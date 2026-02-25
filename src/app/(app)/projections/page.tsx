@@ -22,6 +22,8 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChartContainer,
+  ChartLegend,
+  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   type ChartConfig,
@@ -302,14 +304,16 @@ export default function ProjectionsPage() {
                     <ChartTooltip
                       content={
                         <ChartTooltipContent
-                          formatter={(value) =>
-                            `$${Number(value).toLocaleString("en-US", {
-                              minimumFractionDigits: 2,
-                            })}`
-                          }
+                          labelFormatter={(label) => {
+                            const d = new Date(label);
+                            return granularity === "monthly"
+                              ? format(d, "MMM yyyy")
+                              : format(d, "MMM d, yyyy");
+                          }}
                         />
                       }
                     />
+                    <ChartLegend content={<ChartLegendContent />} />
                     {filteredAccounts.map((account, i) => (
                       <Area
                         key={account._id}

@@ -77,6 +77,9 @@ function TransactionsContent() {
   const [categoryFilter, setCategoryFilter] = useState(
     searchParams.get("category") ?? ""
   );
+  const [recurringOnly, setRecurringOnly] = useState(
+    searchParams.get("recurring") === "true"
+  );
   const [page, setPage] = useState(Number(searchParams.get("page") ?? "1"));
   const [limit, setLimit] = useState(Number(searchParams.get("limit") ?? "25"));
   const [sorting, setSorting] = useState<SortingState>([
@@ -100,10 +103,11 @@ function TransactionsContent() {
     if (accountFilter) p.set("accountId", accountFilter);
     if (typeFilter) p.set("type", typeFilter);
     if (categoryFilter) p.set("category", categoryFilter);
+    if (recurringOnly) p.set("recurring", "true");
     if (page !== 1) p.set("page", String(page));
     if (limit !== 25) p.set("limit", String(limit));
     router.replace(`/transactions?${p.toString()}`, { scroll: false });
-  }, [debouncedSearch, accountFilter, typeFilter, categoryFilter, page, limit, router]);
+  }, [debouncedSearch, accountFilter, typeFilter, categoryFilter, recurringOnly, page, limit, router]);
 
   const sortCol = sorting[0]?.id ?? "date";
   const sortOrder = sorting[0]?.desc ? "desc" : "asc";
@@ -113,6 +117,7 @@ function TransactionsContent() {
     accountId: accountFilter || undefined,
     type: typeFilter as TransactionFilters["type"] || undefined,
     category: categoryFilter || undefined,
+    isRecurring: recurringOnly ? true : undefined,
     page,
     limit,
     sort: sortCol,
@@ -392,6 +397,19 @@ function TransactionsContent() {
             ))}
           </SelectContent>
         </Select>
+
+        <Button
+          variant={recurringOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => {
+            setRecurringOnly((v) => !v);
+            setPage(1);
+          }}
+          className="gap-1.5"
+        >
+          <Repeat className="h-3.5 w-3.5" />
+          Recurring
+        </Button>
       </div>
 
       {isLoading ? (
