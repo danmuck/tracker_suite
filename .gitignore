@@ -39,3 +39,29 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# claude code
+.claude/
+
+# build logs
+.buildlogs/
+
+# editors
+.idea/
+*.swp
+*.swo
+*.sublime-workspace
+
+# windows
+Thumbs.db
+desktop.ini
+ehthumbs.db
+
+# mac (supplement existing .DS_Store entry)
+._*
+.Spotlight-V100
+.Trashes
+
+# database dumps / seeds
+*.dump
+*.bson
