@@ -59,21 +59,16 @@ export function TransactionForm({
   const [frequency, setFrequency] = useState<RecurrenceFrequency>(
     defaultValues?.recurrenceRule?.frequency ?? "monthly"
   );
-  const [recStartDate, setRecStartDate] = useState<Date>(
-    defaultValues?.recurrenceRule?.startDate
-      ? parseDate(defaultValues.recurrenceRule.startDate)
-      : new Date()
-  );
   const [recEndDate, setRecEndDate] = useState<Date | undefined>(
     defaultValues?.recurrenceRule?.endDate
       ? parseDate(defaultValues.recurrenceRule.endDate)
       : undefined
   );
   const [dayOfWeek, setDayOfWeek] = useState(
-    String(defaultValues?.recurrenceRule?.dayOfWeek ?? "1")
+    String(defaultValues?.recurrenceRule?.dayOfWeek ?? "5")
   );
   const [dayOfMonth, setDayOfMonth] = useState(
-    String(defaultValues?.recurrenceRule?.dayOfMonth ?? "1")
+    String(defaultValues?.recurrenceRule?.dayOfMonth ?? (defaultValues?.date ? parseDate(defaultValues.date).getDate() : new Date().getDate()))
   );
   const [daysOfMonth1, setDaysOfMonth1] = useState(
     String(defaultValues?.recurrenceRule?.daysOfMonth?.[0] ?? "1")
@@ -124,7 +119,7 @@ export function TransactionForm({
           ? {
               recurrenceRule: {
                 frequency,
-                startDate: formatDateISO(recStartDate),
+                startDate: formatDateISO(date),
                 endDate: recEndDate ? formatDateISO(recEndDate) : null,
                 ...(frequency === "weekly" || frequency === "biweekly"
                   ? { dayOfWeek: Number(dayOfWeek) }
@@ -198,7 +193,12 @@ export function TransactionForm({
               <Calendar
                 mode="single"
                 selected={date}
-                onSelect={(d) => d && setDate(d)}
+                onSelect={(d) => {
+                  if (d) {
+                    setDate(d);
+                    setDayOfMonth(String(d.getDate()));
+                  }
+                }}
                 initialFocus
               />
             </PopoverContent>
@@ -301,46 +301,26 @@ export function TransactionForm({
 
       {isRecurring && (
         <div className="rounded-md border p-4 space-y-4">
-          <div className="space-y-1">
-            <Label>Frequency</Label>
-            <Select
-              value={frequency}
-              onValueChange={(v) => setFrequency(v as RecurrenceFrequency)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="biweekly">Biweekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="semi_monthly">Semi-Monthly</SelectItem>
-                <SelectItem value="annually">Annually</SelectItem>
-                <SelectItem value="custom">Custom</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <Label>Start Date</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-start font-normal">
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {format(recStartDate, "MMM d, yyyy")}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={recStartDate}
-                    onSelect={(d) => d && setRecStartDate(d)}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+              <Label>Frequency</Label>
+              <Select
+                value={frequency}
+                onValueChange={(v) => setFrequency(v as RecurrenceFrequency)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="daily">Daily</SelectItem>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="biweekly">Biweekly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="semi_monthly">Semi-Monthly</SelectItem>
+                  <SelectItem value="annually">Annually</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1">
