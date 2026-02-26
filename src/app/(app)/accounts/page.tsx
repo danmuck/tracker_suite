@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
@@ -161,7 +162,8 @@ export default function AccountsPage() {
                     <CurrencyDisplay
                       cents={account.balance}
                       currency={account.currency}
-                      colored
+                      accountType={account.type}
+                      creditLimit={account.creditLimit}
                       className="text-xl font-bold"
                     />
                   </div>
@@ -174,7 +176,10 @@ export default function AccountsPage() {
                       </div>
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                         <div
-                          className="h-full rounded-full bg-primary transition-all"
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            utilization >= 100 ? "bg-red-500" : "bg-blue-500"
+                          )}
                           style={{ width: `${Math.min(utilization, 100)}%` }}
                         />
                       </div>

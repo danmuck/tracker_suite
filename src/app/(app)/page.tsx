@@ -126,7 +126,10 @@ export default function DashboardPage() {
               <div className="space-y-1">
                 <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-primary"
+                    className={cn(
+                      "h-full rounded-full",
+                      totalCreditUtilization >= 100 ? "bg-red-500" : "bg-blue-500"
+                    )}
                     style={{ width: `${Math.min(totalCreditUtilization, 100)}%` }}
                   />
                 </div>
@@ -180,14 +183,19 @@ export default function DashboardPage() {
                         <CurrencyDisplay
                           cents={account.balance}
                           currency={account.currency}
-                          className={cn("font-bold", account.balance < 0 && "text-red-600 dark:text-red-400")}
+                          accountType={account.type}
+                          creditLimit={account.creditLimit}
+                          className="font-bold"
                         />
                       </div>
                       {utilization !== null && (
                         <div className="mt-2 space-y-1">
                           <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                             <div
-                              className="h-full rounded-full bg-primary"
+                              className={cn(
+                                "h-full rounded-full",
+                                utilization >= 100 ? "bg-red-500" : "bg-blue-500"
+                              )}
                               style={{
                                 width: `${Math.min(utilization, 100)}%`,
                               }}
