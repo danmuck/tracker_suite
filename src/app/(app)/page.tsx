@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { ArrowRight, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +15,11 @@ import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
 import { CurrencyDisplay } from "@/components/currency-display";
 import { CategoryBadge } from "@/components/category-badge";
+import { ProjectionAlerts } from "@/components/projection-alerts";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useSummary } from "@/hooks/use-summary";
+import { useProjections } from "@/hooks/use-projections";
 import { useCategories } from "@/hooks/use-categories";
 import { centsToDollars, formatDateShort } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -39,6 +41,8 @@ export default function DashboardPage() {
     "monthly",
     new Date()
   );
+  const today = new Date();
+  const { projection } = useProjections(today, addDays(today, 30), "daily");
 
   // Net worth: bank balances minus credit card balances and debt
   const netWorth = accounts.reduce((total, account) => {
@@ -140,6 +144,15 @@ export default function DashboardPage() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Projection alerts (next 30 days) */}
+      {projection?.alerts && projection.alerts.length > 0 && (
+        <ProjectionAlerts
+          alerts={projection.alerts}
+          accounts={accounts}
+          compact
+        />
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">

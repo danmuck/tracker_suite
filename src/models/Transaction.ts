@@ -15,7 +15,8 @@ export interface ITransaction extends Document {
   date: Date;
   description: string;
   accountId: mongoose.Types.ObjectId;
-  type: "credit" | "debit";
+  toAccountId?: mongoose.Types.ObjectId;
+  type: "credit" | "debit" | "transfer";
   isRecurring: boolean;
   recurrenceRule?: IRecurrenceRule;
   categoryTags: string[];
@@ -47,7 +48,8 @@ const TransactionSchema = new Schema<ITransaction>(
     date: { type: Date, required: true },
     description: { type: String, required: true, trim: true },
     accountId: { type: Schema.Types.ObjectId, ref: "Account", required: true },
-    type: { type: String, required: true, enum: ["credit", "debit"] },
+    toAccountId: { type: Schema.Types.ObjectId, ref: "Account" },
+    type: { type: String, required: true, enum: ["credit", "debit", "transfer"] },
     isRecurring: { type: Boolean, default: false },
     recurrenceRule: { type: RecurrenceRuleSchema },
     categoryTags: [{ type: String, trim: true }],
@@ -57,8 +59,14 @@ const TransactionSchema = new Schema<ITransaction>(
 );
 
 TransactionSchema.index({ accountId: 1, date: -1 });
+TransactionSchema.index({ toAccountId: 1, date: -1 });
 TransactionSchema.index({ date: -1 });
 TransactionSchema.index({ categoryTags: 1 });
+
+// Delete cached model in development to pick up schema changes on hot reload
+if (process.env.NODE_ENV !== "production" && mongoose.models.Transaction) {
+  delete mongoose.models.Transaction;
+}
 
 const Transaction: Model<ITransaction> =
   mongoose.models.Transaction || mongoose.model<ITransaction>("Transaction", TransactionSchema);

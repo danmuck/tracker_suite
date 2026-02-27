@@ -26,11 +26,28 @@ export const transactionSchema = z.object({
   date: z.string(),
   description: z.string().min(1, "Description is required").max(200),
   accountId: z.string().min(1, "Account is required"),
-  type: z.enum(["credit", "debit"]),
+  toAccountId: z.string().optional(),
+  type: z.enum(["credit", "debit", "transfer"]),
   isRecurring: z.boolean().default(false),
   recurrenceRule: recurrenceRuleSchema.optional(),
   categoryTags: z.array(z.string()).default([]),
   notes: z.string().max(500).optional(),
+}).superRefine((data, ctx) => {
+  if (data.type === "transfer") {
+    if (!data.toAccountId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Destination account is required for transfers",
+        path: ["toAccountId"],
+      });
+    } else if (data.toAccountId === data.accountId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Cannot transfer to the same account",
+        path: ["toAccountId"],
+      });
+    }
+  }
 });
 
 export const categorySchema = z.object({

@@ -1,4 +1,4 @@
-export type TransactionType = "credit" | "debit";
+export type TransactionType = "credit" | "debit" | "transfer";
 
 export type RecurrenceFrequency =
   | "daily"
@@ -25,6 +25,7 @@ export interface Transaction {
   date: string;
   description: string;
   accountId: string;
+  toAccountId?: string;
   type: TransactionType;
   isRecurring: boolean;
   recurrenceRule?: RecurrenceRule;
@@ -39,6 +40,7 @@ export interface TransactionFormData {
   date: string;
   description: string;
   accountId: string;
+  toAccountId?: string;
   type: TransactionType;
   isRecurring: boolean;
   recurrenceRule?: RecurrenceRule;

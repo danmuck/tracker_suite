@@ -14,7 +14,7 @@ export const DEFAULT_CATEGORIES = [
 
 export const ACCOUNT_TYPES = ["bank", "credit_card", "debt"] as const;
 
-export const TRANSACTION_TYPES = ["credit", "debit"] as const;
+export const TRANSACTION_TYPES = ["credit", "debit", "transfer"] as const;
 
 export const RECURRENCE_FREQUENCIES = [
   "daily",

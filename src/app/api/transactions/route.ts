@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const filter: Record<string, unknown> = {};
 
     if (accountId) {
-      filter.accountId = accountId;
+      filter.$or = [{ accountId }, { toAccountId: accountId }];
     }
 
     if (startDate || endDate) {
@@ -95,18 +95,94 @@ export async function POST(request: NextRequest) {
 
     const amountInCents = Math.round(validated.amount * 100);
 
+    let finalAmountInCents = amountInCents;
+    let sourceAccount = null;
+    let destAccount = null;
+
+    if (validated.type === "transfer") {
+      [sourceAccount, destAccount] = await Promise.all([
+        Account.findById(validated.accountId),
+        Account.findById(validated.toAccountId),
+      ]);
+
+      if (!sourceAccount || !destAccount) {
+        return NextResponse.json(
+          { error: "Source or destination account not found" },
+          { status: 400 }
+        );
+      }
+
+      if (!validated.isRecurring) {
+        // Credit limit cap: if source is credit_card with creditLimit
+        // Positive balance = amount owed, so available = creditLimit - balance
+        if (sourceAccount.type === "credit_card" && sourceAccount.creditLimit) {
+          const availableCredit = sourceAccount.creditLimit - sourceAccount.balance;
+          if (availableCredit <= 0) {
+            finalAmountInCents = 0;
+          } else {
+            finalAmountInCents = Math.min(finalAmountInCents, availableCredit);
+          }
+        }
+
+        // Debt cap: if destination is credit_card/debt, cap at remaining owed
+        // Positive balance = amount owed
+        if (destAccount.type === "credit_card" || destAccount.type === "debt") {
+          const owed = destAccount.balance;
+          if (owed <= 0) {
+            finalAmountInCents = 0;
+          } else {
+            finalAmountInCents = Math.min(finalAmountInCents, owed);
+          }
+        }
+      }
+    }
+
     const transaction = await Transaction.create({
       ...validated,
-      amount: amountInCents,
+      amount: finalAmountInCents,
     });
 
     if (!validated.isRecurring) {
-      const balanceChange =
-        validated.type === "credit" ? amountInCents : -amountInCents;
+      if (validated.type === "transfer") {
+        if (finalAmountInCents > 0) {
+          const isDebtSource = sourceAccount?.type === "credit_card" || sourceAccount?.type === "debt";
+          const isDebtDest = destAccount?.type === "credit_card" || destAccount?.type === "debt";
 
-      await Account.findByIdAndUpdate(validated.accountId, {
-        $inc: { balance: balanceChange },
-      });
+          await Account.bulkWrite([
+            {
+              updateOne: {
+                filter: { _id: validated.accountId },
+                // Debt/CC source: paying from credit increases what's owed (+)
+                // Bank source: decreases balance (-)
+                update: { $inc: { balance: isDebtSource ? finalAmountInCents : -finalAmountInCents } },
+              },
+            },
+            {
+              updateOne: {
+                filter: { _id: validated.toAccountId },
+                // Debt/CC dest: payment reduces what's owed (-)
+                // Bank dest: increases balance (+)
+                update: { $inc: { balance: isDebtDest ? -finalAmountInCents : finalAmountInCents } },
+              },
+            },
+          ]);
+        }
+      } else {
+        const account = await Account.findById(validated.accountId);
+        const isDebt = account?.type === "credit_card" || account?.type === "debt";
+        // For debt/CC: credit (payment) decreases balance, debit (charge) increases balance
+        // For bank: credit increases, debit decreases
+        let balanceChange: number;
+        if (isDebt) {
+          balanceChange = validated.type === "credit" ? -finalAmountInCents : finalAmountInCents;
+        } else {
+          balanceChange = validated.type === "credit" ? finalAmountInCents : -finalAmountInCents;
+        }
+
+        await Account.findByIdAndUpdate(validated.accountId, {
+          $inc: { balance: balanceChange },
+        });
+      }
     }
 
     return NextResponse.json(transaction, { status: 201 });

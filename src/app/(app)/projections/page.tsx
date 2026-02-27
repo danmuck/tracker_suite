@@ -33,6 +33,7 @@ import { PageHeader } from "@/components/page-header";
 import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
 import { CurrencyDisplay } from "@/components/currency-display";
+import { ProjectionAlerts } from "@/components/projection-alerts";
 import { useProjections } from "@/hooks/use-projections";
 import { useAccounts } from "@/hooks/use-accounts";
 import { centsToDollars } from "@/lib/formatters";
@@ -275,6 +276,14 @@ export default function ProjectionsPage() {
             </Card>
           </div>
 
+          {/* Balance constraint alerts */}
+          {projection.alerts.length > 0 && (
+            <ProjectionAlerts
+              alerts={projection.alerts}
+              accounts={accounts}
+            />
+          )}
+
           {/* Area chart */}
           {chartData.length > 0 && filteredAccounts.length > 0 ? (
             <Card>
@@ -288,12 +297,10 @@ export default function ProjectionsPage() {
                     <XAxis
                       dataKey="date"
                       tickFormatter={(v) => {
-                        const d = new Date(v);
-                        return granularity === "daily"
-                          ? format(d, "MMM d")
-                          : granularity === "weekly"
-                          ? format(d, "MMM d")
-                          : format(d, "MMM yyyy");
+                        const d = new Date(v + "T12:00:00.000Z");
+                        return granularity === "monthly"
+                          ? format(d, "MMM yyyy")
+                          : format(d, "MMM d");
                       }}
                       tick={{ fontSize: 11 }}
                     />
@@ -305,7 +312,7 @@ export default function ProjectionsPage() {
                       content={
                         <ChartTooltipContent
                           labelFormatter={(label) => {
-                            const d = new Date(label);
+                            const d = new Date(label + "T12:00:00.000Z");
                             return granularity === "monthly"
                               ? format(d, "MMM yyyy")
                               : format(d, "MMM d, yyyy");
