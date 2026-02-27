@@ -202,6 +202,7 @@ export function TransactionForm({
               <Calendar
                 mode="single"
                 selected={date}
+                defaultMonth={date}
                 onSelect={(d) => {
                   if (d) {
                     setDate(d);
@@ -371,6 +372,7 @@ export function TransactionForm({
                   <Calendar
                     mode="single"
                     selected={recEndDate}
+                    defaultMonth={recEndDate}
                     onSelect={(d) => setRecEndDate(d)}
                     initialFocus
                   />

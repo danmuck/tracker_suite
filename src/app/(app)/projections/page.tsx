@@ -131,6 +131,7 @@ export default function ProjectionsPage() {
             <Calendar
               mode="single"
               selected={startDate}
+              defaultMonth={startDate}
               onSelect={(d) => d && setStartDate(d)}
               initialFocus
             />
@@ -151,6 +152,7 @@ export default function ProjectionsPage() {
             <Calendar
               mode="single"
               selected={endDate}
+              defaultMonth={endDate}
               onSelect={(d) => d && setEndDate(d)}
               initialFocus
             />
