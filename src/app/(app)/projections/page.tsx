@@ -80,14 +80,20 @@ export default function ProjectionsPage() {
     ])
   );
 
+  const debtAccountIds = new Set(
+    accounts
+      .filter((a) => a.type === "credit_card" || a.type === "debt")
+      .map((a) => a._id)
+  );
+
   const chartData =
     projection?.timeline.map((day) => ({
       date: day.date,
       ...Object.fromEntries(
-        filteredAccounts.map((a) => [
-          a._id,
-          centsToDollars(day.balances[a._id] ?? 0),
-        ])
+        filteredAccounts.map((a) => {
+          const raw = day.balances[a._id] ?? 0;
+          return [a._id, centsToDollars(debtAccountIds.has(a._id) ? -raw : raw)];
+        })
       ),
     })) ?? [];
 
@@ -210,8 +216,9 @@ export default function ProjectionsPage() {
               </CardHeader>
               <CardContent>
                 <CurrencyDisplay
-                  cents={Object.values(summary!.startBalances).reduce(
-                    (a, b) => a + b,
+                  cents={Object.entries(summary!.startBalances).reduce(
+                    (total, [id, bal]) =>
+                      total + (debtAccountIds.has(id) ? -bal : bal),
                     0
                   )}
                   className="text-lg font-bold"
@@ -226,8 +233,9 @@ export default function ProjectionsPage() {
               </CardHeader>
               <CardContent>
                 <CurrencyDisplay
-                  cents={Object.values(summary!.endBalances).reduce(
-                    (a, b) => a + b,
+                  cents={Object.entries(summary!.endBalances).reduce(
+                    (total, [id, bal]) =>
+                      total + (debtAccountIds.has(id) ? -bal : bal),
                     0
                   )}
                   className="text-lg font-bold"
