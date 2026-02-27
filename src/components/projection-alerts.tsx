@@ -100,13 +100,13 @@ export function ProjectionAlerts({
     return (
       <Card
         className={cn(
-          "overflow-hidden border-l-4",
+          "overflow-hidden border-l-4 py-0 gap-0",
           redCount > 0
             ? "border-l-red-500 dark:border-l-red-400"
             : "border-l-amber-500 dark:border-l-amber-400"
         )}
       >
-        <CardContent className="pt-4 pb-4">
+        <CardContent className="pt-2 pb-2">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle
               className={cn(
