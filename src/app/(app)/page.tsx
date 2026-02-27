@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
-import { format, addDays } from "date-fns";
+import { format, addDays, endOfDay } from "date-fns";
 import { ArrowRight, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,10 +32,12 @@ const summaryChartConfig: ChartConfig = {
 
 export default function DashboardPage() {
   const { accounts, isLoading: accountsLoading } = useAccounts();
+  const todayEnd = useMemo(() => endOfDay(new Date()).toISOString(), []);
   const { transactions, isLoading: txLoading } = useTransactions({
     limit: 10,
     sort: "date",
     order: "desc",
+    endDate: todayEnd,
   });
   const { categories } = useCategories();
   const { summary, isLoading: summaryLoading } = useSummary(

@@ -61,6 +61,7 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
         type: t.type,
         categoryTags: t.categoryTags,
         isProjected: false,
+        balanceApplied: t.balanceApplied,
         sourceTransactionId: t._id.toString(),
       });
     }
@@ -130,15 +131,15 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
   }
 
   // Calculate starting balances by rewinding from current DB balances.
-  // Non-recurring transactions update DB balances immediately (even future-dated ones),
-  // so we rewind ALL non-recurring transactions in the range to get the balance at start.
+  // Only rewind transactions that actually affected DB balances (balanceApplied === true).
+  // Future non-recurring transactions have balanceApplied = false and don't need rewinding.
   // Recurring transactions don't update DB balances, so we only rewind their past occurrences.
   const startBalances: Record<string, number> = { ...currentBalances };
 
   const txToRewind = filteredProjected.filter((t) => {
     if (t.date < startStr) return false;
-    // Non-recurring: always rewind (they already affected DB balance regardless of date)
-    if (!t.isProjected) return true;
+    // One-time transactions: only rewind if balance was actually applied to DB
+    if (!t.isProjected) return t.balanceApplied === true;
     // Projected (recurring future): only rewind past/today occurrences
     return t.date <= todayStr;
   });

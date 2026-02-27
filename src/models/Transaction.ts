@@ -21,6 +21,7 @@ export interface ITransaction extends Document {
   recurrenceRule?: IRecurrenceRule;
   categoryTags: string[];
   notes?: string;
+  balanceApplied: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +55,7 @@ const TransactionSchema = new Schema<ITransaction>(
     recurrenceRule: { type: RecurrenceRuleSchema },
     categoryTags: [{ type: String, trim: true }],
     notes: { type: String, trim: true },
+    balanceApplied: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

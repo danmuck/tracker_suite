@@ -55,8 +55,15 @@ export async function PUT(
 
     const newAmountInCents = Math.round(validated.amount * 100);
 
-    // Reverse old transaction effect
-    if (!existingTransaction.isRecurring) {
+    // Determine if new date is in the future
+    const newTxDate = new Date(validated.date);
+    const startOfTomorrow = new Date();
+    startOfTomorrow.setHours(0, 0, 0, 0);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+    const newIsFuture = newTxDate >= startOfTomorrow;
+
+    // Reverse old transaction effect only if it was previously applied to balances
+    if (existingTransaction.balanceApplied) {
       if (existingTransaction.type === "transfer" && existingTransaction.toAccountId) {
         if (existingTransaction.amount > 0) {
           const oldSource = await Account.findById(existingTransaction.accountId);
@@ -68,14 +75,12 @@ export async function PUT(
             {
               updateOne: {
                 filter: { _id: existingTransaction.accountId },
-                // Reverse: debt/CC source was +, so reverse is -; bank source was -, so reverse is +
                 update: { $inc: { balance: oldIsDebtSource ? -existingTransaction.amount : existingTransaction.amount } },
               },
             },
             {
               updateOne: {
                 filter: { _id: existingTransaction.toAccountId },
-                // Reverse: debt/CC dest was -, so reverse is +; bank dest was +, so reverse is -
                 update: { $inc: { balance: oldIsDebtDest ? existingTransaction.amount : -existingTransaction.amount } },
               },
             },
@@ -84,7 +89,6 @@ export async function PUT(
       } else {
         const oldAcct = await Account.findById(existingTransaction.accountId);
         const oldIsDebt = oldAcct?.type === "credit_card" || oldAcct?.type === "debt";
-        // Reverse: for debt/CC, credit decreased balance so reverse adds; debit increased so reverse subtracts
         let oldReversal: number;
         if (oldIsDebt) {
           oldReversal = existingTransaction.type === "credit" ? existingTransaction.amount : -existingTransaction.amount;
@@ -98,8 +102,9 @@ export async function PUT(
       }
     }
 
-    // Apply new transaction effect
+    // Apply new transaction effect only if date is today or earlier and not recurring
     let finalNewAmount = newAmountInCents;
+    const shouldApplyNew = !validated.isRecurring && !newIsFuture;
 
     if (validated.type === "transfer" && !validated.isRecurring) {
       const [sourceAccount, destAccount] = await Promise.all([
@@ -137,7 +142,7 @@ export async function PUT(
         }
       }
 
-      if (finalNewAmount > 0) {
+      if (shouldApplyNew && finalNewAmount > 0) {
         await Account.bulkWrite([
           {
             updateOne: {
@@ -153,7 +158,7 @@ export async function PUT(
           },
         ]);
       }
-    } else if (!validated.isRecurring) {
+    } else if (shouldApplyNew) {
       const newAcct = await Account.findById(validated.accountId);
       const newIsDebt = newAcct?.type === "credit_card" || newAcct?.type === "debt";
       let newEffect: number;
@@ -171,7 +176,7 @@ export async function PUT(
     const savedAmount = validated.type === "transfer" ? finalNewAmount : newAmountInCents;
     const updatedTransaction = await Transaction.findByIdAndUpdate(
       transactionId,
-      { ...validated, amount: savedAmount },
+      { ...validated, amount: savedAmount, balanceApplied: shouldApplyNew },
       { new: true, runValidators: true }
     ).lean();
 
@@ -212,7 +217,8 @@ export async function DELETE(
       );
     }
 
-    if (!transaction.isRecurring) {
+    // Only reverse balance if it was previously applied
+    if (transaction.balanceApplied) {
       if (transaction.type === "transfer" && transaction.toAccountId) {
         if (transaction.amount > 0) {
           const delSource = await Account.findById(transaction.accountId);
@@ -224,14 +230,12 @@ export async function DELETE(
             {
               updateOne: {
                 filter: { _id: transaction.accountId },
-                // Reverse: debt/CC source had +, so reverse is -; bank had -, reverse is +
                 update: { $inc: { balance: delIsDebtSource ? -transaction.amount : transaction.amount } },
               },
             },
             {
               updateOne: {
                 filter: { _id: transaction.toAccountId },
-                // Reverse: debt/CC dest had -, so reverse is +; bank had +, reverse is -
                 update: { $inc: { balance: delIsDebtDest ? transaction.amount : -transaction.amount } },
               },
             },

@@ -8,6 +8,7 @@ export interface ProjectedTransaction {
   toAccountId?: string;
   categoryTags: string[];
   isProjected: boolean;
+  balanceApplied?: boolean;
   sourceTransactionId?: string;
 }
 

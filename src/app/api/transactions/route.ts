@@ -137,12 +137,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Determine if this transaction's date is in the future
+    const txDate = new Date(validated.date);
+    const startOfTomorrow = new Date();
+    startOfTomorrow.setHours(0, 0, 0, 0);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+    const isFuture = txDate >= startOfTomorrow;
+
     const transaction = await Transaction.create({
       ...validated,
       amount: finalAmountInCents,
+      balanceApplied: !isFuture && !validated.isRecurring,
     });
 
-    if (!validated.isRecurring) {
+    // Only apply balance changes for non-recurring, non-future transactions
+    if (!validated.isRecurring && !isFuture) {
       if (validated.type === "transfer") {
         if (finalAmountInCents > 0) {
           const isDebtSource = sourceAccount?.type === "credit_card" || sourceAccount?.type === "debt";
