@@ -47,7 +47,8 @@ export function TransactionForm({
     defaultValues?.date ? parseDate(defaultValues.date) : new Date()
   );
   const [accountId, setAccountId] = useState(defaultValues?.accountId ?? "");
-  const [type, setType] = useState<"credit" | "debit">(
+  const [toAccountId, setToAccountId] = useState(defaultValues?.toAccountId ?? "");
+  const [type, setType] = useState<"credit" | "debit" | "transfer">(
     defaultValues?.type ?? "debit"
   );
   const [categoryTags, setCategoryTags] = useState<string[]>(
@@ -97,6 +98,10 @@ export function TransactionForm({
     if (!amount || isNaN(Number(amount)) || Number(amount) <= 0)
       errs.amount = "Amount must be a positive number";
     if (!accountId) errs.accountId = "Account is required";
+    if (type === "transfer") {
+      if (!toAccountId) errs.toAccountId = "Destination account is required";
+      else if (toAccountId === accountId) errs.toAccountId = "Cannot transfer to the same account";
+    }
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -106,13 +111,17 @@ export function TransactionForm({
     if (!validate()) return;
     setLoading(true);
     try {
+      const finalCategoryTags = type === "transfer" && !categoryTags.includes("transfer")
+        ? [...categoryTags, "transfer"]
+        : categoryTags;
       const data: TransactionFormData = {
         description: description.trim(),
         amount: Number(amount),
         date: formatDateISO(date),
         accountId,
+        ...(type === "transfer" ? { toAccountId } : {}),
         type,
-        categoryTags,
+        categoryTags: finalCategoryTags,
         isRecurring,
         notes: notes || undefined,
         ...(isRecurring
@@ -193,6 +202,7 @@ export function TransactionForm({
               <Calendar
                 mode="single"
                 selected={date}
+                defaultMonth={date}
                 onSelect={(d) => {
                   if (d) {
                     setDate(d);
@@ -207,7 +217,7 @@ export function TransactionForm({
       </div>
 
       <div className="space-y-1">
-        <Label htmlFor="accountId">Account</Label>
+        <Label htmlFor="accountId">{type === "transfer" ? "From Account" : "Account"}</Label>
         <Select value={accountId} onValueChange={setAccountId}>
           <SelectTrigger id="accountId">
             <SelectValue placeholder="Select account" />
@@ -225,15 +235,41 @@ export function TransactionForm({
         )}
       </div>
 
+      {type === "transfer" && (
+        <div className="space-y-1">
+          <Label htmlFor="toAccountId">To Account</Label>
+          <Select value={toAccountId} onValueChange={setToAccountId}>
+            <SelectTrigger id="toAccountId">
+              <SelectValue placeholder="Select destination account" />
+            </SelectTrigger>
+            <SelectContent>
+              {accounts
+                .filter((a) => a._id !== accountId)
+                .map((a) => (
+                  <SelectItem key={a._id} value={a._id}>
+                    {a.name}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          {errors.toAccountId && (
+            <p className="text-xs text-destructive">{errors.toAccountId}</p>
+          )}
+        </div>
+      )}
+
       <div className="space-y-1">
         <Label>Type</Label>
-        <Tabs value={type} onValueChange={(v) => setType(v as "credit" | "debit")}>
+        <Tabs value={type} onValueChange={(v) => setType(v as "credit" | "debit" | "transfer")}>
           <TabsList className="w-full">
             <TabsTrigger value="credit" className="flex-1">
-              Income (Credit)
+              Income
             </TabsTrigger>
             <TabsTrigger value="debit" className="flex-1">
-              Expense (Debit)
+              Expense
+            </TabsTrigger>
+            <TabsTrigger value="transfer" className="flex-1">
+              Transfer
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -336,6 +372,7 @@ export function TransactionForm({
                   <Calendar
                     mode="single"
                     selected={recEndDate}
+                    defaultMonth={recEndDate}
                     onSelect={(d) => setRecEndDate(d)}
                     initialFocus
                   />

@@ -33,6 +33,7 @@ import { PageHeader } from "@/components/page-header";
 import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
 import { CurrencyDisplay } from "@/components/currency-display";
+import { ProjectionAlerts } from "@/components/projection-alerts";
 import { useProjections } from "@/hooks/use-projections";
 import { useAccounts } from "@/hooks/use-accounts";
 import { centsToDollars } from "@/lib/formatters";
@@ -79,14 +80,20 @@ export default function ProjectionsPage() {
     ])
   );
 
+  const debtAccountIds = new Set(
+    accounts
+      .filter((a) => a.type === "credit_card" || a.type === "debt")
+      .map((a) => a._id)
+  );
+
   const chartData =
     projection?.timeline.map((day) => ({
       date: day.date,
       ...Object.fromEntries(
-        filteredAccounts.map((a) => [
-          a._id,
-          centsToDollars(day.balances[a._id] ?? 0),
-        ])
+        filteredAccounts.map((a) => {
+          const raw = day.balances[a._id] ?? 0;
+          return [a._id, centsToDollars(debtAccountIds.has(a._id) ? -raw : raw)];
+        })
       ),
     })) ?? [];
 
@@ -130,6 +137,7 @@ export default function ProjectionsPage() {
             <Calendar
               mode="single"
               selected={startDate}
+              defaultMonth={startDate}
               onSelect={(d) => d && setStartDate(d)}
               initialFocus
             />
@@ -150,6 +158,7 @@ export default function ProjectionsPage() {
             <Calendar
               mode="single"
               selected={endDate}
+              defaultMonth={endDate}
               onSelect={(d) => d && setEndDate(d)}
               initialFocus
             />
@@ -207,8 +216,9 @@ export default function ProjectionsPage() {
               </CardHeader>
               <CardContent>
                 <CurrencyDisplay
-                  cents={Object.values(summary!.startBalances).reduce(
-                    (a, b) => a + b,
+                  cents={Object.entries(summary!.startBalances).reduce(
+                    (total, [id, bal]) =>
+                      total + (debtAccountIds.has(id) ? -bal : bal),
                     0
                   )}
                   className="text-lg font-bold"
@@ -223,8 +233,9 @@ export default function ProjectionsPage() {
               </CardHeader>
               <CardContent>
                 <CurrencyDisplay
-                  cents={Object.values(summary!.endBalances).reduce(
-                    (a, b) => a + b,
+                  cents={Object.entries(summary!.endBalances).reduce(
+                    (total, [id, bal]) =>
+                      total + (debtAccountIds.has(id) ? -bal : bal),
                     0
                   )}
                   className="text-lg font-bold"
@@ -275,6 +286,14 @@ export default function ProjectionsPage() {
             </Card>
           </div>
 
+          {/* Balance constraint alerts */}
+          {projection.alerts.length > 0 && (
+            <ProjectionAlerts
+              alerts={projection.alerts}
+              accounts={accounts}
+            />
+          )}
+
           {/* Area chart */}
           {chartData.length > 0 && filteredAccounts.length > 0 ? (
             <Card>
@@ -288,12 +307,10 @@ export default function ProjectionsPage() {
                     <XAxis
                       dataKey="date"
                       tickFormatter={(v) => {
-                        const d = new Date(v);
-                        return granularity === "daily"
-                          ? format(d, "MMM d")
-                          : granularity === "weekly"
-                          ? format(d, "MMM d")
-                          : format(d, "MMM yyyy");
+                        const d = new Date(v + "T12:00:00.000Z");
+                        return granularity === "monthly"
+                          ? format(d, "MMM yyyy")
+                          : format(d, "MMM d");
                       }}
                       tick={{ fontSize: 11 }}
                     />
@@ -305,7 +322,7 @@ export default function ProjectionsPage() {
                       content={
                         <ChartTooltipContent
                           labelFormatter={(label) => {
-                            const d = new Date(label);
+                            const d = new Date(label + "T12:00:00.000Z");
                             return granularity === "monthly"
                               ? format(d, "MMM yyyy")
                               : format(d, "MMM d, yyyy");

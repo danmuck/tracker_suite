@@ -24,15 +24,8 @@ export async function GET(request: NextRequest) {
 
     const accounts = await Account.find();
 
-    // Fetch all transactions that could affect the range
-    // Include recurring transactions that might have occurrences in range
-    const query: Record<string, unknown> = {};
-    if (accountId) {
-      query.accountId = accountId;
-    }
-
-    const transactions = await Transaction.find({
-      ...query,
+    // Build date/recurrence filter
+    const dateFilter = {
       $or: [
         // One-time transactions in range
         {
@@ -50,7 +43,14 @@ export async function GET(request: NextRequest) {
           ],
         },
       ],
-    });
+    };
+
+    // Include transfers where account is source OR destination
+    const query = accountId
+      ? { $and: [{ $or: [{ accountId }, { toAccountId: accountId }] }, dateFilter] }
+      : dateFilter;
+
+    const transactions = await Transaction.find(query);
 
     const result = buildProjection({
       accounts: accounts as any,

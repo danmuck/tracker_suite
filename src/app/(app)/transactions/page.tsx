@@ -56,7 +56,7 @@ import {
 } from "@/hooks/use-transactions";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useCategories } from "@/hooks/use-categories";
-import { formatDateShort } from "@/lib/formatters";
+import { formatDateShort, formatCurrency } from "@/lib/formatters";
 import type { Transaction, TransactionFormData } from "@/types/transaction";
 import type { TransactionFilters } from "@/types/api";
 
@@ -130,6 +130,15 @@ function TransactionsContent() {
 
   const accountMap = Object.fromEntries(accounts.map((a) => [a._id, a]));
 
+  // Total available funds: bank balances + available credit on CCs
+  const totalAvailable = accounts.reduce((sum, a) => {
+    if (a.type === "bank") return sum + a.balance;
+    if (a.type === "credit_card" && a.creditLimit) {
+      return sum + Math.max(0, a.creditLimit - a.balance);
+    }
+    return sum;
+  }, 0);
+
   const columns: ColumnDef<Transaction>[] = [
     {
       accessorKey: "date",
@@ -176,9 +185,20 @@ function TransactionsContent() {
       accessorKey: "accountId",
       header: "Account",
       cell: ({ row }) => {
-        const account = accountMap[row.original.accountId];
+        const tx = row.original;
+        const account = accountMap[tx.accountId];
+        if (tx.type === "transfer" && tx.toAccountId) {
+          const toAccount = accountMap[tx.toAccountId];
+          return (
+            <span className="text-sm flex items-center gap-1">
+              {account?.name ?? tx.accountId}
+              <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
+              {toAccount?.name ?? tx.toAccountId}
+            </span>
+          );
+        }
         return (
-          <span className="text-sm">{account?.name ?? row.original.accountId}</span>
+          <span className="text-sm">{account?.name ?? tx.accountId}</span>
         );
       },
     },
@@ -198,7 +218,13 @@ function TransactionsContent() {
       header: "Type",
       cell: ({ row }) => (
         <Badge
-          variant={row.original.type === "credit" ? "default" : "secondary"}
+          variant={
+            row.original.type === "credit"
+              ? "default"
+              : row.original.type === "transfer"
+              ? "outline"
+              : "secondary"
+          }
           className="capitalize"
         >
           {row.original.type}
@@ -236,6 +262,11 @@ function TransactionsContent() {
       ),
       cell: ({ row }) => {
         const tx = row.original;
+        if (tx.type === "transfer") {
+          return (
+            <CurrencyDisplay cents={tx.amount} className="font-mono text-sm text-muted-foreground" />
+          );
+        }
         const cents = tx.type === "credit" ? tx.amount : -tx.amount;
         return (
           <CurrencyDisplay cents={cents} colored className="font-mono text-sm" />
@@ -319,10 +350,17 @@ function TransactionsContent() {
         title="Transactions"
         description="Track and manage all your financial transactions"
         action={
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Transaction
-          </Button>
+          <div className="flex items-center gap-3">
+            {accounts.length > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {formatCurrency(totalAvailable)} available
+              </span>
+            )}
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Transaction
+            </Button>
+          </div>
         }
       />
 
@@ -375,6 +413,7 @@ function TransactionsContent() {
             <SelectItem value="_all">All types</SelectItem>
             <SelectItem value="credit">Income</SelectItem>
             <SelectItem value="debit">Expense</SelectItem>
+            <SelectItem value="transfer">Transfer</SelectItem>
           </SelectContent>
         </Select>
 
@@ -535,6 +574,7 @@ function TransactionsContent() {
                 amount: editTarget.amount / 100,
                 date: editTarget.date,
                 accountId: editTarget.accountId,
+                toAccountId: editTarget.toAccountId,
                 type: editTarget.type,
                 categoryTags: editTarget.categoryTags,
                 isRecurring: editTarget.isRecurring,

@@ -17,6 +17,63 @@ export async function GET(request: NextRequest) {
       filter.type = type;
     }
 
+    // Apply any pending transactions whose date has arrived
+    const startOfTomorrow = new Date();
+    startOfTomorrow.setHours(0, 0, 0, 0);
+    startOfTomorrow.setDate(startOfTomorrow.getDate() + 1);
+
+    const pendingTransactions = await Transaction.find({
+      balanceApplied: false,
+      isRecurring: { $ne: true },
+      date: { $lt: startOfTomorrow },
+    });
+
+    for (const tx of pendingTransactions) {
+      if (tx.amount === 0) {
+        await Transaction.findByIdAndUpdate(tx._id, { balanceApplied: true });
+        continue;
+      }
+
+      if (tx.type === "transfer" && tx.toAccountId) {
+        const [source, dest] = await Promise.all([
+          Account.findById(tx.accountId),
+          Account.findById(tx.toAccountId),
+        ]);
+        const isDebtSource = source?.type === "credit_card" || source?.type === "debt";
+        const isDebtDest = dest?.type === "credit_card" || dest?.type === "debt";
+
+        await Account.bulkWrite([
+          {
+            updateOne: {
+              filter: { _id: tx.accountId },
+              update: { $inc: { balance: isDebtSource ? tx.amount : -tx.amount } },
+            },
+          },
+          {
+            updateOne: {
+              filter: { _id: tx.toAccountId },
+              update: { $inc: { balance: isDebtDest ? -tx.amount : tx.amount } },
+            },
+          },
+        ]);
+      } else {
+        const acct = await Account.findById(tx.accountId);
+        const isDebt = acct?.type === "credit_card" || acct?.type === "debt";
+        let balanceChange: number;
+        if (isDebt) {
+          balanceChange = tx.type === "credit" ? -tx.amount : tx.amount;
+        } else {
+          balanceChange = tx.type === "credit" ? tx.amount : -tx.amount;
+        }
+
+        await Account.findByIdAndUpdate(tx.accountId, {
+          $inc: { balance: balanceChange },
+        });
+      }
+
+      await Transaction.findByIdAndUpdate(tx._id, { balanceApplied: true });
+    }
+
     const accounts = await Account.find(filter).sort({ createdAt: -1 });
 
     return NextResponse.json(accounts, { status: 200 });

@@ -22,7 +22,7 @@ export interface TransactionFilters {
   accountId?: string;
   startDate?: string;
   endDate?: string;
-  type?: "credit" | "debit";
+  type?: "credit" | "debit" | "transfer";
   category?: string;
   isRecurring?: boolean;
   search?: string;

@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
+import { format, addDays, endOfDay } from "date-fns";
 import { ArrowRight, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +16,11 @@ import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
 import { CurrencyDisplay } from "@/components/currency-display";
 import { CategoryBadge } from "@/components/category-badge";
+import { ProjectionAlerts } from "@/components/projection-alerts";
 import { useAccounts } from "@/hooks/use-accounts";
 import { useTransactions } from "@/hooks/use-transactions";
 import { useSummary } from "@/hooks/use-summary";
+import { useProjections } from "@/hooks/use-projections";
 import { useCategories } from "@/hooks/use-categories";
 import { centsToDollars, formatDateShort } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
@@ -29,16 +32,20 @@ const summaryChartConfig: ChartConfig = {
 
 export default function DashboardPage() {
   const { accounts, isLoading: accountsLoading } = useAccounts();
+  const todayEnd = useMemo(() => endOfDay(new Date()).toISOString(), []);
   const { transactions, isLoading: txLoading } = useTransactions({
     limit: 10,
     sort: "date",
     order: "desc",
+    endDate: todayEnd,
   });
   const { categories } = useCategories();
   const { summary, isLoading: summaryLoading } = useSummary(
     "monthly",
     new Date()
   );
+  const today = new Date();
+  const { projection } = useProjections(today, addDays(today, 30), "daily");
 
   // Net worth: bank balances minus credit card balances and debt
   const netWorth = accounts.reduce((total, account) => {
@@ -81,7 +88,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Net worth banner */}
-      <Card className="bg-primary text-primary-foreground dark:bg-muted dark:text-foreground">
+      <Card>
         <CardContent className="pt-6">
           <p className="text-sm opacity-80">Net Worth</p>
           <p className={cn("text-3xl font-bold mt-1", netWorth < 0 && "text-red-300")}>
@@ -109,37 +116,43 @@ export default function DashboardPage() {
               )}
             </span>
           </div>
+          {creditAccounts.length > 0 && totalCreditLimit > 0 && (
+            <div className="mt-4 pt-4 border-t">
+              <div className="flex justify-between items-center mb-2">
+                <p className="text-sm font-medium">Credit Cards</p>
+                <p className="text-sm text-muted-foreground">
+                  <CurrencyDisplay cents={totalCreditBalance} /> of{" "}
+                  <CurrencyDisplay cents={totalCreditLimit} /> limit
+                </p>
+              </div>
+              {totalCreditUtilization !== null && (
+                <div className="space-y-1">
+                  <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={cn(
+                        "h-full rounded-full",
+                        totalCreditUtilization >= 100 ? "bg-red-500" : "bg-blue-500"
+                      )}
+                      style={{ width: `${Math.min(totalCreditUtilization, 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {totalCreditUtilization.toFixed(0)}% of total credit limit used across {creditAccounts.length} card{creditAccounts.length !== 1 ? "s" : ""}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {creditAccounts.length > 0 && totalCreditLimit > 0 && (
-        <Card>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex justify-between items-center mb-2">
-              <p className="text-sm font-medium">Credit Cards</p>
-              <p className="text-sm text-muted-foreground">
-                <CurrencyDisplay cents={totalCreditBalance} /> of{" "}
-                <CurrencyDisplay cents={totalCreditLimit} /> limit
-              </p>
-            </div>
-            {totalCreditUtilization !== null && (
-              <div className="space-y-1">
-                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
-                  <div
-                    className={cn(
-                      "h-full rounded-full",
-                      totalCreditUtilization >= 100 ? "bg-red-500" : "bg-blue-500"
-                    )}
-                    style={{ width: `${Math.min(totalCreditUtilization, 100)}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {totalCreditUtilization.toFixed(0)}% of total credit limit used across {creditAccounts.length} card{creditAccounts.length !== 1 ? "s" : ""}
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+      {/* Projection alerts (next 30 days) */}
+      {projection?.alerts && projection.alerts.length > 0 && (
+        <ProjectionAlerts
+          alerts={projection.alerts}
+          accounts={accounts}
+          compact
+        />
       )}
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -171,8 +184,8 @@ export default function DashboardPage() {
                     ? (account.balance / account.creditLimit) * 100
                     : null;
                 return (
-                  <Card key={account._id}>
-                    <CardContent className="pt-4 pb-4">
+                  <Card key={account._id} className="py-0 gap-0">
+                    <CardContent className="pt-2 pb-2">
                       <div className="flex justify-between items-start mb-1">
                         <div>
                           <p className="font-medium text-sm">{account.name}</p>
@@ -305,7 +318,7 @@ export default function DashboardPage() {
             description="Add your first transaction to start tracking."
           />
         ) : (
-          <Card>
+          <Card className="py-0 gap-0">
             <CardContent className="p-0">
               <div className="divide-y">
                 {transactions.map((tx) => {
