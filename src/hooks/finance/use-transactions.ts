@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { Transaction, TransactionFormData } from "@/types/transaction";
+import type { Transaction, TransactionFormData } from "@/types/finance/transaction";
 import type { TransactionFilters, PaginatedResponse } from "@/types/api";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());

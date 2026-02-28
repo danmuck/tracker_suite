@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import type { Category } from "@/types/category";
+import type { Category } from "@/types/finance/category";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 

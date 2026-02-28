@@ -13,10 +13,10 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CurrencyDisplay } from "@/components/currency-display";
+import { CurrencyDisplay } from "@/components/finance/currency-display";
 import { cn } from "@/lib/utils";
-import type { ProjectionAlert, ProjectionAlertReason } from "@/types/projection";
-import type { Account } from "@/types/account";
+import type { ProjectionAlert, ProjectionAlertReason } from "@/types/finance/projection";
+import type { Account } from "@/types/finance/account";
 
 const REASON_META: Record<
   ProjectionAlertReason,

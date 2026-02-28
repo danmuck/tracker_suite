@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { getIcon } from "@/lib/icon-map";
-import type { Category } from "@/types/category";
+import type { Category } from "@/types/finance/category";
 
 interface CategoryBadgeProps {
   categoryName: string;

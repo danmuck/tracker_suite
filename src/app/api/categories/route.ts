@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import Category from "@/models/Category";
-import { categorySchema } from "@/lib/validators";
-import { DEFAULT_CATEGORIES } from "@/lib/constants";
+import Category from "@/models/finance/Category";
+import { categorySchema } from "@/lib/finance/validators";
+import { DEFAULT_CATEGORIES } from "@/lib/finance/constants";
 
 async function seedDefaults() {
   const count = await Category.countDocuments();

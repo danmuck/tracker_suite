@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR from "swr";
-import type { SummaryResult, SummaryView } from "@/types/summary";
-import { formatDateISO } from "@/lib/formatters";
+import type { SummaryResult, SummaryView } from "@/types/finance/summary";
+import { formatDateISO } from "@/lib/finance/formatters";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 

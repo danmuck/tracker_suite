@@ -11,7 +11,7 @@ import {
   getDaysInMonth,
   getDay,
 } from "date-fns";
-import type { RecurrenceRule } from "@/types/transaction";
+import type { RecurrenceRule } from "@/types/finance/transaction";
 
 function clampDayOfMonth(date: Date, targetDay: number): Date {
   const maxDay = getDaysInMonth(date);

@@ -45,19 +45,19 @@ import { PageHeader } from "@/components/page-header";
 import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-import { TransactionForm } from "@/components/transaction-form";
-import { CurrencyDisplay } from "@/components/currency-display";
-import { CategoryBadge } from "@/components/category-badge";
+import { TransactionForm } from "@/components/finance/transaction-form";
+import { CurrencyDisplay } from "@/components/finance/currency-display";
+import { CategoryBadge } from "@/components/finance/category-badge";
 import {
   useTransactions,
   createTransaction,
   updateTransaction,
   deleteTransaction,
-} from "@/hooks/use-transactions";
-import { useAccounts } from "@/hooks/use-accounts";
-import { useCategories } from "@/hooks/use-categories";
-import { formatDateShort, formatCurrency } from "@/lib/formatters";
-import type { Transaction, TransactionFormData } from "@/types/transaction";
+} from "@/hooks/finance/use-transactions";
+import { useAccounts } from "@/hooks/finance/use-accounts";
+import { useCategories } from "@/hooks/finance/use-categories";
+import { formatDateShort, formatCurrency } from "@/lib/finance/formatters";
+import type { Transaction, TransactionFormData } from "@/types/finance/transaction";
 import type { TransactionFilters } from "@/types/api";
 
 const LIMIT_OPTIONS = [10, 25, 50, 100];
@@ -106,7 +106,7 @@ function TransactionsContent() {
     if (recurringOnly) p.set("recurring", "true");
     if (page !== 1) p.set("page", String(page));
     if (limit !== 25) p.set("limit", String(limit));
-    router.replace(`/transactions?${p.toString()}`, { scroll: false });
+    router.replace(`/finance/transactions?${p.toString()}`, { scroll: false });
   }, [debouncedSearch, accountFilter, typeFilter, categoryFilter, recurringOnly, page, limit, router]);
 
   const sortCol = sorting[0]?.id ?? "date";

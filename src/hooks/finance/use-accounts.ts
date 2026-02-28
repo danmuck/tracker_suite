@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR from "swr";
-import type { Account, AccountFormData } from "@/types/account";
-import { dollarsToCents } from "@/lib/formatters";
+import type { Account, AccountFormData } from "@/types/finance/account";
+import { dollarsToCents } from "@/lib/finance/formatters";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 

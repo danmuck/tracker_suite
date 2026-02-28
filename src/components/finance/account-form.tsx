@@ -14,8 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useAccounts } from "@/hooks/use-accounts";
-import type { AccountFormData } from "@/types/account";
+import { useAccounts } from "@/hooks/finance/use-accounts";
+import type { AccountFormData } from "@/types/finance/account";
 
 interface AccountFormProps {
   defaultValues?: Partial<AccountFormData>;

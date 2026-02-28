@@ -5,9 +5,9 @@ import {
   addDays,
 } from "date-fns";
 import { expandRecurrence } from "./recurrence";
-import type { ProjectedTransaction, ProjectionDay, ProjectionResult, ProjectionAlert, Granularity } from "@/types/projection";
-import type { IAccount } from "@/models/Account";
-import type { ITransaction } from "@/models/Transaction";
+import type { ProjectedTransaction, ProjectionDay, ProjectionResult, ProjectionAlert, Granularity } from "@/types/finance/projection";
+import type { IAccount } from "@/models/finance/Account";
+import type { ITransaction } from "@/models/finance/Transaction";
 
 /** Extract UTC date string (yyyy-MM-dd) from any date, avoiding timezone shifts */
 function toUTCDateStr(d: Date | string): string {

@@ -32,12 +32,12 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid } from "recharts";
 import { PageHeader } from "@/components/page-header";
 import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
-import { CurrencyDisplay } from "@/components/currency-display";
-import { ProjectionAlerts } from "@/components/projection-alerts";
-import { useProjections } from "@/hooks/use-projections";
-import { useAccounts } from "@/hooks/use-accounts";
-import { centsToDollars } from "@/lib/formatters";
-import type { Granularity } from "@/types/projection";
+import { CurrencyDisplay } from "@/components/finance/currency-display";
+import { ProjectionAlerts } from "@/components/finance/projection-alerts";
+import { useProjections } from "@/hooks/finance/use-projections";
+import { useAccounts } from "@/hooks/finance/use-accounts";
+import { centsToDollars } from "@/lib/finance/formatters";
+import type { Granularity } from "@/types/finance/projection";
 
 const CHART_COLORS = [
   "var(--chart-1)",

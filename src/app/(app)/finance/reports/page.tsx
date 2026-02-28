@@ -48,12 +48,12 @@ import {
 import { PageHeader } from "@/components/page-header";
 import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
-import { CurrencyDisplay } from "@/components/currency-display";
-import { useSummary } from "@/hooks/use-summary";
-import { useAccounts } from "@/hooks/use-accounts";
-import { useCategories } from "@/hooks/use-categories";
-import { formatCurrency, centsToDollars, formatDateShort } from "@/lib/formatters";
-import type { SummaryView } from "@/types/summary";
+import { CurrencyDisplay } from "@/components/finance/currency-display";
+import { useSummary } from "@/hooks/finance/use-summary";
+import { useAccounts } from "@/hooks/finance/use-accounts";
+import { useCategories } from "@/hooks/finance/use-categories";
+import { formatCurrency, centsToDollars, formatDateShort } from "@/lib/finance/formatters";
+import type { SummaryView } from "@/types/finance/summary";
 
 function getPeriodLabel(view: SummaryView, date: Date): string {
   if (view === "weekly") return `Week of ${format(date, "MMM d, yyyy")}`;

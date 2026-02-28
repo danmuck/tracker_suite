@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import Account from "@/models/Account";
-import Transaction from "@/models/Transaction";
-import { buildProjection } from "@/lib/projection-engine";
+import Account from "@/models/finance/Account";
+import Transaction from "@/models/finance/Transaction";
+import { buildProjection } from "@/lib/finance/projection-engine";
 import {
   startOfWeek,
   endOfWeek,
@@ -12,7 +12,7 @@ import {
   endOfYear,
   format,
 } from "date-fns";
-import type { SummaryView, SummaryResult, DaySummary, MonthSummary } from "@/types/summary";
+import type { SummaryView, SummaryResult, DaySummary, MonthSummary } from "@/types/finance/summary";
 
 export async function GET(request: NextRequest) {
   try {

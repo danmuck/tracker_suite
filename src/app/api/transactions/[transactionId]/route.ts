@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
-import Transaction from "@/models/Transaction";
-import Account from "@/models/Account";
-import { transactionSchema } from "@/lib/validators";
+import Transaction from "@/models/finance/Transaction";
+import Account from "@/models/finance/Account";
+import { transactionSchema } from "@/lib/finance/validators";
 
 export async function GET(
   request: NextRequest,

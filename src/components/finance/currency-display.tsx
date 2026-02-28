@@ -1,4 +1,4 @@
-import { formatCurrency } from "@/lib/formatters";
+import { formatCurrency } from "@/lib/finance/formatters";
 import { cn } from "@/lib/utils";
 
 interface CurrencyDisplayProps {

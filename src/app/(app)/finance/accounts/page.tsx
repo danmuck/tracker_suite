@@ -13,15 +13,15 @@ import { PageHeader } from "@/components/page-header";
 import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
 import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
-import { AccountForm } from "@/components/account-form";
-import { CurrencyDisplay } from "@/components/currency-display";
+import { AccountForm } from "@/components/finance/account-form";
+import { CurrencyDisplay } from "@/components/finance/currency-display";
 import {
   useAccounts,
   createAccount,
   updateAccount,
   deleteAccount,
-} from "@/hooks/use-accounts";
-import type { Account, AccountFormData } from "@/types/account";
+} from "@/hooks/finance/use-accounts";
+import type { Account, AccountFormData } from "@/types/finance/account";
 
 const typeLabels: Record<string, string> = {
   bank: "Bank",

@@ -1,8 +1,8 @@
 "use client";
 
 import useSWR from "swr";
-import type { ProjectionResult, Granularity } from "@/types/projection";
-import { formatDateISO } from "@/lib/formatters";
+import type { ProjectionResult, Granularity } from "@/types/finance/projection";
+import { formatDateISO } from "@/lib/finance/formatters";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 

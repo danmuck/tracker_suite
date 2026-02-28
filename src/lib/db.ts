@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Account from "@/models/Account";
+import { runSeeds } from "@/lib/finance/seed";
 
 const MONGODB_URI = process.env.MONGODB_URI!;
 
@@ -35,11 +35,7 @@ export async function connectDB() {
 
   if (!cached.seeded) {
     cached.seeded = true;
-    await Account.findOneAndUpdate(
-      { isCash: true },
-      { $setOnInsert: { name: "Cash", type: "bank", isCash: true, balance: 0, currency: "USD" } },
-      { upsert: true, setDefaultsOnInsert: true }
-    );
+    await runSeeds();
   }
 
   return cached.conn;

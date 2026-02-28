@@ -23,11 +23,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CategoryBadge } from "@/components/category-badge";
-import { useAccounts } from "@/hooks/use-accounts";
-import { useCategories } from "@/hooks/use-categories";
-import { formatDateISO, parseDate } from "@/lib/formatters";
-import type { TransactionFormData, RecurrenceFrequency } from "@/types/transaction";
+import { CategoryBadge } from "@/components/finance/category-badge";
+import { useAccounts } from "@/hooks/finance/use-accounts";
+import { useCategories } from "@/hooks/finance/use-categories";
+import { formatDateISO, parseDate } from "@/lib/finance/formatters";
+import type { TransactionFormData, RecurrenceFrequency } from "@/types/finance/transaction";
 
 interface TransactionFormProps {
   defaultValues?: Partial<TransactionFormData>;
