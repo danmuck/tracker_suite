@@ -25,6 +25,7 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LinksNavItems } from "@/components/links/links-nav-items";
 import { modules, globalNavItems } from "@/lib/modules";
 
 export function AppSidebar() {
@@ -85,24 +86,28 @@ export function AppSidebar() {
                 </SidebarGroupLabel>
                 <CollapsibleContent>
                   <SidebarMenu>
-                    <SidebarMenuSub>
-                      {mod.navItems.map(({ href, label, icon: Icon }) => {
-                        const isActive =
-                          href === mod.basePath
-                            ? pathname === mod.basePath
-                            : pathname.startsWith(href);
-                        return (
-                          <SidebarMenuSubItem key={href}>
-                            <SidebarMenuSubButton asChild isActive={isActive}>
-                              <Link href={href}>
-                                <Icon className="h-4 w-4" />
-                                <span>{label}</span>
-                              </Link>
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        );
-                      })}
-                    </SidebarMenuSub>
+                    {mod.id === "links" ? (
+                      <LinksNavItems />
+                    ) : (
+                      <SidebarMenuSub>
+                        {mod.navItems.map(({ href, label, icon: Icon }) => {
+                          const isActive =
+                            href === mod.basePath
+                              ? pathname === mod.basePath
+                              : pathname.startsWith(href);
+                          return (
+                            <SidebarMenuSubItem key={href}>
+                              <SidebarMenuSubButton asChild isActive={isActive}>
+                                <Link href={href}>
+                                  <Icon className="h-4 w-4" />
+                                  <span>{label}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          );
+                        })}
+                      </SidebarMenuSub>
+                    )}
                   </SidebarMenu>
                 </CollapsibleContent>
               </SidebarGroup>

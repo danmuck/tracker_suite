@@ -5,6 +5,8 @@ import {
   TrendingUp,
   BarChart3,
   DollarSign,
+  FolderKanban,
+  Link2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -37,6 +39,24 @@ export const modules: ModuleConfig[] = [
       { href: "/finance/projections", label: "Projections", icon: TrendingUp },
       { href: "/finance/reports", label: "Reports", icon: BarChart3 },
     ],
+  },
+  {
+    id: "projects",
+    label: "Projects",
+    icon: FolderKanban,
+    basePath: "/projects",
+    accentColor: "var(--chart-3)",
+    navItems: [
+      { href: "/projects", label: "Projects", icon: FolderKanban },
+    ],
+  },
+  {
+    id: "links",
+    label: "Links",
+    icon: Link2,
+    basePath: "/links",
+    accentColor: "var(--chart-4)",
+    navItems: [],
   },
 ];
 

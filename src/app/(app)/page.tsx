@@ -9,6 +9,8 @@ import { CurrencyDisplay } from "@/components/finance/currency-display";
 import { LoadingState } from "@/components/loading-state";
 import { useAccounts } from "@/hooks/finance/use-accounts";
 import { useSummary } from "@/hooks/finance/use-summary";
+import { useProjects } from "@/hooks/projects/use-projects";
+import { useLinkGroups } from "@/hooks/links/use-link-groups";
 import { modules } from "@/lib/modules";
 
 export default function GlobalDashboardPage() {
@@ -42,6 +44,8 @@ export default function GlobalDashboardPage() {
 
 function ModuleCard({ moduleId }: { moduleId: string }) {
   if (moduleId === "finance") return <FinanceModuleCard />;
+  if (moduleId === "projects") return <ProjectsModuleCard />;
+  if (moduleId === "links") return <LinksModuleCard />;
   return null;
 }
 
@@ -104,6 +108,111 @@ function FinanceModuleCard() {
                   />
                 </span>
               )}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LinksModuleCard() {
+  const { groups, isLoading } = useLinkGroups();
+
+  const totalLinks = groups.reduce((sum, g) => sum + (g.linkCount ?? 0), 0);
+
+  const mod = modules.find((m) => m.id === "links")!;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-md text-white"
+              style={{ backgroundColor: mod.accentColor }}
+            >
+              <mod.icon className="h-4 w-4" />
+            </div>
+            <CardTitle className="text-base">{mod.label}</CardTitle>
+          </div>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/links">
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <LoadingState variant="cards" />
+        ) : (
+          <>
+            <div>
+              <p className="text-xs text-muted-foreground">Groups</p>
+              <p className="text-xl font-bold">{groups.length}</p>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {totalLinks} link{totalLinks !== 1 ? "s" : ""} total
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ProjectsModuleCard() {
+  const { projects, isLoading } = useProjects();
+
+  const activeProjects = projects.filter((p) => p.status === "active");
+  const totalTasks = projects.reduce(
+    (sum, p) => sum + (p.taskCounts?.total ?? 0),
+    0
+  );
+  const openTasks = projects.reduce(
+    (sum, p) => sum + (p.taskCounts?.total ?? 0) - (p.taskCounts?.done ?? 0),
+    0
+  );
+
+  const mod = modules.find((m) => m.id === "projects")!;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-md text-white"
+              style={{ backgroundColor: mod.accentColor }}
+            >
+              <mod.icon className="h-4 w-4" />
+            </div>
+            <CardTitle className="text-base">{mod.label}</CardTitle>
+          </div>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/projects">
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {isLoading ? (
+          <LoadingState variant="cards" />
+        ) : (
+          <>
+            <div>
+              <p className="text-xs text-muted-foreground">Active Projects</p>
+              <p className="text-xl font-bold">{activeProjects.length}</p>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">
+                {projects.length} project{projects.length !== 1 ? "s" : ""} total
+              </span>
+              <span className="text-muted-foreground">
+                {openTasks} open task{openTasks !== 1 ? "s" : ""}
+              </span>
             </div>
           </>
         )}

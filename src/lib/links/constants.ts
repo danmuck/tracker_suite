@@ -1,0 +1,18 @@
+export const LINK_GROUP_ICONS = [
+  "Globe",
+  "Server",
+  "Gamepad2",
+  "Monitor",
+  "Code",
+  "BookOpen",
+  "Wrench",
+  "Tv",
+  "Cpu",
+  "Database",
+  "Link2",
+  "Music",
+  "Film",
+  "ShoppingCart",
+  "Heart",
+  "Star",
+] as const;
