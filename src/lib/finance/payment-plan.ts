@@ -182,6 +182,9 @@ export async function setupPayments(
   input: { fromAccountId: string; dayOfMonth: number; startDate: string; firstAmount: number }
 ) {
   const account = await loadAccount(accountId);
+  if (await loadPaymentTx(account)) {
+    throw new PaymentPlanError("Payments are already set up for this account — unlink them first", 409);
+  }
   const from = await Account.findById(input.fromAccountId);
   if (!from || from.type !== "bank" || from.isArchived) {
     throw new PaymentPlanError("Payments must come from an active bank account", 400);
