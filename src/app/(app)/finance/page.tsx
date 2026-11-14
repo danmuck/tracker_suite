@@ -22,7 +22,8 @@ import { useTransactions } from "@/hooks/finance/use-transactions";
 import { useSummary } from "@/hooks/finance/use-summary";
 import { useProjections } from "@/hooks/finance/use-projections";
 import { useCategories } from "@/hooks/finance/use-categories";
-import { centsToDollars, formatDate, formatDateShort } from "@/lib/finance/formatters";
+import { centsToDollars, formatDate } from "@/lib/finance/formatters";
+import { monthWeekBuckets } from "@/lib/finance/summary-utils";
 import { computeAccountTotals } from "@/lib/finance/account-utils";
 import { cn } from "@/lib/utils";
 
@@ -77,11 +78,13 @@ export default function FinanceDashboardPage() {
       income: centsToDollars(m.totalCredits),
       expenses: centsToDollars(m.totalDebits),
     })) ??
-    summary?.days?.slice(-14).map((d) => ({
-      label: formatDateShort(d.date),
-      income: centsToDollars(d.totalCredits),
-      expenses: centsToDollars(d.totalDebits),
-    })) ??
+    // Whole month, grouped into weeks so it fits the small card
+    (summary?.days &&
+      monthWeekBuckets(summary.days).map((w) => ({
+        label: w.label,
+        income: centsToDollars(w.totalCredits),
+        expenses: centsToDollars(w.totalDebits),
+      }))) ??
     [];
 
   return (
@@ -279,12 +282,13 @@ export default function FinanceDashboardPage() {
                     config={summaryChartConfig}
                     className="h-[120px] w-full mt-2"
                   >
-                    <BarChart data={summaryBarData.slice(-6)} barSize={8}>
+                    <BarChart data={summaryBarData} barSize={8}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis
                         dataKey="label"
                         tick={{ fontSize: 9 }}
                         tickLine={false}
+                        interval={0}
                       />
                       <Bar dataKey="income" fill="var(--chart-2)" radius={[2, 2, 0, 0]} />
                       <Bar dataKey="expenses" fill="var(--chart-1)" radius={[2, 2, 0, 0]} />
