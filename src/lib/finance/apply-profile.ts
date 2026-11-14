@@ -58,12 +58,20 @@ async function writeSchedule(id: string, kind: "Salary" | "Rent", build: (freque
   const tx = await Transaction.findById(id);
   if (!tx) throw new LinkedTransactionMissingError(kind);
   const schedule = build(tx.recurrenceRule?.frequency ?? "biweekly");
-  if (schedule.length === 0) return false;
+  if (schedule.length === 0) {
+    await clearSchedule(id);
+    return false;
+  }
   const today = localTodayStr();
   tx.amountSchedule = schedule.map((e) => ({ effectiveDate: new Date(e.effectiveDate), amount: e.amount }));
   tx.amount = amountOn(schedule[0].amount, schedule, today);
   await tx.save();
   return true;
+}
+
+/** Stop the Datasheet managing a transaction: its plain `amount` applies again. */
+async function clearSchedule(id: string | null | undefined) {
+  if (id) await Transaction.updateOne({ _id: id }, { $unset: { amountSchedule: 1 } });
 }
 
 /**
@@ -79,7 +87,12 @@ export async function saveProfileAndApply(p: FinanceProfileData) {
     throw new LinkedTransactionMissingError("Rent");
   }
 
+  const previous = await loadProfile();
   await FinanceProfile.findOneAndUpdate({}, profileDataToDoc(p), { upsert: true, runValidators: true });
+
+  // Transactions that were unlinked or swapped out keep no stale schedule
+  if (previous.salaryTransactionId !== (p.salaryTransactionId || null)) await clearSchedule(previous.salaryTransactionId);
+  if (previous.rentTransactionId !== (p.rentTransactionId || null)) await clearSchedule(previous.rentTransactionId);
 
   const updated = { salary: false, rent: false };
   if (p.salaryTransactionId) {
