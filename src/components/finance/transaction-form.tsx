@@ -83,7 +83,14 @@ export function TransactionForm({
   const [notes, setNotes] = useState(defaultValues?.notes ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const { accounts } = useAccounts();
+  // Archived accounts are hidden from pickers, except the ones this transaction already uses
+  const { accounts: allAccounts } = useAccounts(undefined, { includeArchived: true });
+  const accounts = allAccounts.filter(
+    (a) =>
+      !a.isArchived ||
+      a._id === defaultValues?.accountId ||
+      a._id === defaultValues?.toAccountId
+  );
   const { categories } = useCategories();
 
   function toggleCategory(name: string) {

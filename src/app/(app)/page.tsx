@@ -12,6 +12,7 @@ import { useSummary } from "@/hooks/finance/use-summary";
 import { useProjects } from "@/hooks/projects/use-projects";
 import { useLinkGroups } from "@/hooks/links/use-link-groups";
 import { modules } from "@/lib/modules";
+import { computeAccountTotals } from "@/lib/finance/account-utils";
 
 export default function GlobalDashboardPage() {
   return (
@@ -53,10 +54,7 @@ function FinanceModuleCard() {
   const { accounts, isLoading: accountsLoading } = useAccounts();
   const { summary, isLoading: summaryLoading } = useSummary("monthly", new Date());
 
-  const netWorth = accounts.reduce((total, account) => {
-    if (account.type === "bank") return total + account.balance;
-    return total - account.balance;
-  }, 0);
+  const { netWorth } = computeAccountTotals(accounts);
 
   const mod = modules.find((m) => m.id === "finance")!;
 

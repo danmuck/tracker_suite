@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
-import { accountSchema } from "@/lib/finance/validators";
+import { accountSchema, accountArchiveSchema } from "@/lib/finance/validators";
 
 // GET /api/accounts/:accountId — fetch a single account
 export async function GET(
@@ -91,6 +91,56 @@ export async function PUT(
     return NextResponse.json(updatedAccount, { status: 200 });
   } catch (error) {
     console.error(`PUT /api/accounts/[accountId] error:`, error);
+    return NextResponse.json(
+      { error: "Failed to update account" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH /api/accounts/:accountId — archive or unarchive an account
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ accountId: string }> }
+) {
+  try {
+    await connectDB();
+
+    const { accountId } = await params;
+
+    const account = await Account.findById(accountId);
+    if (!account) {
+      return NextResponse.json(
+        { error: "Account not found" },
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json();
+    const parsed = accountArchiveSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: "Validation failed", details: parsed.error.flatten() },
+        { status: 400 }
+      );
+    }
+
+    if (account.isCash && parsed.data.isArchived) {
+      return NextResponse.json(
+        { error: "The Cash account cannot be archived" },
+        { status: 403 }
+      );
+    }
+
+    const updatedAccount = await Account.findByIdAndUpdate(
+      accountId,
+      { isArchived: parsed.data.isArchived },
+      { new: true }
+    );
+
+    return NextResponse.json(updatedAccount, { status: 200 });
+  } catch (error) {
+    console.error(`PATCH /api/accounts/[accountId] error:`, error);
     return NextResponse.json(
       { error: "Failed to update account" },
       { status: 500 }

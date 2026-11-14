@@ -11,6 +11,10 @@ export const accountSchema = z.object({
   notes: z.string().max(500).optional(),
 });
 
+export const accountArchiveSchema = z.object({
+  isArchived: z.boolean(),
+});
+
 export const recurrenceRuleSchema = z.object({
   frequency: z.enum(["daily", "weekly", "biweekly", "monthly", "semi_monthly", "annually", "custom"]),
   interval: z.number().int().min(1).optional(),

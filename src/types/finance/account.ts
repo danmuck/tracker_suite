@@ -11,6 +11,7 @@ export interface Account {
   currency: string;
   notes?: string;
   isCash?: boolean;
+  isArchived?: boolean;
   createdAt: string;
   updatedAt: string;
 }

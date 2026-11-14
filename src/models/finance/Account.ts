@@ -10,6 +10,7 @@ export interface IAccount extends Document {
   currency: string;
   notes?: string;
   isCash?: boolean;
+  isArchived?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -25,6 +26,7 @@ const AccountSchema = new Schema<IAccount>(
     currency: { type: String, default: "USD" },
     notes: { type: String, trim: true },
     isCash: { type: Boolean, default: false },
+    isArchived: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

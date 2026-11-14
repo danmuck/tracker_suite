@@ -125,10 +125,16 @@ function TransactionsContent() {
   };
 
   const { transactions, pagination, isLoading, mutate } = useTransactions(filters);
-  const { accounts } = useAccounts();
+  // Include archived accounts so older transactions still resolve their account names
+  const { accounts: allAccounts } = useAccounts(undefined, { includeArchived: true });
   const { categories } = useCategories();
 
-  const accountMap = Object.fromEntries(accounts.map((a) => [a._id, a]));
+  const accountMap = Object.fromEntries(allAccounts.map((a) => [a._id, a]));
+  const accounts = allAccounts.filter((a) => !a.isArchived);
+  // Keep a selected archived account in the filter dropdown so its value still renders
+  const filterAccounts = allAccounts.filter(
+    (a) => !a.isArchived || a._id === accountFilter
+  );
 
   // Total available funds: bank balances + available credit on CCs
   const totalAvailable = accounts.reduce((sum, a) => {
@@ -391,9 +397,10 @@ function TransactionsContent() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="_all">All accounts</SelectItem>
-            {accounts.map((a) => (
+            {filterAccounts.map((a) => (
               <SelectItem key={a._id} value={a._id}>
                 {a.name}
+                {a.isArchived ? " (archived)" : ""}
               </SelectItem>
             ))}
           </SelectContent>

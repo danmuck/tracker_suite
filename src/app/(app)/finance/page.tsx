@@ -23,6 +23,7 @@ import { useSummary } from "@/hooks/finance/use-summary";
 import { useProjections } from "@/hooks/finance/use-projections";
 import { useCategories } from "@/hooks/finance/use-categories";
 import { centsToDollars, formatDateShort } from "@/lib/finance/formatters";
+import { computeAccountTotals } from "@/lib/finance/account-utils";
 import { cn } from "@/lib/utils";
 
 const summaryChartConfig: ChartConfig = {
@@ -31,7 +32,12 @@ const summaryChartConfig: ChartConfig = {
 };
 
 export default function FinanceDashboardPage() {
-  const { accounts, isLoading: accountsLoading } = useAccounts();
+  // Fetch archived accounts too so recent transactions can still show their names;
+  // totals and the account list only use active accounts.
+  const { accounts: allAccounts, isLoading: accountsLoading } = useAccounts(undefined, {
+    includeArchived: true,
+  });
+  const accounts = useMemo(() => allAccounts.filter((a) => !a.isArchived), [allAccounts]);
   const todayEnd = useMemo(() => endOfDay(new Date()).toISOString(), []);
   const { transactions, isLoading: txLoading } = useTransactions({
     limit: 10,
@@ -48,10 +54,14 @@ export default function FinanceDashboardPage() {
   const { projection } = useProjections(today, addDays(today, 30), "daily");
 
   // Net worth: bank balances minus credit card balances and debt
-  const netWorth = accounts.reduce((total, account) => {
-    if (account.type === "bank") return total + account.balance;
-    return total - account.balance;
-  }, 0);
+  const {
+    assets,
+    liabilities,
+    netWorth,
+    creditBalance: totalCreditBalance,
+    creditLimit: totalCreditLimit,
+    creditUtilization: totalCreditUtilization,
+  } = computeAccountTotals(accounts);
 
   const bankAccounts = accounts.filter((a) => a.type === "bank");
   const creditAccounts = accounts.filter((a) => a.type === "credit_card");
@@ -60,10 +70,6 @@ export default function FinanceDashboardPage() {
   // Sort accounts in order: banks -> credit -> debts
   const sortedAccounts = [...bankAccounts, ...creditAccounts, ...debtAccounts];
 
-  const totalCreditBalance = creditAccounts.reduce((s, a) => s + a.balance, 0);
-  const totalCreditLimit = creditAccounts.reduce((s, a) => s + (a.creditLimit ?? 0), 0);
-  const totalCreditUtilization =
-    totalCreditLimit > 0 ? (totalCreditBalance / totalCreditLimit) * 100 : null;
 
   const summaryBarData =
     summary?.months?.map((m) => ({
@@ -103,16 +109,13 @@ export default function FinanceDashboardPage() {
             <span>
               Assets:{" "}
               {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-                bankAccounts.reduce((s, a) => s + a.balance, 0) / 100
+                assets / 100
               )}
             </span>
             <span>
               Liabilities:{" "}
               {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(
-                [...creditAccounts, ...debtAccounts].reduce(
-                  (s, a) => s + a.balance,
-                  0
-                ) / 100
+                liabilities / 100
               )}
             </span>
           </div>
@@ -322,7 +325,7 @@ export default function FinanceDashboardPage() {
             <CardContent className="p-0">
               <div className="divide-y">
                 {transactions.map((tx) => {
-                  const account = accounts.find((a) => a._id === tx.accountId);
+                  const account = allAccounts.find((a) => a._id === tx.accountId);
                   const cents = tx.type === "credit" ? tx.amount : -tx.amount;
                   return (
                     <div

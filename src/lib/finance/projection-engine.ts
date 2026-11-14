@@ -37,9 +37,11 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
   const start = fromDateStr(startStr);
   const end = fromDateStr(endStr);
 
+  // Archived accounts are excluded from totals unless explicitly requested.
+  // They still take part in balance tracking below so transfers stay consistent.
   const targetAccounts = filterAccountId
     ? accounts.filter((a) => a._id.toString() === filterAccountId)
-    : accounts;
+    : accounts.filter((a) => !a.isArchived);
 
   // Separate recurring vs one-time
   const oneTimeTransactions = transactions.filter((t) => !t.isRecurring);

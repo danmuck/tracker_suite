@@ -6,9 +6,18 @@ import { dollarsToCents } from "@/lib/finance/formatters";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useAccounts(type?: string) {
-  const params = type ? `?type=${type}` : "";
-  const { data, error, isLoading, mutate } = useSWR(`/api/accounts${params}`, fetcher);
+export function useAccounts(
+  type?: string,
+  options: { includeArchived?: boolean } = {}
+) {
+  const search = new URLSearchParams();
+  if (type) search.set("type", type);
+  if (options.includeArchived) search.set("includeArchived", "true");
+  const qs = search.toString();
+  const { data, error, isLoading, mutate } = useSWR(
+    `/api/accounts${qs ? `?${qs}` : ""}`,
+    fetcher
+  );
   return {
     accounts: (data || []) as Account[],
     isLoading,
@@ -69,6 +78,19 @@ export async function deleteAccount(id: string) {
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.error || "Failed to delete account");
+  }
+  return res.json();
+}
+
+export async function setAccountArchived(id: string, isArchived: boolean) {
+  const res = await fetch(`/api/accounts/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ isArchived }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || "Failed to update account");
   }
   return res.json();
 }

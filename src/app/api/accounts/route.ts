@@ -4,7 +4,7 @@ import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
 import { accountSchema } from "@/lib/finance/validators";
 
-// GET /api/accounts — list accounts, optional ?type= filter
+// GET /api/accounts — list accounts, optional ?type= and ?includeArchived=true filters
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
@@ -12,9 +12,14 @@ export async function GET(request: NextRequest) {
     const { searchParams } = request.nextUrl;
     const type = searchParams.get("type");
 
-    const filter: Record<string, string> = {};
+    const includeArchived = searchParams.get("includeArchived") === "true";
+
+    const filter: Record<string, unknown> = {};
     if (type) {
       filter.type = type;
+    }
+    if (!includeArchived) {
+      filter.isArchived = { $ne: true };
     }
 
     // Apply any pending transactions whose date has arrived
