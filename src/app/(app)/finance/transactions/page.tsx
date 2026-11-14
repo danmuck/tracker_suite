@@ -56,7 +56,7 @@ import {
 } from "@/hooks/finance/use-transactions";
 import { useAccounts } from "@/hooks/finance/use-accounts";
 import { useCategories } from "@/hooks/finance/use-categories";
-import { formatDateShort, formatCurrency } from "@/lib/finance/formatters";
+import { formatDate, formatCurrency } from "@/lib/finance/formatters";
 import type { Transaction, TransactionFormData } from "@/types/finance/transaction";
 import type { TransactionFilters } from "@/types/api";
 
@@ -169,7 +169,7 @@ function TransactionsContent() {
       ),
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">
-          {formatDateShort(row.original.date)}
+          {formatDate(row.original.date)}
         </span>
       ),
     },

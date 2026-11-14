@@ -3,15 +3,16 @@ import { connectDB } from "@/lib/db";
 import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
 import { buildProjection } from "@/lib/finance/projection-engine";
+import { format } from "date-fns";
 import {
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  startOfYear,
-  endOfYear,
-  format,
-} from "date-fns";
+  fromDateStr,
+  localTodayStr,
+  monthBounds,
+  toDateStr,
+  weekBounds,
+  yearBounds,
+  type DateRangeStr,
+} from "@/lib/finance/dates";
 import type { SummaryView, SummaryResult, DaySummary, MonthSummary } from "@/types/finance/summary";
 
 export async function GET(request: NextRequest) {
@@ -20,31 +21,37 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
 
     const view = (searchParams.get("view") || "monthly") as SummaryView;
-    const dateStr = searchParams.get("date") || new Date().toISOString();
+    const dateParam = searchParams.get("date");
     const accountId = searchParams.get("accountId") || undefined;
-    const date = new Date(dateStr);
+    // Treat the param as a calendar date: "yyyy-MM-dd" is taken as-is, a full ISO string by its UTC day
+    const dateStr = !dateParam
+      ? localTodayStr()
+      : /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
+      ? dateParam
+      : toDateStr(dateParam);
 
-    let startDate: Date;
-    let endDate: Date;
+    let range: DateRangeStr;
     let periodLabel: string;
 
     switch (view) {
       case "weekly":
-        startDate = startOfWeek(date, { weekStartsOn: 0 });
-        endDate = endOfWeek(date, { weekStartsOn: 0 });
-        periodLabel = `Week of ${format(startDate, "MMM d, yyyy")}`;
+        range = weekBounds(dateStr);
+        periodLabel = `Week of ${format(fromDateStr(range.startStr), "MMM d, yyyy")}`;
         break;
       case "monthly":
-        startDate = startOfMonth(date);
-        endDate = endOfMonth(date);
-        periodLabel = format(date, "MMMM yyyy");
+        range = monthBounds(dateStr);
+        periodLabel = format(fromDateStr(dateStr), "MMMM yyyy");
         break;
       case "annual":
-        startDate = startOfYear(date);
-        endDate = endOfYear(date);
-        periodLabel = format(date, "yyyy");
+      default:
+        range = yearBounds(dateStr);
+        periodLabel = dateStr.slice(0, 4);
         break;
     }
+
+    // Stored dates are UTC midnight, so query with UTC-midnight bounds (inclusive)
+    const startDate = new Date(range.startStr);
+    const endDate = new Date(range.endStr);
 
     const accounts = await Account.find();
 
@@ -74,8 +81,8 @@ export async function GET(request: NextRequest) {
     const projection = buildProjection({
       accounts: accounts as any,
       transactions: transactions as any,
-      startDate,
-      endDate,
+      startDate: fromDateStr(range.startStr),
+      endDate: fromDateStr(range.endStr),
       granularity,
       filterAccountId: accountId,
     });
@@ -110,7 +117,7 @@ export async function GET(request: NextRequest) {
 
     if (view === "annual") {
       months = projection.timeline.map((entry) => {
-        const d = new Date(entry.date);
+        const d = fromDateStr(entry.date);
         const totalCredits = entry.transactions
           .filter((t) => t.type === "credit")
           .reduce((sum, t) => sum + t.amount, 0);
@@ -119,9 +126,9 @@ export async function GET(request: NextRequest) {
           .reduce((sum, t) => sum + t.amount, 0);
 
         return {
-          month: d.getMonth(),
-          year: d.getFullYear(),
-          label: format(d, "MMMM"),
+          month: Number(entry.date.slice(5, 7)) - 1,
+          year: Number(entry.date.slice(0, 4)),
+          label: format(d, "MMM yyyy"),
           totalCredits,
           totalDebits,
           transactionCount: entry.transactions.length,
@@ -145,8 +152,8 @@ export async function GET(request: NextRequest) {
     const result: SummaryResult = {
       view,
       period: {
-        start: format(startDate, "yyyy-MM-dd"),
-        end: format(endDate, "yyyy-MM-dd"),
+        start: range.startStr,
+        end: range.endStr,
         label: periodLabel,
       },
       days,

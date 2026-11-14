@@ -22,7 +22,7 @@ import { useTransactions } from "@/hooks/finance/use-transactions";
 import { useSummary } from "@/hooks/finance/use-summary";
 import { useProjections } from "@/hooks/finance/use-projections";
 import { useCategories } from "@/hooks/finance/use-categories";
-import { centsToDollars, formatDateShort } from "@/lib/finance/formatters";
+import { centsToDollars, formatDate, formatDateShort } from "@/lib/finance/formatters";
 import { computeAccountTotals } from "@/lib/finance/account-utils";
 import { cn } from "@/lib/utils";
 
@@ -338,7 +338,7 @@ export default function FinanceDashboardPage() {
                         </p>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-xs text-muted-foreground">
-                            {formatDateShort(tx.date)}
+                            {formatDate(tx.date)}
                           </span>
                           {account && (
                             <span className="text-xs text-muted-foreground">

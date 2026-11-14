@@ -3,15 +3,14 @@ import {
   addWeeks,
   addMonths,
   addYears,
-  isWithinInterval,
   isBefore,
   isAfter,
-  startOfDay,
   setDate,
   getDaysInMonth,
   getDay,
 } from "date-fns";
 import type { RecurrenceRule } from "@/types/finance/transaction";
+import { fromDateStr, normalizeDate } from "./dates";
 
 function clampDayOfMonth(date: Date, targetDay: number): Date {
   const maxDay = getDaysInMonth(date);
@@ -19,14 +18,25 @@ function clampDayOfMonth(date: Date, targetDay: number): Date {
   return setDate(date, day);
 }
 
+function snapToDayOfWeek(date: Date, dayOfWeek: number | undefined): Date {
+  if (dayOfWeek === undefined || dayOfWeek === null) return date;
+  return addDays(date, (dayOfWeek - getDay(date) + 7) % 7);
+}
+
+/**
+ * Expand a recurrence rule into occurrence dates within [windowStart, windowEnd].
+ * All dates are treated as calendar days and returned at noon UTC (see ./dates).
+ */
 export function expandRecurrence(
   rule: RecurrenceRule,
-  windowStart: Date,
-  windowEnd: Date
+  rawWindowStart: Date,
+  rawWindowEnd: Date
 ): Date[] {
   const dates: Date[] = [];
-  const start = startOfDay(new Date(rule.startDate));
-  const end = rule.endDate ? startOfDay(new Date(rule.endDate)) : null;
+  const windowStart = normalizeDate(rawWindowStart);
+  const windowEnd = normalizeDate(rawWindowEnd);
+  const start = normalizeDate(rule.startDate);
+  const end = rule.endDate ? normalizeDate(rule.endDate) : null;
   const interval = rule.interval || 1;
 
   if (end && isBefore(end, windowStart)) return dates;
@@ -47,11 +57,7 @@ export function expandRecurrence(
     }
 
     case "weekly": {
-      let current = start;
-      if (rule.dayOfWeek !== undefined) {
-        const diff = (rule.dayOfWeek - getDay(current) + 7) % 7;
-        current = addDays(current, diff);
-      }
+      let current = snapToDayOfWeek(start, rule.dayOfWeek);
       while (!isAfter(current, effectiveEnd)) {
         if (!isBefore(current, windowStart)) {
           dates.push(new Date(current));
@@ -62,7 +68,7 @@ export function expandRecurrence(
     }
 
     case "biweekly": {
-      let current = start;
+      let current = snapToDayOfWeek(start, rule.dayOfWeek);
       while (!isAfter(current, effectiveEnd)) {
         if (!isBefore(current, windowStart)) {
           dates.push(new Date(current));
@@ -88,7 +94,9 @@ export function expandRecurrence(
 
     case "semi_monthly": {
       const days = rule.daysOfMonth || [1, 15];
-      let current = new Date(start.getFullYear(), start.getMonth(), 1);
+      let current = fromDateStr(
+        `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`
+      );
       while (!isAfter(current, effectiveEnd)) {
         for (const day of days) {
           const d = clampDayOfMonth(current, day);

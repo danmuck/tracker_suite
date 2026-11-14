@@ -1,23 +1,16 @@
-import {
-  eachDayOfInterval,
-  eachWeekOfInterval,
-  eachMonthOfInterval,
-  addDays,
-} from "date-fns";
+import { addDays } from "date-fns";
 import { expandRecurrence } from "./recurrence";
+import {
+  toDateStr as toUTCDateStr,
+  fromDateStr,
+  localTodayStr,
+  monthBounds,
+  weekBounds,
+  type DateRangeStr,
+} from "./dates";
 import type { ProjectedTransaction, ProjectionDay, ProjectionResult, ProjectionAlert, Granularity } from "@/types/finance/projection";
 import type { IAccount } from "@/models/finance/Account";
 import type { ITransaction } from "@/models/finance/Transaction";
-
-/** Extract UTC date string (yyyy-MM-dd) from any date, avoiding timezone shifts */
-function toUTCDateStr(d: Date | string): string {
-  return new Date(d).toISOString().slice(0, 10);
-}
-
-/** Create a Date at noon UTC for a given yyyy-MM-dd string, safe for date-fns in any timezone */
-function fromDateStr(s: string): Date {
-  return new Date(s + "T12:00:00.000Z");
-}
 
 interface ProjectionInput {
   accounts: IAccount[];
@@ -30,7 +23,7 @@ interface ProjectionInput {
 
 export function buildProjection(input: ProjectionInput): ProjectionResult {
   const { accounts, transactions, startDate, endDate, granularity = "daily", filterAccountId } = input;
-  const todayStr = toUTCDateStr(new Date());
+  const todayStr = localTodayStr();
   const startStr = toUTCDateStr(startDate);
   const endStr = toUTCDateStr(endDate);
   // Noon-UTC dates for date-fns interval generation (avoids timezone boundary issues)
@@ -109,7 +102,10 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
     : allProjected;
 
   // Build day-by-day timeline
-  const days = eachDayOfInterval({ start, end });
+  // Step noon-UTC days (eachDayOfInterval snaps to local midnight, which is a
+  // different UTC calendar day in timezones east of UTC)
+  const days: Date[] = [];
+  for (let d = start; toUTCDateStr(d) <= endStr; d = addDays(d, 1)) days.push(d);
 
   // Track balances for ALL accounts (transfers need both source and dest)
   const currentBalances: Record<string, number> = {};
@@ -359,20 +355,17 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
   // Aggregate by granularity if not daily
   let aggregatedTimeline = timeline;
   if (granularity === "weekly" || granularity === "monthly") {
-    const intervals =
-      granularity === "weekly"
-        ? eachWeekOfInterval({ start, end }).map((weekStart) => ({
-            start: weekStart,
-            end: addDays(weekStart, 6),
-          }))
-        : eachMonthOfInterval({ start, end }).map((monthStart) => {
-            const nextMonth = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
-            return { start: monthStart, end: nextMonth };
-          });
+    // Bucket boundaries derived from calendar-date strings (timezone-independent)
+    const bucketOf = granularity === "weekly" ? weekBounds : monthBounds;
+    const intervals: DateRangeStr[] = [];
+    for (const d of timeline) {
+      const last = intervals[intervals.length - 1];
+      if (!last || d.date > last.endStr) intervals.push(bucketOf(d.date));
+    }
 
     aggregatedTimeline = intervals.map((interval) => {
-      const intervalStartStr = toUTCDateStr(interval.start);
-      const intervalEndStr = toUTCDateStr(interval.end);
+      const intervalStartStr = interval.startStr;
+      const intervalEndStr = interval.endStr;
       const periodDays = timeline.filter((d) => {
         return d.date >= intervalStartStr && d.date <= intervalEndStr;
       });

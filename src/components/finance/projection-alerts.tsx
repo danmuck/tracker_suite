@@ -93,7 +93,7 @@ export function ProjectionAlerts({
 
   function formatDateCompact(dateStr: string) {
     const d = new Date(dateStr + "T12:00:00.000Z");
-    return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   }
 
   if (compact) {

@@ -98,6 +98,7 @@ export default function ProjectionsPage() {
     })) ?? [];
 
   const summary = projection?.summary;
+  const spansYears = startDate.getFullYear() !== endDate.getFullYear();
 
   return (
     <div className="space-y-6">
@@ -308,9 +309,8 @@ export default function ProjectionsPage() {
                       dataKey="date"
                       tickFormatter={(v) => {
                         const d = new Date(v + "T12:00:00.000Z");
-                        return granularity === "monthly"
-                          ? format(d, "MMM yyyy")
-                          : format(d, "MMM d");
+                        if (granularity === "monthly") return format(d, "MMM yyyy");
+                        return spansYears ? format(d, "MMM d ''yy") : format(d, "MMM d");
                       }}
                       tick={{ fontSize: 11 }}
                     />
