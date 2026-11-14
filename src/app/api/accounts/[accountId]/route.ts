@@ -176,8 +176,10 @@ export async function DELETE(
       );
     }
 
-    // Delete all transactions associated with this account
-    await Transaction.deleteMany({ accountId });
+    // Delete all transactions associated with this account, including
+    // transfers into it (e.g. its payment plan), which would otherwise keep
+    // draining the source account in projections
+    await Transaction.deleteMany({ $or: [{ accountId }, { toAccountId: accountId }] });
 
     // Delete the account itself
     await Account.findByIdAndDelete(accountId);
