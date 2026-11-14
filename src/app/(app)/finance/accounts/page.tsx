@@ -47,6 +47,7 @@ import {
   sortAccounts,
 } from "@/lib/finance/account-utils";
 import { formatCurrency } from "@/lib/finance/formatters";
+import { DebtDetails } from "@/components/finance/debt/debt-details";
 import { ACCOUNT_TYPES } from "@/lib/finance/constants";
 import type { Account, AccountFormData, AccountType } from "@/types/finance/account";
 
@@ -56,6 +57,7 @@ export default function AccountsPage() {
   const [showArchived, setShowArchived] = useState(false);
   // Always fetch archived accounts so the page knows when a view holds only archived ones
   const { accounts, isLoading, mutate } = useAccounts(undefined, { includeArchived: true });
+  const activeBanks = accounts.filter((a) => a.type === "bank" && !a.isArchived);
   const [tab, setTab] = useState<TabValue>("all");
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Account | null>(null);
@@ -240,6 +242,10 @@ export default function AccountsPage() {
 
           {account.notes && (
             <p className="text-xs text-muted-foreground line-clamp-2">{account.notes}</p>
+          )}
+
+          {!account.isArchived && (account.type === "credit_card" || account.type === "debt") && (
+            <DebtDetails account={account} banks={activeBanks} />
           )}
         </CardContent>
       </Card>

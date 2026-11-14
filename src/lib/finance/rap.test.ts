@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { priorYearAgi, rapMonthlyPayment, rapScheduleEntries } from "./rap";
+import { paydaysInYear, priorYearAgi, rapMonthlyPayment, rapScheduleEntries } from "./rap";
 import { DEFAULT_PROFILE } from "./finance-profile";
 
 test("rapMonthlyPayment tiers, dependents and floor", () => {
@@ -44,4 +44,25 @@ test("rapScheduleEntries uses prior-year income at each recert date", () => {
     { effectiveDate: "2027-07-01", amount: rapMonthlyPayment(5_000_000, 0), source: "rap" },
     { effectiveDate: "2028-07-01", amount: rapMonthlyPayment(6_000_000, 0), source: "rap" },
   ]);
+});
+
+test("paydaysInYear follows the pay rhythm before the transaction's start date", () => {
+  const days = paydaysInYear(
+    { frequency: "biweekly", interval: 1, startDate: "2026-10-02", endDate: null, dayOfWeek: 5 },
+    2026
+  );
+  assert.equal(days.length, 26);
+  assert.equal(days[0], "2026-01-09");
+  assert.equal(days[25], "2026-12-25");
+  assert.ok(days.includes("2026-10-02"));
+});
+
+test("paydaysInYear respects the rule's end date", () => {
+  const days = paydaysInYear({ frequency: "biweekly", interval: 1, startDate: "2026-10-02", endDate: "2026-03-31", dayOfWeek: 5 }, 2026);
+  assert.equal(days[days.length - 1], "2026-03-20"); // Fridays on the Jan 9 rhythm: Mar 6, Mar 20, Apr 3
+});
+
+test("paydaysInYear for monthly and semi-monthly cover the whole year", () => {
+  assert.equal(paydaysInYear({ frequency: "monthly", interval: 1, startDate: "2026-10-15", endDate: null, dayOfMonth: 15 }, 2026).length, 12);
+  assert.equal(paydaysInYear({ frequency: "semi_monthly", startDate: "2026-10-01", endDate: null, daysOfMonth: [1, 15] }, 2026).length, 24);
 });

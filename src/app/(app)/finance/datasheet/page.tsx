@@ -8,6 +8,7 @@ import { PageHeader } from "@/components/page-header";
 import { LoadingState } from "@/components/loading-state";
 import { SettingsCard } from "@/components/finance/datasheet/settings-card";
 import { StepsCard } from "@/components/finance/datasheet/steps-card";
+import { DebtPaymentsCard } from "@/components/finance/datasheet/debt-payments-card";
 import { PaycheckBreakdown } from "@/components/finance/datasheet/paycheck-breakdown";
 import { SalaryTable } from "@/components/finance/datasheet/salary-table";
 import { RentMergeBanner } from "@/components/finance/datasheet/rent-merge-banner";
@@ -137,6 +138,8 @@ export default function DatasheetPage() {
       />
 
       <StepsCard profile={current} onChange={update} />
+
+      <DebtPaymentsCard />
 
       {actualGross !== null && (
         <PaycheckBreakdown

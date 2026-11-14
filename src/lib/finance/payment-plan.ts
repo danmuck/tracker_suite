@@ -1,12 +1,11 @@
 import Account, { type IAccount } from "@/models/finance/Account";
 import Transaction, { type ITransaction } from "@/models/finance/Transaction";
 import FinanceProfile from "@/models/finance/FinanceProfile";
-import { fromDateStr, localTodayStr, toDateStr } from "./dates";
+import { localTodayStr, toDateStr } from "./dates";
 import { amountOn } from "./amount-schedule";
 import { blendedApr } from "./interest";
 import { estimatePayoff, type PayoffEstimate } from "./payoff";
-import { expandRecurrence } from "./recurrence";
-import { priorYearAgi, rapScheduleEntries } from "./rap";
+import { paydaysInYear, priorYearAgi, rapScheduleEntries } from "./rap";
 import { mergeRapEntries, type ScheduleEntry } from "./rap-merge";
 import { getPeriodsPerYear } from "./tax-calculator";
 import { profileDocToData } from "./apply-profile";
@@ -64,20 +63,18 @@ async function agiLookup(): Promise<(year: number) => number | null> {
   const rule = salaryTx?.recurrenceRule;
   if (!rule) return () => null;
   const periods = getPeriodsPerYear(rule.frequency);
+  const ruleStr = {
+    frequency: rule.frequency,
+    interval: rule.interval,
+    startDate: rule.startDate.toISOString(),
+    endDate: rule.endDate?.toISOString() ?? null,
+    dayOfWeek: rule.dayOfWeek,
+    dayOfMonth: rule.dayOfMonth,
+    daysOfMonth: rule.daysOfMonth,
+  };
   return (year: number) => {
-    const paydays = expandRecurrence(
-      {
-        frequency: rule.frequency,
-        interval: rule.interval,
-        startDate: rule.startDate.toISOString(),
-        endDate: rule.endDate?.toISOString() ?? null,
-        dayOfWeek: rule.dayOfWeek,
-        dayOfMonth: rule.dayOfMonth,
-        daysOfMonth: rule.daysOfMonth,
-      },
-      fromDateStr(`${year}-01-01`),
-      fromDateStr(`${year}-12-31`)
-    ).map(toDateStr);
+    // Paydays on the salary's rhythm for the whole year; salary steps decide which count
+    const paydays = paydaysInYear(ruleStr, year);
     return priorYearAgi(profile, paydays, year, periods);
   };
 }
