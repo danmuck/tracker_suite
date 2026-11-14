@@ -1,6 +1,7 @@
 import { addDays } from "date-fns";
 import { expandRecurrence } from "./recurrence";
 import { amountOn } from "./amount-schedule";
+import { blendedApr, monthlyInterest, rapMonthEnd } from "./interest";
 import {
   toDateStr as toUTCDateStr,
   fromDateStr,
@@ -190,9 +191,28 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
       .map((a) => a._id.toString())
   );
 
+  // Interest-bearing liabilities: blended sub-loan rate, else the account APR
+  const interestAccounts = accounts
+    .filter((a) => a.type === "credit_card" || a.type === "debt")
+    .map((a) => ({
+      id: a._id.toString(),
+      apr: blendedApr(a.subLoans, a.apr),
+      rap: !!a.rap?.enabled,
+    }))
+    .filter((a) => a.apr > 0);
+  // Payments into each liability during the current calendar month (for RAP)
+  let paidThisMonth: Record<string, number> = {};
+  let currentMonth = "";
+  // Synthetic interest / RAP match lines (for summary totals)
+  const syntheticTx: ProjectedTransaction[] = [];
+
   for (const day of days) {
     const dateStr = toUTCDateStr(day);
     const dayTx = filteredProjected.filter((t) => t.date === dateStr);
+    if (dateStr.slice(0, 7) !== currentMonth) {
+      currentMonth = dateStr.slice(0, 7);
+      paidThisMonth = {};
+    }
 
     for (const t of dayTx) {
       const origAmount = t.amount;
@@ -263,6 +283,7 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
         if (runningBalances[t.toAccountId] !== undefined) {
           runningBalances[t.toAccountId] += isDebtDest ? -amount : amount;
         }
+        if (isDebtDest) paidThisMonth[t.toAccountId] = (paidThisMonth[t.toAccountId] ?? 0) + amount;
       } else {
         const accountId = t.accountId;
         if (runningBalances[accountId] === undefined) continue;
@@ -278,6 +299,7 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
             if (t.amount > owed) t.amount = owed;
             runningBalances[accountId] -= t.amount;
           }
+          paidThisMonth[accountId] = (paidThisMonth[accountId] ?? 0) + t.amount;
           if (t.amount < origAmount) {
             t.originalAmount = origAmount;
             alerts.push({
@@ -343,6 +365,32 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
       }
     }
 
+    // Month-end interest (future months only; past interest is already in DB balances)
+    const isMonthEnd = toUTCDateStr(addDays(day, 1)).slice(5, 7) !== dateStr.slice(5, 7);
+    if (isMonthEnd && dateStr > todayStr) {
+      for (const a of interestAccounts) {
+        const owed = runningBalances[a.id];
+        if (owed === undefined || owed <= 0) continue;
+        const interest = monthlyInterest(owed, a.apr);
+        const paid = paidThisMonth[a.id] ?? 0;
+        const { charged, match } = a.rap ? rapMonthEnd(interest, paid) : { charged: interest, match: 0 };
+        runningBalances[a.id] += charged - match;
+
+        const visible = !filterAccountId || filterAccountId === a.id;
+        const base = { date: dateStr, accountId: a.id, isProjected: true };
+        if (charged > 0) {
+          const line: ProjectedTransaction = { ...base, amount: charged, description: "Interest", type: "debit", categoryTags: ["interest"] };
+          syntheticTx.push(line);
+          if (visible) dayTx.push(line);
+        }
+        if (match > 0) {
+          const line: ProjectedTransaction = { ...base, amount: match, description: "RAP principal match", type: "credit", categoryTags: ["rap_match"] };
+          syntheticTx.push(line);
+          if (visible) dayTx.push(line);
+        }
+      }
+    }
+
     // Only include target account balances in output
     const outputBalances: Record<string, number> = {};
     for (const a of targetAccounts) {
@@ -391,8 +439,10 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
   // Summary — skip transfers (internal movements don't count as income/expense)
   let totalIncome = 0;
   let totalExpenses = 0;
-  for (const t of filteredProjected) {
+  const visibleSynthetic = syntheticTx.filter((t) => !filterAccountId || t.accountId === filterAccountId);
+  for (const t of [...filteredProjected, ...visibleSynthetic]) {
     if (t.type === "transfer") continue;
+    if (t.categoryTags.includes("rap_match")) continue; // principal forgiveness, not income
     if (t.type === "credit") totalIncome += t.amount;
     else totalExpenses += t.amount;
   }
