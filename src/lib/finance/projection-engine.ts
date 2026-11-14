@@ -1,5 +1,6 @@
 import { addDays } from "date-fns";
 import { expandRecurrence } from "./recurrence";
+import { amountOn } from "./amount-schedule";
 import {
   toDateStr as toUTCDateStr,
   fromDateStr,
@@ -11,6 +12,9 @@ import {
 import type { ProjectedTransaction, ProjectionDay, ProjectionResult, ProjectionAlert, Granularity } from "@/types/finance/projection";
 import type { IAccount } from "@/models/finance/Account";
 import type { ITransaction } from "@/models/finance/Transaction";
+
+/** ~100 years; guards against runaway day loops from extreme date params */
+const MAX_PROJECTION_DAYS = 36_600;
 
 interface ProjectionInput {
   accounts: IAccount[];
@@ -29,6 +33,9 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
   // Noon-UTC dates for date-fns interval generation (avoids timezone boundary issues)
   const start = fromDateStr(startStr);
   const end = fromDateStr(endStr);
+  if (end.getTime() - start.getTime() > MAX_PROJECTION_DAYS * 86_400_000) {
+    throw new RangeError(`Projection window exceeds ${MAX_PROJECTION_DAYS} days`);
+  }
 
   // Archived accounts are excluded from totals unless explicitly requested.
   // They still take part in balance tracking below so transfers stay consistent.
@@ -84,7 +91,7 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
       const isPast = dateStr <= todayStr;
       allProjected.push({
         date: dateStr,
-        amount: t.amount,
+        amount: amountOn(t.amount, t.amountSchedule, dateStr),
         description: t.description,
         accountId: t.accountId.toString(),
         toAccountId: t.toAccountId?.toString(),

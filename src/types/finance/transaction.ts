@@ -29,6 +29,7 @@ export interface Transaction {
   type: TransactionType;
   isRecurring: boolean;
   recurrenceRule?: RecurrenceRule;
+  amountSchedule?: { effectiveDate: string; amount: number }[]; // cents, managed by Datasheet
   categoryTags: string[];
   notes?: string;
   createdAt: string;

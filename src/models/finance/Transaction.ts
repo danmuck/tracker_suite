@@ -10,6 +10,11 @@ export interface IRecurrenceRule {
   daysOfMonth?: number[];
 }
 
+export interface IAmountStep {
+  effectiveDate: Date;
+  amount: number; // cents
+}
+
 export interface ITransaction extends Document {
   amount: number;
   date: Date;
@@ -19,6 +24,8 @@ export interface ITransaction extends Document {
   type: "credit" | "debit" | "transfer";
   isRecurring: boolean;
   recurrenceRule?: IRecurrenceRule;
+  /** Dated amounts for recurring transactions (written by the Datasheet) */
+  amountSchedule?: IAmountStep[];
   categoryTags: string[];
   notes?: string;
   balanceApplied: boolean;
@@ -43,6 +50,14 @@ const RecurrenceRuleSchema = new Schema<IRecurrenceRule>(
   { _id: false }
 );
 
+const AmountStepSchema = new Schema<IAmountStep>(
+  {
+    effectiveDate: { type: Date, required: true },
+    amount: { type: Number, required: true },
+  },
+  { _id: false }
+);
+
 const TransactionSchema = new Schema<ITransaction>(
   {
     amount: { type: Number, required: true },
@@ -53,6 +68,7 @@ const TransactionSchema = new Schema<ITransaction>(
     type: { type: String, required: true, enum: ["credit", "debit", "transfer"] },
     isRecurring: { type: Boolean, default: false },
     recurrenceRule: { type: RecurrenceRuleSchema },
+    amountSchedule: { type: [AmountStepSchema], default: undefined },
     categoryTags: [{ type: String, trim: true }],
     notes: { type: String, trim: true },
     balanceApplied: { type: Boolean, default: true },
