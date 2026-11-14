@@ -36,57 +36,74 @@ export const PAY_CYCLES = [
 
 export const FILING_STATUSES = ["single", "married_jointly", "married_separately", "head_of_household"] as const;
 
-// 2024 Federal Tax Brackets
-export const FEDERAL_TAX_BRACKETS = {
-  single: [
-    { min: 0, max: 11600, rate: 0.10 },
-    { min: 11600, max: 47150, rate: 0.12 },
-    { min: 47150, max: 100525, rate: 0.22 },
-    { min: 100525, max: 191950, rate: 0.24 },
-    { min: 191950, max: 243725, rate: 0.32 },
-    { min: 243725, max: 609350, rate: 0.35 },
-    { min: 609350, max: Infinity, rate: 0.37 },
-  ],
-  married_jointly: [
-    { min: 0, max: 23200, rate: 0.10 },
-    { min: 23200, max: 94300, rate: 0.12 },
-    { min: 94300, max: 201050, rate: 0.22 },
-    { min: 201050, max: 383900, rate: 0.24 },
-    { min: 383900, max: 487450, rate: 0.32 },
-    { min: 487450, max: 731200, rate: 0.35 },
-    { min: 731200, max: Infinity, rate: 0.37 },
-  ],
-  married_separately: [
-    { min: 0, max: 11600, rate: 0.10 },
-    { min: 11600, max: 47150, rate: 0.12 },
-    { min: 47150, max: 100525, rate: 0.22 },
-    { min: 100525, max: 191950, rate: 0.24 },
-    { min: 191950, max: 243725, rate: 0.32 },
-    { min: 243725, max: 365600, rate: 0.35 },
-    { min: 365600, max: Infinity, rate: 0.37 },
-  ],
-  head_of_household: [
-    { min: 0, max: 16550, rate: 0.10 },
-    { min: 16550, max: 63100, rate: 0.12 },
-    { min: 63100, max: 100500, rate: 0.22 },
-    { min: 100500, max: 191950, rate: 0.24 },
-    { min: 191950, max: 243700, rate: 0.32 },
-    { min: 243700, max: 609350, rate: 0.35 },
-    { min: 609350, max: Infinity, rate: 0.37 },
-  ],
-} as const;
+export const TAX_YEAR = 2026;
 
-// FICA
+/** Progressive bracket: `rate` applies to income up to `upTo` (dollars), above the previous bracket. */
+export interface TaxBracket {
+  upTo: number;
+  rate: number;
+}
+
+type FilingStatusKey = (typeof FILING_STATUSES)[number];
+
+function brackets(rates: number[], bounds: number[]): TaxBracket[] {
+  return rates.map((rate, i) => ({ upTo: bounds[i] ?? Infinity, rate }));
+}
+
+const FED_RATES = [0.10, 0.12, 0.22, 0.24, 0.32, 0.35, 0.37];
+
+// 2026 federal brackets (IRS, OBBBA inflation adjustments)
+export const FEDERAL_TAX_BRACKETS: Record<FilingStatusKey, TaxBracket[]> = {
+  single: brackets(FED_RATES, [12400, 50400, 105700, 201775, 256225, 640600]),
+  married_jointly: brackets(FED_RATES, [24800, 100800, 211400, 403550, 512450, 768700]),
+  married_separately: brackets(FED_RATES, [12400, 50400, 105700, 201775, 256225, 384350]),
+  head_of_household: brackets(FED_RATES, [17700, 67450, 105700, 201750, 256200, 640600]),
+};
+
+export const STANDARD_DEDUCTIONS: Record<FilingStatusKey, number> = {
+  single: 16100,
+  married_jointly: 32200,
+  married_separately: 16100,
+  head_of_household: 24150,
+};
+
+// FICA (2026)
 export const SOCIAL_SECURITY_RATE = 0.062;
-export const SOCIAL_SECURITY_WAGE_BASE = 168600;
+export const SOCIAL_SECURITY_WAGE_BASE = 184500;
 export const MEDICARE_RATE = 0.0145;
 export const MEDICARE_ADDITIONAL_RATE = 0.009;
 export const MEDICARE_ADDITIONAL_THRESHOLD = 200000;
 
-// Standard Deductions 2024
-export const STANDARD_DEDUCTIONS = {
-  single: 14600,
-  married_jointly: 29200,
-  married_separately: 14600,
-  head_of_household: 21900,
-} as const;
+// New York State (2026)
+const NY_RATES = [0.039, 0.044, 0.0515, 0.054, 0.059, 0.0685, 0.0965, 0.103, 0.109];
+const NY_SINGLE_BOUNDS = [8500, 11700, 13900, 80650, 215400, 1077550, 5000000, 25000000];
+
+export const NY_TAX_BRACKETS: Record<FilingStatusKey, TaxBracket[]> = {
+  single: brackets(NY_RATES, NY_SINGLE_BOUNDS),
+  married_separately: brackets(NY_RATES, NY_SINGLE_BOUNDS),
+  married_jointly: brackets(NY_RATES, [17150, 23600, 27900, 161550, 323200, 2155350, 5000000, 25000000]),
+  head_of_household: brackets(NY_RATES, [12800, 17650, 20900, 107650, 269300, 1616450, 5000000, 25000000]),
+};
+
+export const NY_STANDARD_DEDUCTIONS: Record<FilingStatusKey, number> = {
+  single: 8000,
+  married_jointly: 16050,
+  married_separately: 8000,
+  head_of_household: 11200,
+};
+
+// New York City resident tax
+const NYC_RATES = [0.03078, 0.03762, 0.03819, 0.03876];
+
+export const NYC_TAX_BRACKETS: Record<FilingStatusKey, TaxBracket[]> = {
+  single: brackets(NYC_RATES, [12000, 25000, 50000]),
+  married_separately: brackets(NYC_RATES, [12000, 25000, 50000]),
+  married_jointly: brackets(NYC_RATES, [21600, 45000, 90000]),
+  head_of_household: brackets(NYC_RATES, [14400, 30000, 60000]),
+};
+
+// NY Disability (SDI) and Paid Family Leave employee contributions (2026)
+export const NY_SDI_RATE = 0.005;
+export const NY_SDI_ANNUAL_MAX = 31.2; // $0.60/week × 52
+export const NY_PFL_RATE = 0.00432;
+export const NY_PFL_ANNUAL_MAX = 411.91;
