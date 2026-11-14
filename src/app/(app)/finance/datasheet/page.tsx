@@ -12,12 +12,13 @@ import { PaycheckBreakdown } from "@/components/finance/datasheet/paycheck-break
 import { SalaryTable } from "@/components/finance/datasheet/salary-table";
 import { RentMergeBanner } from "@/components/finance/datasheet/rent-merge-banner";
 import { useFinanceProfile, saveFinanceProfile, mergeRent } from "@/hooks/finance/use-finance-profile";
-import { useTransactions } from "@/hooks/finance/use-transactions";
+import { useTransactions, deleteTransaction } from "@/hooks/finance/use-transactions";
 import { localTodayStr } from "@/lib/finance/dates";
 import { paycheckOn, stepOn } from "@/lib/finance/datasheet";
 import { getPeriodsPerYear } from "@/lib/finance/tax-calculator";
 import { formatDate } from "@/lib/finance/formatters";
 import type { FinanceProfileData } from "@/types/finance/datasheet";
+import type { Transaction } from "@/types/finance/transaction";
 
 const CYCLE_LABELS: Record<string, string> = {
   weekly: "Weekly",
@@ -49,11 +50,12 @@ export default function DatasheetPage() {
     return { actualGross: first.annualGross, asOf: first.effectiveDate };
   }, [current, today]);
 
-  // A second recurring debit with the same name as the linked Rent → offer to merge it
+  // Other recurring debits with the same name as the linked Rent → offer to merge or delete each
   const rentTx = recurring.find((t) => t._id === current?.rentTransactionId);
-  const duplicateRent = rentTx
-    ? recurring.find((t) => t._id !== rentTx._id && t.type === "debit" && t.description.trim().toLowerCase() === rentTx.description.trim().toLowerCase())
-    : undefined;
+  const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+  const extraRents = rentTx
+    ? recurring.filter((t) => t._id !== rentTx._id && t.type === "debit" && sameName(t.description, rentTx.description))
+    : [];
 
   if (isLoading || !current) return <LoadingState />;
 
@@ -75,14 +77,24 @@ export default function DatasheetPage() {
     }
   }
 
-  async function handleMerge() {
-    if (!rentTx || !duplicateRent) return;
+  async function handleMerge(extra: Transaction) {
+    if (!rentTx) return;
     try {
-      await mergeRent(rentTx._id, duplicateRent._id);
+      await mergeRent(rentTx._id, extra._id);
       await Promise.all([mutate(), mutateTransactions()]);
       toast.success("Rent merged");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to merge rent");
+    }
+  }
+
+  async function handleDeleteExtra(extra: Transaction) {
+    try {
+      await deleteTransaction(extra._id);
+      await mutateTransactions();
+      toast.success(`Deleted extra ${extra.description}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete transaction");
     }
   }
 
@@ -105,9 +117,17 @@ export default function DatasheetPage() {
         }
       />
 
-      {rentTx && duplicateRent && !draft && (
-        <RentMergeBanner keep={rentTx} merge={duplicateRent} onConfirm={handleMerge} />
-      )}
+      {rentTx &&
+        !draft &&
+        extraRents.map((extra) => (
+          <RentMergeBanner
+            key={extra._id}
+            keep={rentTx}
+            extra={extra}
+            onMerge={() => handleMerge(extra)}
+            onDelete={() => handleDeleteExtra(extra)}
+          />
+        ))}
 
       <SettingsCard
         profile={current}
