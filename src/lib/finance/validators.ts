@@ -64,3 +64,45 @@ export const categorySchema = z.object({
 export type AccountInput = z.infer<typeof accountSchema>;
 export type TransactionInput = z.infer<typeof transactionSchema>;
 export type CategoryInput = z.infer<typeof categorySchema>;
+
+// ── Finance profile (Datasheet). Money arrives in dollars; the API converts to cents. ──
+const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be yyyy-MM-dd");
+const dollars = z.number().min(0).max(100_000_000);
+
+function uniqueDates(kind: string) {
+  return (steps: { effectiveDate: string }[], ctx: z.RefinementCtx) => {
+    const seen = new Set<string>();
+    for (const s of steps) {
+      if (seen.has(s.effectiveDate)) {
+        ctx.addIssue({ code: "custom", message: `Duplicate date in ${kind} changes` });
+        return;
+      }
+      seen.add(s.effectiveDate);
+    }
+  };
+}
+
+export const financeProfileSchema = z.object({
+  filingStatus: z.enum(["single", "married_jointly", "married_separately", "head_of_household"]),
+  hoursPerWeek: z.number().min(1).max(80),
+  nycResident: z.boolean(),
+  raiseRate: z.number().min(0).max(0.5),
+  salaryTransactionId: z.string().nullable().optional(),
+  rentTransactionId: z.string().nullable().optional(),
+  salarySteps: z
+    .array(z.object({ effectiveDate: isoDate, annualGross: dollars }))
+    .min(1, "Add at least one salary")
+    .superRefine(uniqueDates("salary")),
+  retirementSteps: z
+    .array(z.object({ effectiveDate: isoDate, percent: z.number().min(0).max(1) }))
+    .superRefine(uniqueDates("401(k)")),
+  healthSteps: z
+    .array(z.object({ effectiveDate: isoDate, perPaycheck: dollars }))
+    .superRefine(uniqueDates("health")),
+  rentSteps: z
+    .array(z.object({ effectiveDate: isoDate, monthly: dollars }))
+    .superRefine(uniqueDates("rent")),
+  whatIfSalaries: z.array(z.object({ label: z.string().max(50).optional(), annualGross: dollars })).max(20),
+});
+
+export type FinanceProfileInput = z.infer<typeof financeProfileSchema>;
