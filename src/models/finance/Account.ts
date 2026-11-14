@@ -11,6 +11,16 @@ export interface IAccount extends Document {
   notes?: string;
   isCash?: boolean;
   isArchived?: boolean;
+  /** Credit card / debt: annual rate as a fraction (0.065) */
+  apr?: number;
+  /** Credit card / debt: minimum monthly payment, cents */
+  minimumPayment?: number;
+  /** Recurring bank → this account transfer whose amountSchedule is the payment plan */
+  paymentTransactionId?: mongoose.Types.ObjectId;
+  /** Debt: sub-loans under one total balance; their blended rate drives interest */
+  subLoans?: { name: string; balance: number; apr: number }[];
+  /** Debt: federal Repayment Assistance Plan settings */
+  rap?: { enabled: boolean; autoSchedule: boolean; recertDate: string; dependents: number };
   createdAt: Date;
   updatedAt: Date;
 }
@@ -27,9 +37,42 @@ const AccountSchema = new Schema<IAccount>(
     notes: { type: String, trim: true },
     isCash: { type: Boolean, default: false },
     isArchived: { type: Boolean, default: false },
+    apr: { type: Number, min: 0, max: 1 },
+    minimumPayment: { type: Number, min: 0 },
+    paymentTransactionId: { type: Schema.Types.ObjectId, ref: "Transaction" },
+    subLoans: {
+      type: [
+        new Schema(
+          {
+            name: { type: String, required: true, trim: true },
+            balance: { type: Number, required: true, min: 0 },
+            apr: { type: Number, required: true, min: 0, max: 1 },
+          },
+          { _id: false }
+        ),
+      ],
+      default: undefined,
+    },
+    rap: {
+      type: new Schema(
+        {
+          enabled: { type: Boolean, default: false },
+          autoSchedule: { type: Boolean, default: true },
+          recertDate: { type: String, match: /^\d{2}-\d{2}$/, default: "07-01" },
+          dependents: { type: Number, min: 0, default: 0 },
+        },
+        { _id: false }
+      ),
+      default: undefined,
+    },
   },
   { timestamps: true }
 );
+
+// Delete cached model in development to pick up schema changes on hot reload
+if (process.env.NODE_ENV !== "production" && mongoose.models.Account) {
+  delete mongoose.models.Account;
+}
 
 const Account: Model<IAccount> =
   mongoose.models.Account || mongoose.model<IAccount>("Account", AccountSchema);

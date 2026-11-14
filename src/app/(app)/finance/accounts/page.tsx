@@ -418,8 +418,11 @@ export default function AccountsPage() {
                 linkedAccountId: editTarget.linkedAccountId,
                 currency: editTarget.currency,
                 notes: editTarget.notes,
+                apr: editTarget.apr != null ? +(editTarget.apr * 100).toFixed(4) : undefined,
+                minimumPayment: editTarget.minimumPayment != null ? editTarget.minimumPayment / 100 : undefined,
               }}
               isCash={editTarget.isCash}
+              hasSubLoans={!!editTarget.subLoans?.length}
               onSubmit={handleEdit}
               onCancel={() => setEditTarget(null)}
             />

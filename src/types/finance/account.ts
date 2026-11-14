@@ -12,6 +12,11 @@ export interface Account {
   notes?: string;
   isCash?: boolean;
   isArchived?: boolean;
+  apr?: number; // fraction
+  minimumPayment?: number; // cents
+  paymentTransactionId?: string;
+  subLoans?: { name: string; balance: number; apr: number }[]; // cents, fraction
+  rap?: { enabled: boolean; autoSchedule: boolean; recertDate: string; dependents: number };
   createdAt: string;
   updatedAt: string;
 }
@@ -25,4 +30,6 @@ export interface AccountFormData {
   linkedAccountId?: string;
   currency?: string;
   notes?: string;
+  apr?: number | null; // percent in the form (6.5), null clears
+  minimumPayment?: number | null; // dollars, null clears
 }

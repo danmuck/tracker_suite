@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
+import { planFieldsToDb } from "@/lib/finance/account-plan-fields";
 import { accountSchema } from "@/lib/finance/validators";
 
 // GET /api/accounts — list accounts, optional ?type= and ?includeArchived=true filters
@@ -111,10 +112,10 @@ export async function POST(request: NextRequest) {
     // Convert dollar amounts to cents
     const balanceInCents = Math.round(data.balance * 100);
 
-    const accountData: Record<string, unknown> = {
-      ...data,
-      balance: balanceInCents,
-    };
+    const accountData: Record<string, unknown> = { ...data, balance: balanceInCents };
+    delete accountData.apr;
+    delete accountData.minimumPayment;
+    Object.assign(accountData, planFieldsToDb(data).set);
 
     if (data.creditLimit !== undefined && data.creditLimit !== null) {
       accountData.creditLimit = Math.round(data.creditLimit * 100);

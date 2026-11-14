@@ -29,7 +29,7 @@ export interface Transaction {
   type: TransactionType;
   isRecurring: boolean;
   recurrenceRule?: RecurrenceRule;
-  amountSchedule?: { effectiveDate: string; amount: number }[]; // cents, managed by Datasheet
+  amountSchedule?: { effectiveDate: string; amount: number; source?: "rap" }[]; // cents, managed by Datasheet / payment plans
   categoryTags: string[];
   notes?: string;
   createdAt: string;

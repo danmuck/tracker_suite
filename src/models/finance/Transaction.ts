@@ -13,6 +13,8 @@ export interface IRecurrenceRule {
 export interface IAmountStep {
   effectiveDate: Date;
   amount: number; // cents
+  /** "rap" = generated from RAP income; absent = entered by the user */
+  source?: "rap";
 }
 
 export interface ITransaction extends Document {
@@ -54,6 +56,7 @@ const AmountStepSchema = new Schema<IAmountStep>(
   {
     effectiveDate: { type: Date, required: true },
     amount: { type: Number, required: true },
+    source: { type: String, enum: ["rap"] },
   },
   { _id: false }
 );

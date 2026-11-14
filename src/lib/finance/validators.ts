@@ -9,6 +9,8 @@ export const accountSchema = z.object({
   linkedAccountId: z.string().optional(),
   currency: z.string().default("USD"),
   notes: z.string().max(500).optional(),
+  apr: z.number().min(0).max(100).nullable().optional(), // percent
+  minimumPayment: z.number().min(0).nullable().optional(), // dollars
 });
 
 export const accountArchiveSchema = z.object({

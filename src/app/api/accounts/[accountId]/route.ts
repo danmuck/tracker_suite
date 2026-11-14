@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
+import { planFieldsToDb } from "@/lib/finance/account-plan-fields";
 import { accountSchema, accountArchiveSchema } from "@/lib/finance/validators";
 
 // GET /api/accounts/:accountId — fetch a single account
@@ -72,10 +73,12 @@ export async function PUT(
     const data = parsed.data;
 
     // Convert dollar amounts to cents
-    const updateData: Record<string, unknown> = {
-      ...data,
-      balance: Math.round(data.balance * 100),
-    };
+    const plan = planFieldsToDb(data);
+    const updateData: Record<string, unknown> = { ...data, balance: Math.round(data.balance * 100) };
+    delete updateData.apr;
+    delete updateData.minimumPayment;
+    Object.assign(updateData, plan.set);
+    if (Object.keys(plan.unset).length) updateData.$unset = plan.unset;
 
     if (data.creditLimit !== undefined && data.creditLimit !== null) {
       updateData.creditLimit = Math.round(data.creditLimit * 100);
