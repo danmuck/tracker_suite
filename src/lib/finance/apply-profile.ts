@@ -103,5 +103,8 @@ export async function saveProfileAndApply(p: FinanceProfileData) {
   if (p.rentTransactionId) {
     updated.rent = await writeSchedule(p.rentTransactionId, "Rent", () => buildRentSchedule(p));
   }
+  // RAP payments are priced from Datasheet income, so refresh them too
+  const { regenerateAllRapSchedules } = await import("./payment-plan");
+  await regenerateAllRapSchedules();
   return updated;
 }

@@ -108,3 +108,30 @@ export const financeProfileSchema = z.object({
 });
 
 export type FinanceProfileInput = z.infer<typeof financeProfileSchema>;
+
+// ── Debt / credit card payment plans. Money in dollars, rates in percent. ──
+export const paymentPlanSetupSchema = z.object({
+  fromAccountId: z.string().min(1, "Choose the account payments come from"),
+  dayOfMonth: z.number().int().min(1).max(28),
+  startDate: isoDate,
+  firstAmount: z.number().min(0),
+});
+
+export const paymentPlanUpdateSchema = z.object({
+  schedule: z
+    .array(z.object({ effectiveDate: isoDate, amount: z.number().min(0) }))
+    .superRefine(uniqueDates("payment"))
+    .optional(),
+  subLoans: z
+    .array(z.object({ name: z.string().trim().min(1).max(60), balance: z.number().min(0), apr: z.number().min(0).max(100) }))
+    .max(30)
+    .optional(),
+  rap: z
+    .object({
+      enabled: z.boolean(),
+      autoSchedule: z.boolean(),
+      recertDate: z.string().regex(/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/, "Recert date must be MM-dd"),
+      dependents: z.number().int().min(0).max(20),
+    })
+    .optional(),
+});
