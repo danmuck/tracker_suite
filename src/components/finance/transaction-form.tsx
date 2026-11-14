@@ -43,6 +43,7 @@ export function TransactionForm({
   const [loading, setLoading] = useState(false);
   const [description, setDescription] = useState(defaultValues?.description ?? "");
   const [amount, setAmount] = useState(String(defaultValues?.amount ?? ""));
+  const amountManaged = !!defaultValues?.amountSchedule?.length;
   const [date, setDate] = useState<Date>(
     defaultValues?.date ? parseDate(defaultValues.date) : new Date()
   );
@@ -190,7 +191,11 @@ export function TransactionForm({
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
+            disabled={amountManaged}
           />
+          {amountManaged && (
+            <p className="text-xs text-muted-foreground">Managed by Datasheet</p>
+          )}
           {errors.amount && (
             <p className="text-xs text-destructive">{errors.amount}</p>
           )}

@@ -47,4 +47,6 @@ export interface TransactionFormData {
   recurrenceRule?: RecurrenceRule;
   categoryTags: string[];
   notes?: string;
+  /** Display only: when set, the amount is managed by the Datasheet (not submitted) */
+  amountSchedule?: { effectiveDate: string; amount: number }[];
 }

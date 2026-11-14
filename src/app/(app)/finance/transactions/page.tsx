@@ -587,6 +587,7 @@ function TransactionsContent() {
                 isRecurring: editTarget.isRecurring,
                 recurrenceRule: editTarget.recurrenceRule,
                 notes: editTarget.notes,
+                amountSchedule: editTarget.amountSchedule,
               }}
               onSubmit={handleEdit}
               onCancel={() => setEditTarget(null)}
