@@ -65,6 +65,12 @@ async function writeSchedule(id: string, kind: "Salary" | "Rent", build: (freque
   const today = localTodayStr();
   tx.amountSchedule = schedule.map((e) => ({ effectiveDate: new Date(e.effectiveDate), amount: e.amount }));
   tx.amount = amountOn(schedule[0].amount, schedule, today);
+  // Rent begins when the Datasheet's first rent step does, not at a later change
+  if (kind === "Rent" && tx.recurrenceRule) {
+    const start = new Date(schedule[0].effectiveDate);
+    tx.recurrenceRule.startDate = start;
+    tx.date = start;
+  }
   await tx.save();
   return true;
 }

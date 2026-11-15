@@ -20,7 +20,7 @@ import type { Account } from "@/types/finance/account";
 
 const REASON_META: Record<
   ProjectionAlertReason,
-  { label: string; icon: typeof AlertTriangle; severity: "amber" | "red" }
+  { label: string; icon: typeof AlertTriangle; severity: "green" | "red" }
 > = {
   credit_limit: {
     label: "Credit limit reached",
@@ -30,7 +30,7 @@ const REASON_META: Record<
   debt_paid_off: {
     label: "Debt fully paid",
     icon: CheckCircle2,
-    severity: "amber",
+    severity: "green",
   },
   insufficient_balance: {
     label: "Insufficient balance",
@@ -38,6 +38,40 @@ const REASON_META: Record<
     severity: "red",
   },
 };
+
+type Tone = "red" | "amber" | "green";
+
+const TONE: Record<Tone, { border: string; bg: string; icon: string; badge: string; text: string }> = {
+  red: {
+    border: "border-l-red-500 dark:border-l-red-400",
+    bg: "bg-red-100 dark:bg-red-950/50",
+    icon: "text-red-600 dark:text-red-400",
+    badge: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400",
+    text: "text-red-600 dark:text-red-400",
+  },
+  amber: {
+    border: "border-l-amber-500 dark:border-l-amber-400",
+    bg: "bg-amber-100 dark:bg-amber-950/50",
+    icon: "text-amber-600 dark:text-amber-400",
+    badge: "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400",
+    text: "text-amber-600 dark:text-amber-400",
+  },
+  green: {
+    border: "border-l-emerald-500 dark:border-l-emerald-400",
+    bg: "bg-emerald-100 dark:bg-emerald-950/50",
+    icon: "text-emerald-600 dark:text-emerald-400",
+    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
+    text: "text-emerald-600 dark:text-emerald-400",
+  },
+};
+
+/** Badge wording and colour for one alert: a paid-off debt is good news */
+function impactOf(alert: ProjectionAlert): { label: string; tone: Tone } {
+  if (alert.reason === "debt_paid_off") return { label: "paid off", tone: "green" };
+  return alert.adjustedAmount === 0
+    ? { label: "stopped", tone: "red" }
+    : { label: "reduced", tone: "amber" };
+}
 
 interface ProjectionAlertsProps {
   alerts: ProjectionAlert[];
@@ -86,7 +120,9 @@ export function ProjectionAlerts({
   const redCount = entries.filter(
     (e) => REASON_META[e.alert.reason].severity === "red"
   ).length;
-  const amberCount = entries.length - redCount;
+  const greenCount = entries.length - redCount;
+  const cardTone = TONE[redCount > 0 ? "red" : "green"];
+  const HeaderIcon = redCount > 0 ? AlertTriangle : CheckCircle2;
 
   const visible = expanded ? entries : entries.slice(0, initialLimit);
   const hasMore = entries.length > initialLimit;
@@ -99,23 +135,11 @@ export function ProjectionAlerts({
   if (compact) {
     return (
       <Card
-        className={cn(
-          "overflow-hidden border-l-4 py-0 gap-0",
-          redCount > 0
-            ? "border-l-red-500 dark:border-l-red-400"
-            : "border-l-amber-500 dark:border-l-amber-400"
-        )}
+        className={cn("overflow-hidden border-l-4 py-0 gap-0", cardTone.border)}
       >
         <CardContent className="pt-2 pb-2">
           <div className="flex items-center gap-2 mb-2">
-            <AlertTriangle
-              className={cn(
-                "h-4 w-4 shrink-0",
-                redCount > 0
-                  ? "text-red-500 dark:text-red-400"
-                  : "text-amber-500 dark:text-amber-400"
-              )}
-            />
+            <HeaderIcon className={cn("h-4 w-4 shrink-0", cardTone.icon)} />
             <span className="text-sm font-medium">
               {entries.length} projection{" "}
               {entries.length === 1 ? "alert" : "alerts"}
@@ -123,8 +147,7 @@ export function ProjectionAlerts({
           </div>
           <div className="space-y-1.5">
             {entries.slice(0, 3).map((entry, i) => {
-              const meta = REASON_META[entry.alert.reason];
-              const isStopped = entry.alert.adjustedAmount === 0;
+              const impact = impactOf(entry.alert);
               return (
                 <div
                   key={i}
@@ -137,12 +160,10 @@ export function ProjectionAlerts({
                     variant="secondary"
                     className={cn(
                       "shrink-0 text-[10px] px-1.5 py-0",
-                      meta.severity === "red"
-                        ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
-                        : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
+                      TONE[impact.tone].badge
                     )}
                   >
-                    {isStopped ? "stopped" : "reduced"}
+                    {impact.label}
                   </Badge>
                 </div>
               );
@@ -160,12 +181,7 @@ export function ProjectionAlerts({
 
   return (
     <Card
-      className={cn(
-        "overflow-hidden border-l-4",
-        redCount > 0
-          ? "border-l-red-500 dark:border-l-red-400"
-          : "border-l-amber-500 dark:border-l-amber-400"
-      )}
+      className={cn("overflow-hidden border-l-4", cardTone.border)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
@@ -173,19 +189,10 @@ export function ProjectionAlerts({
             <div
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-lg",
-                redCount > 0
-                  ? "bg-red-100 dark:bg-red-950/50"
-                  : "bg-amber-100 dark:bg-amber-950/50"
+                cardTone.bg
               )}
             >
-              <AlertTriangle
-                className={cn(
-                  "h-4 w-4",
-                  redCount > 0
-                    ? "text-red-600 dark:text-red-400"
-                    : "text-amber-600 dark:text-amber-400"
-                )}
-              />
+              <HeaderIcon className={cn("h-4 w-4", cardTone.icon)} />
             </div>
             <div>
               <CardTitle className="text-sm">Projection Alerts</CardTitle>
@@ -204,12 +211,12 @@ export function ProjectionAlerts({
                 {redCount} critical
               </Badge>
             )}
-            {amberCount > 0 && (
+            {greenCount > 0 && (
               <Badge
                 variant="secondary"
-                className="bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400 text-xs"
+                className={cn("text-xs", TONE.green.badge)}
               >
-                {amberCount} info
+                {greenCount} paid off
               </Badge>
             )}
           </div>
@@ -221,6 +228,7 @@ export function ProjectionAlerts({
             const meta = REASON_META[entry.alert.reason];
             const Icon = meta.icon;
             const isStopped = entry.alert.adjustedAmount === 0;
+            const impact = impactOf(entry.alert);
             const accountName =
               accountMap[entry.alert.accountId]?.name ??
               entry.alert.accountId;
@@ -241,19 +249,10 @@ export function ProjectionAlerts({
                 <div
                   className={cn(
                     "mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
-                    meta.severity === "red"
-                      ? "bg-red-100 dark:bg-red-950/50"
-                      : "bg-amber-100 dark:bg-amber-950/50"
+                    TONE[meta.severity].bg
                   )}
                 >
-                  <Icon
-                    className={cn(
-                      "h-3.5 w-3.5",
-                      meta.severity === "red"
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-amber-600 dark:text-amber-400"
-                    )}
-                  />
+                  <Icon className={cn("h-3.5 w-3.5", TONE[meta.severity].icon)} />
                 </div>
 
                 {/* Content */}
@@ -266,12 +265,10 @@ export function ProjectionAlerts({
                       variant="secondary"
                       className={cn(
                         "shrink-0 text-[10px] px-1.5 py-0",
-                        isStopped
-                          ? "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400"
-                          : "bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400"
+                        TONE[impact.tone].badge
                       )}
                     >
-                      {isStopped ? "stopped" : "reduced"}
+                      {impact.label}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-1.5 mt-1 text-xs text-muted-foreground">
@@ -309,9 +306,7 @@ export function ProjectionAlerts({
                   <p
                     className={cn(
                       "font-mono text-sm font-medium",
-                      isStopped
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-amber-600 dark:text-amber-400"
+                      TONE[impact.tone].text
                     )}
                   >
                     {isStopped ? (
