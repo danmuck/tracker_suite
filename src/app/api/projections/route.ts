@@ -4,6 +4,7 @@ import { postDuePayments } from "@/lib/finance/post-payments";
 import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
 import { buildProjection } from "@/lib/finance/projection-engine";
+import { localTodayStr } from "@/lib/finance/dates";
 import type { Granularity } from "@/types/finance/projection";
 
 export async function GET(request: NextRequest) {
@@ -26,13 +27,18 @@ export async function GET(request: NextRequest) {
 
     const accounts = await Account.find();
 
+    // A window starting in the future is projected forward from today, so the
+    // engine also needs the transactions between today and the window start
+    const todayStr = localTodayStr();
+    const queryStart = startDate > todayStr ? todayStr : startDate;
+
     // Build date/recurrence filter
     const dateFilter = {
       $or: [
         // One-time transactions in range
         {
           isRecurring: { $ne: true },
-          date: { $gte: new Date(startDate), $lte: new Date(endDate) },
+          date: { $gte: new Date(queryStart), $lte: new Date(endDate) },
         },
         // Recurring transactions that overlap with range
         {
@@ -41,7 +47,7 @@ export async function GET(request: NextRequest) {
           $or: [
             { "recurrenceRule.endDate": null },
             { "recurrenceRule.endDate": { $exists: false } },
-            { "recurrenceRule.endDate": { $gte: new Date(startDate) } },
+            { "recurrenceRule.endDate": { $gte: new Date(queryStart) } },
           ],
         },
       ],

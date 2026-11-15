@@ -11,6 +11,8 @@ function run(accounts: object[], transactions: object[] = [], start = "2099-01-0
     transactions: transactions as never,
     startDate: new Date(start),
     endDate: new Date(end),
+    // Pin "today" just before the 2099 windows so they start from the given balances
+    today: "2098-12-31",
   });
 }
 

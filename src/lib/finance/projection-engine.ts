@@ -24,11 +24,40 @@ interface ProjectionInput {
   endDate: Date;
   granularity?: Granularity;
   filterAccountId?: string;
+  /** Calendar date treated as today (YYYY-MM-DD); defaults to the local date */
+  today?: string;
+}
+
+/** State handed from the lead-in run (today → window start) to the window run */
+interface Carry {
+  balances: Record<string, number>;
+  paidThisMonth: Record<string, number>;
+  month: string;
 }
 
 export function buildProjection(input: ProjectionInput): ProjectionResult {
+  const today = input.today ?? localTodayStr();
+  const startStr = toUTCDateStr(input.startDate);
+  // A window that starts in the future begins from the balances projected for
+  // that date, so everything between today and the start is simulated first
+  let carry: Carry | undefined;
+  if (startStr > today) {
+    carry = runProjection({
+      ...input,
+      today,
+      startDate: fromDateStr(today),
+      endDate: addDays(fromDateStr(startStr), -1),
+      granularity: "daily",
+      filterAccountId: undefined,
+    }).carry;
+  }
+  const { timeline, alerts, summary } = runProjection({ ...input, today }, carry);
+  return { timeline, alerts, summary };
+}
+
+function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult & { carry: Carry } {
   const { accounts, transactions, startDate, endDate, granularity = "daily", filterAccountId } = input;
-  const todayStr = localTodayStr();
+  const todayStr = input.today ?? localTodayStr();
   const startStr = toUTCDateStr(startDate);
   const endStr = toUTCDateStr(endDate);
   // Noon-UTC dates for date-fns interval generation (avoids timezone boundary issues)
@@ -121,7 +150,8 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
   // Track balances for ALL accounts (transfers need both source and dest)
   const currentBalances: Record<string, number> = {};
   for (const a of accounts) {
-    currentBalances[a._id.toString()] = a.balance;
+    const id = a._id.toString();
+    currentBalances[id] = carry?.balances[id] ?? a.balance;
   }
 
   // Track which accounts are debt/credit-card so we can cap payoff payments
@@ -204,8 +234,8 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
     }))
     .filter((a) => a.apr > 0);
   // Payments into each liability during the current calendar month (for RAP)
-  let paidThisMonth: Record<string, number> = {};
-  let currentMonth = "";
+  let paidThisMonth: Record<string, number> = { ...carry?.paidThisMonth };
+  let currentMonth = carry?.month ?? "";
   // Synthetic interest / RAP match lines (for summary totals)
   const syntheticTx: ProjectedTransaction[] = [];
 
@@ -494,5 +524,6 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
         .reduce((sum, t) => sum + t.amount, 0),
       debtPayments,
     },
+    carry: { balances: { ...runningBalances }, paidThisMonth, month: currentMonth },
   };
 }
