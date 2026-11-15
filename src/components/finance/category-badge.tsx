@@ -24,8 +24,14 @@ export function CategoryBadge({ categoryName, categories }: CategoryBadgeProps) 
 
   return (
     <Badge
-      className="text-xs gap-1 text-white"
-      style={{ backgroundColor: category.color }}
+      variant="outline"
+      className="text-xs gap-1"
+      // Tinted from the category colour so it sits with the theme in light and dark
+      style={{
+        backgroundColor: `color-mix(in oklab, ${category.color} 14%, transparent)`,
+        borderColor: `color-mix(in oklab, ${category.color} 35%, transparent)`,
+        color: `color-mix(in oklab, ${category.color} 65%, var(--foreground))`,
+      }}
     >
       <Icon className="h-3 w-3" />
       {category.name}

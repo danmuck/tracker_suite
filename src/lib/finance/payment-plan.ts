@@ -199,7 +199,7 @@ export async function setupPayments(
     type: "transfer",
     isRecurring: true,
     recurrenceRule: { frequency: "monthly", interval: 1, startDate: new Date(input.startDate), endDate: null, dayOfMonth: input.dayOfMonth },
-    categoryTags: [account.type === "credit_card" ? "credit" : "debt", "transfer"],
+    categoryTags: [account.type === "credit_card" ? "credit" : "loans", "transfer"],
     balanceApplied: false,
     amountSchedule: [{ effectiveDate: new Date(input.startDate), amount: cents }],
   });

@@ -14,6 +14,7 @@ import {
   Trash2,
   ArrowRightLeft,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
   useReactTable,
@@ -61,6 +62,26 @@ import type { Transaction, TransactionFormData } from "@/types/finance/transacti
 import type { TransactionFilters } from "@/types/api";
 
 const LIMIT_OPTIONS = [10, 25, 50, 100];
+
+// Account names are coloured by the direction money moves for that account
+const MONEY_IN = "text-green-600 dark:text-green-400";
+const MONEY_OUT = "text-red-600 dark:text-red-400";
+
+// Subtle per-type row tint, with a matching type badge
+const TYPE_STYLE: Record<Transaction["type"], { row: string; badge: string }> = {
+  credit: {
+    row: "bg-green-500/[0.04] hover:bg-green-500/10",
+    badge: "border-green-500/30 bg-green-500/10 text-green-700 dark:text-green-400",
+  },
+  debit: {
+    row: "bg-red-500/[0.04] hover:bg-red-500/10",
+    badge: "border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-400",
+  },
+  transfer: {
+    row: "bg-blue-500/[0.04] hover:bg-blue-500/10",
+    badge: "border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-400",
+  },
+};
 
 function TransactionsContent() {
   const router = useRouter();
@@ -197,14 +218,16 @@ function TransactionsContent() {
           const toAccount = accountMap[tx.toAccountId];
           return (
             <span className="text-sm flex items-center gap-1">
-              {account?.name ?? tx.accountId}
+              <span className={MONEY_OUT}>{account?.name ?? tx.accountId}</span>
               <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
-              {toAccount?.name ?? tx.toAccountId}
+              <span className={MONEY_IN}>{toAccount?.name ?? tx.toAccountId}</span>
             </span>
           );
         }
         return (
-          <span className="text-sm">{account?.name ?? tx.accountId}</span>
+          <span className={cn("text-sm", tx.type === "credit" ? MONEY_IN : MONEY_OUT)}>
+            {account?.name ?? tx.accountId}
+          </span>
         );
       },
     },
@@ -224,14 +247,8 @@ function TransactionsContent() {
       header: "Type",
       cell: ({ row }) => (
         <Badge
-          variant={
-            row.original.type === "credit"
-              ? "default"
-              : row.original.type === "transfer"
-              ? "outline"
-              : "secondary"
-          }
-          className="capitalize"
+          variant="outline"
+          className={cn("capitalize", TYPE_STYLE[row.original.type].badge)}
         >
           {row.original.type}
         </Badge>
@@ -488,7 +505,7 @@ function TransactionsContent() {
               </TableHeader>
               <TableBody>
                 {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow key={row.id} className={TYPE_STYLE[row.original.type].row}>
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
                         {typeof cell.column.columnDef.cell === "function"

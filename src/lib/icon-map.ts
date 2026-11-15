@@ -24,6 +24,8 @@ import {
   Film,
   Heart,
   Star,
+  Gift,
+  Landmark,
   type LucideIcon,
 } from "lucide-react";
 
@@ -53,6 +55,8 @@ const iconMap: Record<string, LucideIcon> = {
   Film,
   Heart,
   Star,
+  Gift,
+  Landmark,
 };
 
 export function getIcon(name: string): LucideIcon {

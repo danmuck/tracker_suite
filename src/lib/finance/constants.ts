@@ -1,13 +1,11 @@
 export const DEFAULT_CATEGORIES = [
   { name: "salary", color: "#22c55e", icon: "Banknote", isDefault: true },
+  { name: "bonus", color: "#14b8a6", icon: "Gift", isDefault: true },
   { name: "bills", color: "#ef4444", icon: "Receipt", isDefault: true },
   { name: "subscriptions", color: "#8b5cf6", icon: "Repeat", isDefault: true },
-  { name: "auto", color: "#f59e0b", icon: "Car", isDefault: true },
-  { name: "grocery", color: "#10b981", icon: "ShoppingCart", isDefault: true },
+  { name: "spending", color: "#f59e0b", icon: "ShoppingCart", isDefault: true },
   { name: "credit", color: "#6366f1", icon: "CreditCard", isDefault: true },
-  { name: "entertainment", color: "#ec4899", icon: "Gamepad2", isDefault: true },
-  { name: "dining", color: "#f97316", icon: "UtensilsCrossed", isDefault: true },
-  { name: "healthcare", color: "#06b6d4", icon: "HeartPulse", isDefault: true },
+  { name: "loans", color: "#06b6d4", icon: "Landmark", isDefault: true },
   { name: "transfer", color: "#64748b", icon: "ArrowLeftRight", isDefault: true },
   { name: "other", color: "#94a3b8", icon: "MoreHorizontal", isDefault: true },
 ] as const;
