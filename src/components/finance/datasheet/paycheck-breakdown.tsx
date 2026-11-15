@@ -60,7 +60,7 @@ export function PaycheckBreakdown({ breakdown, asOf }: { breakdown: Breakdown; a
             {LINES.filter(({ key }) => annual[key] !== 0).map(({ key, label }) =>
               row(key, label, "text-muted-foreground", "−")
             )}
-            {row("net", "Take-home pay", cn("font-semibold text-emerald-700 dark:text-emerald-400"))}
+            {row("net", "Take-home pay", cn("font-semibold text-emerald-700 dark:text-emerald-500"))}
           </TableBody>
         </Table>
       </CardContent>

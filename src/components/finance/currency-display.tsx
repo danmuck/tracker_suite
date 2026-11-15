@@ -19,18 +19,18 @@ function accountBalanceColor(
   creditLimit?: number
 ): string {
   if (accountType === "bank") {
-    if (cents > 0) return "text-green-600 dark:text-green-400";
-    if (cents < 0) return "text-red-600 dark:text-red-400";
+    if (cents > 0) return "text-green-600 dark:text-green-500";
+    if (cents < 0) return "text-red-600 dark:text-loss";
     return "";
   }
   if (accountType === "credit_card") {
     const atOrOverLimit = creditLimit != null && cents >= creditLimit;
     return atOrOverLimit
-      ? "text-red-600 dark:text-red-400"
+      ? "text-red-600 dark:text-loss"
       : "text-blue-600 dark:text-blue-400";
   }
   if (accountType === "debt") {
-    return "text-red-600 dark:text-red-400";
+    return "text-red-600 dark:text-loss";
   }
   return "";
 }
@@ -47,9 +47,9 @@ export function CurrencyDisplay({
     ? accountBalanceColor(accountType, cents, creditLimit)
     : colored
     ? cents > 0
-      ? "text-green-600 dark:text-green-400"
+      ? "text-green-600 dark:text-green-500"
       : cents < 0
-      ? "text-red-600 dark:text-red-400"
+      ? "text-red-600 dark:text-loss"
       : ""
     : "";
 

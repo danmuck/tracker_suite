@@ -45,9 +45,9 @@ const TONE: Record<Tone, { border: string; bg: string; icon: string; badge: stri
   red: {
     border: "border-l-red-500 dark:border-l-red-400",
     bg: "bg-red-100 dark:bg-red-950/50",
-    icon: "text-red-600 dark:text-red-400",
-    badge: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400",
-    text: "text-red-600 dark:text-red-400",
+    icon: "text-red-600 dark:text-loss",
+    badge: "bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-loss",
+    text: "text-red-600 dark:text-loss",
   },
   amber: {
     border: "border-l-amber-500 dark:border-l-amber-400",
@@ -59,9 +59,9 @@ const TONE: Record<Tone, { border: string; bg: string; icon: string; badge: stri
   green: {
     border: "border-l-emerald-500 dark:border-l-emerald-400",
     bg: "bg-emerald-100 dark:bg-emerald-950/50",
-    icon: "text-emerald-600 dark:text-emerald-400",
-    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
-    text: "text-emerald-600 dark:text-emerald-400",
+    icon: "text-emerald-600 dark:text-emerald-500",
+    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-500",
+    text: "text-emerald-600 dark:text-emerald-500",
   },
 };
 
@@ -206,7 +206,7 @@ export function ProjectionAlerts({
             {redCount > 0 && (
               <Badge
                 variant="secondary"
-                className="bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400 text-xs"
+                className="bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-loss text-xs"
               >
                 {redCount} critical
               </Badge>

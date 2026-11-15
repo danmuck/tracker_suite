@@ -289,7 +289,7 @@ export default function AccountsPage() {
           {
             label: "Net Worth",
             cents: totals.netWorth,
-            className: totals.netWorth < 0 ? "text-red-600 dark:text-red-400" : undefined,
+            className: totals.netWorth < 0 ? "text-red-600 dark:text-loss" : undefined,
           },
           ...(totals.creditUtilization !== null
             ? [{ label: "Credit Utilization", text: `${totals.creditUtilization.toFixed(0)}%` }]

@@ -5,6 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
+  /* Dark-mode red for money-out text: deeper than red-400, less vivid than red-500 */
+  --color-loss: oklch(0.68 0.17 23);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);

@@ -34,7 +34,7 @@ function Cells({ row }: { row: SalaryRow }) {
       {COLS.map(({ key, net }) => (
         <TableCell
           key={key}
-          className={`text-right tabular-nums ${net ? "text-emerald-700 dark:text-emerald-400" : ""}`}
+          className={`text-right tabular-nums ${net ? "text-emerald-700 dark:text-emerald-500" : ""}`}
         >
           {formatCurrency(row[key])}
         </TableCell>

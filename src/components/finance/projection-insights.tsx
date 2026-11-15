@@ -53,7 +53,7 @@ export function ProjectionInsightCards({ summary }: { summary: ProjectionResult[
         {savingsRate === null ? (
           "—"
         ) : (
-          <span className={savingsRate < 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"}>
+          <span className={savingsRate < 0 ? "text-red-600 dark:text-loss" : "text-green-600 dark:text-green-500"}>
             {savingsRate.toFixed(1)}%
           </span>
         )}
@@ -99,7 +99,7 @@ export function PayoffDates({
               <div key={a._id} className="flex items-center justify-between gap-3 py-2 first:pt-0 last:pb-0 text-sm">
                 <span className="truncate">{a.name}</span>
                 {date ? (
-                  <span className="shrink-0 font-medium text-green-600 dark:text-green-400">{fmtDay(date)}</span>
+                  <span className="shrink-0 font-medium text-green-600 dark:text-green-500">{fmtDay(date)}</span>
                 ) : (
                   <span className="shrink-0 text-xs text-muted-foreground">Not within this window</span>
                 )}
