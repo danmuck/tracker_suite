@@ -258,6 +258,8 @@ export async function DELETE(
     }
 
     await Transaction.findByIdAndDelete(transactionId);
+    // A deleted payment-plan transfer leaves no plan behind
+    await Account.updateMany({ paymentTransactionId: transactionId }, { $unset: { paymentTransactionId: 1 } });
 
     return NextResponse.json({ message: "Transaction deleted successfully" });
   } catch (error) {
