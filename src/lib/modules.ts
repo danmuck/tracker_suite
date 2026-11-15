@@ -3,7 +3,6 @@ import {
   Wallet,
   ArrowRightLeft,
   TrendingUp,
-  BarChart3,
   Calculator,
   DollarSign,
   FolderKanban,
@@ -39,7 +38,6 @@ export const modules: ModuleConfig[] = [
       { href: "/finance/transactions", label: "Transactions", icon: ArrowRightLeft },
       { href: "/finance/projections", label: "Projections", icon: TrendingUp },
       { href: "/finance/datasheet", label: "Datasheet", icon: Calculator },
-      { href: "/finance/reports", label: "Reports", icon: BarChart3 },
     ],
   },
   {

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { addDays, addMonths, differenceInCalendarDays, isSameDay } from "date-fns";
-import { CalendarIcon, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import { BarChart3, CalendarIcon, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import { ReportsPanel } from "@/components/finance/reports-panel";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -71,7 +72,7 @@ interface ProjectionSettings {
   view: ProjectionView;
 }
 
-const VIEWS = ["overview", "cashflow", "debt", "alerts"] as const;
+const VIEWS = ["overview", "cashflow", "debt", "alerts", "reports"] as const;
 type ProjectionView = (typeof VIEWS)[number];
 
 const STORAGE_KEY = "finance.projections.settings";
@@ -197,10 +198,15 @@ export default function ProjectionsPage() {
 
   // Restore after a full reload (done post-mount to keep hydration consistent)
   useEffect(() => {
-    if (savedSettings) return;
-    const stored = readStoredSettings();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (stored) setSettings(stored);
+    const stored = savedSettings ? null : readStoredSettings();
+    // ?view=reports (etc.) opens a specific tab, then is dropped from the URL
+    const linked = new URLSearchParams(window.location.search).get("view");
+    const view = VIEWS.find((v) => v === linked);
+    if (view) window.history.replaceState(null, "", window.location.pathname);
+    if (stored || view) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSettings((s) => ({ ...(stored ?? s), ...(view ? { view } : {}) }));
+    }
   }, []);
 
   useEffect(() => {
@@ -534,6 +540,11 @@ export default function ProjectionsPage() {
                   </Badge>
                 )}
               </TabsTrigger>
+              {/* Reports look back at recorded activity, so they sit apart from the forecast tabs */}
+              <TabsTrigger value="reports" className="ml-auto flex-none">
+                <BarChart3 className="h-4 w-4" />
+                Reports
+              </TabsTrigger>
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
@@ -585,6 +596,10 @@ export default function ProjectionsPage() {
                   description="Nothing in this range is stopped, reduced or paid off."
                 />
               )}
+            </TabsContent>
+
+            <TabsContent value="reports">
+              <ReportsPanel accountId={accountId || undefined} />
             </TabsContent>
           </Tabs>
         </>

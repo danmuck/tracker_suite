@@ -297,7 +297,7 @@ export default function FinanceDashboardPage() {
                 )}
 
                 <Button variant="outline" size="sm" className="w-full" asChild>
-                  <Link href="/finance/reports">View Reports</Link>
+                  <Link href="/finance/projections?view=reports">View Reports</Link>
                 </Button>
               </CardContent>
             </Card>
