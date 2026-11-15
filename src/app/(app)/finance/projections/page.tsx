@@ -2,7 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { addDays, addMonths, differenceInCalendarDays, isSameDay } from "date-fns";
-import { BarChart3, CalendarIcon, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
+import {
+  BarChart3,
+  CalendarIcon,
+  ChevronLeft,
+  ChevronRight,
+  FlaskConical,
+  RotateCcw,
+  TrendingUp,
+} from "lucide-react";
+import { toast } from "sonner";
+import {
+  projectionSandbox,
+  sandboxChangeCount,
+  useProjectionSandbox,
+} from "@/hooks/finance/use-projection-sandbox";
 import { ReportsPanel } from "@/components/finance/reports-panel";
 import { ProjectionTransactions } from "@/components/finance/projection-transactions";
 import { format } from "date-fns";
@@ -247,12 +261,27 @@ export default function ProjectionsPage() {
   };
   const isFromToday = isSameDay(startDate, new Date());
 
-  const { projection, isLoading } = useProjections(
+  const sandbox = useProjectionSandbox();
+  const sandboxChanges = sandboxChangeCount(sandbox);
+  const { projection, dataVersion, isLoading } = useProjections(
     startDate,
     endDate,
     granularity,
-    accountId || undefined
+    accountId || undefined,
+    sandbox
   );
+
+  // The sandbox belongs to the real data it was made against: once that data
+  // changes, drop it so the projection goes back to reality
+  useEffect(() => {
+    if (!dataVersion || sandboxChanges === 0) return;
+    if (sandbox.version === null) {
+      projectionSandbox.setVersion(dataVersion);
+    } else if (sandbox.version !== dataVersion) {
+      projectionSandbox.clear();
+      toast.info("Your real data changed, so the sandbox was reset.");
+    }
+  }, [dataVersion, sandbox.version, sandboxChanges]);
 
   const filteredAccounts = accountId
     ? accounts.filter((a) => a._id === accountId)
@@ -467,6 +496,24 @@ export default function ProjectionsPage() {
         />
       ) : (
         <>
+          {sandboxChanges > 0 && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 px-4 py-3">
+              <FlaskConical className="h-4 w-4 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1 text-sm">
+                <span className="font-medium">Sandbox</span>
+                <span className="text-muted-foreground">
+                  {" "}
+                  — {sandboxChanges} what-if {sandboxChanges === 1 ? "change" : "changes"} applied
+                  below. Your real transactions are untouched.
+                </span>
+              </div>
+              <Button variant="outline" size="sm" onClick={() => projectionSandbox.clear()}>
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
+                Reset to real data
+              </Button>
+            </div>
+          )}
+
           {/* Summary cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <Card>
@@ -635,7 +682,11 @@ export default function ProjectionsPage() {
             </TabsContent>
 
             <TabsContent value="transactions">
-              <ProjectionTransactions timeline={projection.timeline} accounts={accounts} />
+              <ProjectionTransactions
+                timeline={projection.timeline}
+                accounts={accounts}
+                sandbox={sandbox}
+              />
             </TabsContent>
 
             <TabsContent value="alerts" className="space-y-6">

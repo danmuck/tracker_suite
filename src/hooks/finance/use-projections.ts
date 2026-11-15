@@ -3,26 +3,52 @@
 import useSWR from "swr";
 import type { ProjectionResult, Granularity } from "@/types/finance/projection";
 import { formatDateISO } from "@/lib/finance/formatters";
+import { sandboxChangeCount, type SandboxState } from "@/hooks/finance/use-projection-sandbox";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
+
+/** Sandbox projections are computed by POSTing the what-if changes; nothing is saved */
+const sandboxFetcher = ([url, body]: [string, string]) =>
+  fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  }).then((r) => r.json());
 
 export function useProjections(
   startDate: Date,
   endDate: Date,
   granularity: Granularity,
-  accountId?: string
+  accountId?: string,
+  sandbox?: SandboxState
 ) {
-  const params = new URLSearchParams({
+  const range = {
     startDate: formatDateISO(startDate),
     endDate: formatDateISO(endDate),
     granularity,
-  });
-  if (accountId) params.set("accountId", accountId);
+    ...(accountId ? { accountId } : {}),
+  };
+  const useSandbox = !!sandbox && sandboxChangeCount(sandbox) > 0;
 
-  const { data, error, isLoading } = useSWR(
-    `/api/projections?${params.toString()}`,
-    fetcher
+  // Always loaded: it is the projection when the sandbox is empty, and the
+  // fallback shown while a sandbox projection is still being calculated
+  const real = useSWR(`/api/projections?${new URLSearchParams(range).toString()}`, fetcher);
+  const whatIf = useSWR(
+    useSandbox
+      ? [
+          "/api/projections",
+          JSON.stringify({
+            ...range,
+            sandbox: { added: sandbox.added, edited: sandbox.edited, removed: sandbox.removed },
+          }),
+        ]
+      : null,
+    sandboxFetcher,
+    { keepPreviousData: true }
   );
+  const data = useSandbox ? whatIf.data ?? real.data : real.data;
+  const error = useSandbox ? whatIf.error : real.error;
+  const isLoading = !data && (real.isLoading || whatIf.isLoading);
 
   // Responses cached or served before the insight fields existed lack them; fill defaults
   const raw = data?.data as ProjectionResult | undefined;
@@ -39,7 +65,9 @@ export function useProjections(
 
   return {
     projection,
+    /** Fingerprint of the real data behind this projection */
+    dataVersion: data?.dataVersion as string | undefined,
     isLoading,
-    isError: !!error,
+    isError: !!error || !!data?.error,
   };
 }

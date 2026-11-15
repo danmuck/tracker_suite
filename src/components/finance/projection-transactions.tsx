@@ -6,10 +6,23 @@ import {
   ArrowRightLeft,
   ArrowUp,
   ArrowUpDown,
+  FlaskConical,
   ListX,
+  Pencil,
+  Plus,
   Repeat,
   Search,
+  Trash2,
 } from "lucide-react";
+import { toast } from "sonner";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { TransactionForm } from "@/components/finance/transaction-form";
+import {
+  isSandboxId,
+  projectionSandbox,
+  type SandboxState,
+} from "@/hooks/finance/use-projection-sandbox";
+import type { Transaction, TransactionFormData } from "@/types/finance/transaction";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -56,10 +69,47 @@ function signedAmount(t: ProjectedTransaction) {
 export function ProjectionTransactions({
   timeline,
   accounts,
+  sandbox,
 }: {
   timeline: ProjectionDay[];
   accounts: Account[];
+  sandbox: SandboxState;
 }) {
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<{ id: string; values: Partial<TransactionFormData> } | null>(null);
+
+  /** Open the form for the transaction behind a row, using its sandbox version if it has one */
+  async function openEdit(id: string) {
+    const local = sandbox.added.find((a) => a.id === id)?.data ?? sandbox.edited[id];
+    if (local) {
+      setEditTarget({ id, values: local });
+      return;
+    }
+    try {
+      const res = await fetch(`/api/transactions/${id}`);
+      // This endpoint returns the transaction itself, not wrapped in { data }
+      const tx = (await res.json()) as Transaction;
+      if (!res.ok || !tx?._id) throw new Error();
+      setEditTarget({
+        id,
+        values: {
+          description: tx.description,
+          amount: tx.amount / 100,
+          date: tx.date,
+          accountId: tx.accountId,
+          toAccountId: tx.toAccountId,
+          type: tx.type,
+          categoryTags: tx.categoryTags,
+          isRecurring: tx.isRecurring,
+          recurrenceRule: tx.recurrenceRule,
+          notes: tx.notes,
+        },
+      });
+    } catch {
+      toast.error("Could not load that transaction");
+    }
+  }
+
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -185,6 +235,11 @@ export function ProjectionTransactions({
           <Repeat className="h-3.5 w-3.5" />
           Recurring
         </Button>
+
+        <Button className="gap-1.5" onClick={() => setCreateOpen(true)}>
+          <Plus className="h-4 w-4" />
+          Add to sandbox
+        </Button>
       </div>
 
       {rows.length === 0 ? (
@@ -220,6 +275,7 @@ export function ProjectionTransactions({
                       <span>Credit</span>
                     </div>
                   </TableHead>
+                  <TableHead />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -228,6 +284,9 @@ export function ProjectionTransactions({
                   const toAccount = tx.toAccountId ? accountMap[tx.toAccountId] : undefined;
                   const reduced =
                     tx.originalAmount !== undefined && tx.originalAmount !== tx.amount;
+                  const sourceId = tx.sourceTransactionId;
+                  const inSandbox =
+                    !!sourceId && (isSandboxId(sourceId) || sourceId in sandbox.edited);
                   return (
                     <TableRow
                       key={`${tx.date}-${tx.sourceTransactionId ?? tx.description}-${tx.accountId}-${i}`}
@@ -240,7 +299,14 @@ export function ProjectionTransactions({
                       </TableCell>
                       <TableCell>
                         <div className="max-w-[200px]">
-                          <p className="font-medium truncate">{tx.description}</p>
+                          <p className="font-medium truncate flex items-center gap-1.5">
+                            <span className="truncate">{tx.description}</span>
+                            {inSandbox && (
+                              <span title="Sandbox change, not in your real data">
+                                <FlaskConical className="h-3 w-3 shrink-0 text-primary" />
+                              </span>
+                            )}
+                          </p>
                           {reduced && (
                             <p className="text-xs text-muted-foreground truncate">
                               {tx.amount === 0 ? "Stopped" : "Reduced"} (see Alerts)
@@ -302,6 +368,38 @@ export function ProjectionTransactions({
                           </div>
                         ) : null}
                       </TableCell>
+                      <TableCell>
+                        {/* Projected interest lines have no transaction behind them to change */}
+                        {sourceId ? (
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title={tx.isRecurring ? "Edit in sandbox (whole series)" : "Edit in sandbox"}
+                              onClick={() => openEdit(sourceId)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-destructive hover:text-destructive"
+                              title={
+                                tx.isRecurring
+                                  ? "Remove from sandbox projection (whole series)"
+                                  : "Remove from sandbox projection"
+                              }
+                              onClick={() => {
+                                projectionSandbox.remove(sourceId);
+                                toast.success(`"${tx.description}" left out of the sandbox projection`);
+                              }}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        ) : null}
+                      </TableCell>
                     </TableRow>
                   );
                 })}
@@ -357,6 +455,49 @@ export function ProjectionTransactions({
           </div>
         </>
       )}
+
+      {/* Add to sandbox */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Sandbox Transaction</DialogTitle>
+            <DialogDescription>
+              Used only for this projection. It is not saved to your transactions.
+            </DialogDescription>
+          </DialogHeader>
+          <TransactionForm
+            onSubmit={async (data) => {
+              projectionSandbox.add(data);
+              setCreateOpen(false);
+              toast.success("Added to the sandbox");
+            }}
+            onCancel={() => setCreateOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit in sandbox */}
+      <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit in Sandbox</DialogTitle>
+            <DialogDescription>
+              Changes apply to this projection only. Your real transaction stays as it is.
+            </DialogDescription>
+          </DialogHeader>
+          {editTarget && (
+            <TransactionForm
+              defaultValues={editTarget.values}
+              onSubmit={async (data) => {
+                projectionSandbox.edit(editTarget.id, data);
+                setEditTarget(null);
+                toast.success("Sandbox updated");
+              }}
+              onCancel={() => setEditTarget(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
