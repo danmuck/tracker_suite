@@ -47,7 +47,7 @@ import {
   sortAccounts,
 } from "@/lib/finance/account-utils";
 import { formatCurrency } from "@/lib/finance/formatters";
-import { DebtDetails } from "@/components/finance/debt/debt-details";
+import { AccountEditTabs } from "@/components/finance/debt/account-edit-tabs";
 import { ACCOUNT_TYPES } from "@/lib/finance/constants";
 import type { Account, AccountFormData, AccountType } from "@/types/finance/account";
 
@@ -244,9 +244,6 @@ export default function AccountsPage() {
             <p className="text-xs text-muted-foreground line-clamp-2">{account.notes}</p>
           )}
 
-          {!account.isArchived && (account.type === "credit_card" || account.type === "debt") && (
-            <DebtDetails account={account} banks={activeBanks} />
-          )}
         </CardContent>
       </Card>
     );
@@ -407,11 +404,12 @@ export default function AccountsPage() {
 
       {/* Edit dialog */}
       <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit Account</DialogTitle>
           </DialogHeader>
           {editTarget && (
+            <AccountEditTabs account={editTarget} banks={activeBanks}>
             <AccountForm
               defaultValues={{
                 name: editTarget.name,
@@ -432,6 +430,7 @@ export default function AccountsPage() {
               onSubmit={handleEdit}
               onCancel={() => setEditTarget(null)}
             />
+            </AccountEditTabs>
           )}
         </DialogContent>
       </Dialog>
