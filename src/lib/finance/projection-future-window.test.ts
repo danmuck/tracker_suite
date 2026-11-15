@@ -64,3 +64,21 @@ test("a window starting today or earlier is unchanged", () => {
   assert.equal(r.summary.startBalances.bank, 100_000);
   assert.equal(r.summary.endBalances.bank, 70_000);
 });
+
+test("each transaction carries running bank and credit card totals", () => {
+  const card = { _id: id("card"), type: "credit_card", balance: 20_000, creditLimit: 500_000, isArchived: false };
+  const charge = {
+    _id: id("c1"), amount: 5_000, date: new Date("2099-01-05"), description: "Charge",
+    accountId: id("card"), type: "debit", isRecurring: false, balanceApplied: false, categoryTags: [],
+  };
+  const payment = {
+    _id: id("p1"), amount: 3_000, date: new Date("2099-01-10"), description: "Payment",
+    accountId: id("bank"), toAccountId: id("card"), type: "transfer", isRecurring: false, balanceApplied: false, categoryTags: [],
+  };
+  const r = run([bank, card], [charge, payment], "2099-01-01", "2099-01-31");
+  const tx = r.timeline.flatMap((d) => d.transactions);
+  assert.deepEqual(tx.map((t) => t.ledger), [
+    { bank: 100_000, credit: 25_000 },
+    { bank: 97_000, credit: 22_000 },
+  ]);
+});

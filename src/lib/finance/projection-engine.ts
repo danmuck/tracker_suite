@@ -128,6 +128,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         type: t.type,
         categoryTags: t.categoryTags,
         isProjected: !isPast,
+        isRecurring: true,
         // Past occurrences are already in stored balances: payment plans post them,
         // and other recurring items are kept current by the user
         balanceApplied: isPast,
@@ -242,6 +243,10 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
   // Insight trackers (target accounts only)
   const targetIds = new Set(targetAccounts.map((a) => a._id.toString()));
   const targetBankIds = targetAccounts.filter((a) => a.type === "bank").map((a) => a._id.toString());
+  const targetCardIds = targetAccounts.filter((a) => a.type === "credit_card").map((a) => a._id.toString());
+  // Running totals stamped on each transaction once it has been applied
+  const sumOf = (ids: string[]) => ids.reduce((sum, id) => sum + (runningBalances[id] ?? 0), 0);
+  const ledgerNow = () => ({ bank: sumOf(targetBankIds), credit: sumOf(targetCardIds) });
   let lowestCash: { amount: number; date: string } | null = null;
   // Liabilities owing at the start: date they first reach zero, null if not within the window
   const payoffDates: Record<string, string | null> = {};
@@ -333,7 +338,10 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         }
       } else {
         const accountId = t.accountId;
-        if (runningBalances[accountId] === undefined) continue;
+        if (runningBalances[accountId] === undefined) {
+          t.ledger = ledgerNow();
+          continue;
+        }
         const isDebtAccount = debtAccountIds.has(accountId);
         const isBankAccount = bankAccountIds.has(accountId);
 
@@ -411,6 +419,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
           runningBalances[accountId] -= t.amount;
         }
       }
+      t.ledger = ledgerNow();
     }
 
     // Month-end interest (future months only; past interest is already in DB balances)
@@ -425,7 +434,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         runningBalances[a.id] += charged - match;
 
         const visible = !filterAccountId || filterAccountId === a.id;
-        const base = { date: dateStr, accountId: a.id, isProjected: true };
+        const base = { date: dateStr, accountId: a.id, isProjected: true, ledger: ledgerNow() };
         if (charged > 0) {
           const line: ProjectedTransaction = { ...base, amount: charged, description: "Interest", type: "debit", categoryTags: ["interest"] };
           syntheticTx.push(line);

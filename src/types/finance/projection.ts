@@ -8,6 +8,10 @@ export interface ProjectedTransaction {
   toAccountId?: string;
   categoryTags: string[];
   isProjected: boolean;
+  /** An occurrence of a recurring transaction */
+  isRecurring?: boolean;
+  /** Totals right after this transaction: bank/cash balance and credit card balance owed (cents) */
+  ledger?: { bank: number; credit: number };
   balanceApplied?: boolean;
   sourceTransactionId?: string;
 }

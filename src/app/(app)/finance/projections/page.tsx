@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { addDays, addMonths, differenceInCalendarDays, isSameDay } from "date-fns";
 import { BarChart3, CalendarIcon, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import { ReportsPanel } from "@/components/finance/reports-panel";
+import { ProjectionTransactions } from "@/components/finance/projection-transactions";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,7 +73,7 @@ interface ProjectionSettings {
   view: ProjectionView;
 }
 
-const VIEWS = ["overview", "cashflow", "debt", "alerts", "reports"] as const;
+const VIEWS = ["overview", "cashflow", "debt", "transactions", "alerts", "reports"] as const;
 type ProjectionView = (typeof VIEWS)[number];
 
 const STORAGE_KEY = "finance.projections.settings";
@@ -582,6 +583,7 @@ export default function ProjectionsPage() {
               <TabsTrigger value="overview" className="flex-none">Overview</TabsTrigger>
               <TabsTrigger value="cashflow" className="flex-none">Cash Flow</TabsTrigger>
               <TabsTrigger value="debt" className="flex-none">Debt</TabsTrigger>
+              <TabsTrigger value="transactions" className="flex-none">Transactions</TabsTrigger>
               <TabsTrigger value="alerts" className="flex-none">
                 Alerts
                 {projection.alerts.length > 0 && (
@@ -630,6 +632,10 @@ export default function ProjectionsPage() {
             <TabsContent value="debt" className="space-y-6">
               <PayoffDates payoffDates={summary!.payoffDates} accounts={filteredAccounts} />
               <UtilizationChart timeline={projection.timeline} accounts={filteredAccounts} granularity={granularity} />
+            </TabsContent>
+
+            <TabsContent value="transactions">
+              <ProjectionTransactions timeline={projection.timeline} accounts={accounts} />
             </TabsContent>
 
             <TabsContent value="alerts" className="space-y-6">
