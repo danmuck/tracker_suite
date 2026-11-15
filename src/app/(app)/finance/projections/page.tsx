@@ -34,6 +34,14 @@ import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
 import { CurrencyDisplay } from "@/components/finance/currency-display";
 import { ProjectionAlerts } from "@/components/finance/projection-alerts";
+import {
+  CashFlowChart,
+  NetWorthChart,
+  PayoffDates,
+  ProjectionInsightCards,
+  UpcomingItems,
+  UtilizationChart,
+} from "@/components/finance/projection-insights";
 import { useProjections } from "@/hooks/finance/use-projections";
 import { useAccounts } from "@/hooks/finance/use-accounts";
 import { centsToDollars } from "@/lib/finance/formatters";
@@ -371,6 +379,8 @@ export default function ProjectionsPage() {
             </Card>
           </div>
 
+          <ProjectionInsightCards summary={summary!} />
+
           {/* Balance constraint alerts */}
           {projection.alerts.length > 0 && (
             <ProjectionAlerts
@@ -378,6 +388,11 @@ export default function ProjectionsPage() {
               accounts={accounts}
             />
           )}
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <PayoffDates payoffDates={summary!.payoffDates} accounts={filteredAccounts} />
+            <UpcomingItems timeline={projection.timeline} accounts={accounts} />
+          </div>
 
           {/* Area charts */}
           {chartData.length > 0 && chartSeries.length > 0 ? (
@@ -400,6 +415,10 @@ export default function ProjectionsPage() {
               spansYears={spansYears}
             />
           ) : null}
+          <NetWorthChart timeline={projection.timeline} accounts={filteredAccounts} granularity={granularity} />
+          <CashFlowChart timeline={projection.timeline} />
+          <UtilizationChart timeline={projection.timeline} accounts={filteredAccounts} granularity={granularity} />
+
         </>
       )}
     </div>

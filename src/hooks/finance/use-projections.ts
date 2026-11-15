@@ -24,8 +24,21 @@ export function useProjections(
     fetcher
   );
 
+  // Responses cached or served before the insight fields existed lack them; fill defaults
+  const raw = data?.data as ProjectionResult | undefined;
+  const projection: ProjectionResult | undefined = raw && {
+    ...raw,
+    summary: {
+      ...raw.summary,
+      lowestCash: raw.summary.lowestCash ?? null,
+      payoffDates: raw.summary.payoffDates ?? {},
+      interestCharged: raw.summary.interestCharged ?? 0,
+      debtPayments: raw.summary.debtPayments ?? 0,
+    },
+  };
+
   return {
-    projection: data?.data as ProjectionResult | undefined,
+    projection,
     isLoading,
     isError: !!error,
   };

@@ -43,6 +43,14 @@ export interface ProjectionResult {
     netChange: number;
     startBalances: Record<string, number>;
     endBalances: Record<string, number>;
+    /** Lowest end-of-day combined cash/bank balance in the window (cents); null when no bank accounts are in view */
+    lowestCash: { amount: number; date: string } | null;
+    /** Liabilities owing at the start → date first paid off, or null if not within the window */
+    payoffDates: Record<string, string | null>;
+    /** Projected interest charged in the window (cents) */
+    interestCharged: number;
+    /** Payments into credit cards and debt in the window (cents) */
+    debtPayments: number;
   };
 }
 

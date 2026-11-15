@@ -209,6 +209,17 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
   // Synthetic interest / RAP match lines (for summary totals)
   const syntheticTx: ProjectedTransaction[] = [];
 
+  // Insight trackers (target accounts only)
+  const targetIds = new Set(targetAccounts.map((a) => a._id.toString()));
+  const targetBankIds = targetAccounts.filter((a) => a.type === "bank").map((a) => a._id.toString());
+  let lowestCash: { amount: number; date: string } | null = null;
+  // Liabilities owing at the start: date they first reach zero, null if not within the window
+  const payoffDates: Record<string, string | null> = {};
+  for (const id of targetIds) {
+    if (debtAccountIds.has(id) && (startBalances[id] ?? 0) > 0) payoffDates[id] = null;
+  }
+  let debtPayments = 0;
+
   for (const day of days) {
     const dateStr = toUTCDateStr(day);
     const dayTx = filteredProjected.filter((t) => t.date === dateStr);
@@ -286,7 +297,10 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
         if (runningBalances[t.toAccountId] !== undefined) {
           runningBalances[t.toAccountId] += isDebtDest ? -amount : amount;
         }
-        if (isDebtDest) paidThisMonth[t.toAccountId] = (paidThisMonth[t.toAccountId] ?? 0) + amount;
+        if (isDebtDest) {
+          paidThisMonth[t.toAccountId] = (paidThisMonth[t.toAccountId] ?? 0) + amount;
+          if (targetIds.has(t.toAccountId)) debtPayments += amount;
+        }
       } else {
         const accountId = t.accountId;
         if (runningBalances[accountId] === undefined) continue;
@@ -303,6 +317,7 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
             runningBalances[accountId] -= t.amount;
           }
           paidThisMonth[accountId] = (paidThisMonth[accountId] ?? 0) + t.amount;
+          if (targetIds.has(accountId)) debtPayments += t.amount;
           if (t.amount < origAmount) {
             t.originalAmount = origAmount;
             alerts.push({
@@ -394,6 +409,15 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
       }
     }
 
+    // End-of-day insights: lowest combined cash/bank balance, and payoff dates
+    if (targetBankIds.length > 0) {
+      const cash = targetBankIds.reduce((sum, id) => sum + (runningBalances[id] ?? 0), 0);
+      if (!lowestCash || cash < lowestCash.amount) lowestCash = { amount: cash, date: dateStr };
+    }
+    for (const id of Object.keys(payoffDates)) {
+      if (payoffDates[id] === null && runningBalances[id] <= 0) payoffDates[id] = dateStr;
+    }
+
     // Only include target account balances in output
     const outputBalances: Record<string, number> = {};
     for (const a of targetAccounts) {
@@ -463,6 +487,12 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
         targetAccounts.map((a) => [a._id.toString(), startBalances[a._id.toString()] ?? 0])
       ),
       endBalances: lastDay?.balances || {},
+      lowestCash,
+      payoffDates,
+      interestCharged: visibleSynthetic
+        .filter((t) => t.categoryTags.includes("interest"))
+        .reduce((sum, t) => sum + t.amount, 0),
+      debtPayments,
     },
   };
 }
