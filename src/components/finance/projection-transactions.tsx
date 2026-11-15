@@ -37,6 +37,9 @@ import type { ProjectedTransaction, ProjectionDay } from "@/types/finance/projec
 
 const LIMIT_OPTIONS = [10, 25, 50, 100];
 
+// Bank | Credit: equal-width halves either side of a centred divider
+const LEDGER_GRID = "grid grid-cols-[1fr_auto_1fr] items-baseline gap-x-2";
+
 type SortKey = "date" | "amount";
 type SortDir = "asc" | "desc";
 
@@ -209,10 +212,13 @@ export function ProjectionTransactions({
                   <TableHead>
                     {sortButton("Amount", "amount")}
                   </TableHead>
-                  <TableHead className="text-right">
-                    <span title="Totals right after each transaction">
-                      Bank <span className="opacity-40">|</span> Credit
-                    </span>
+                  <TableHead>
+                    {/* Same three-track grid as the cells below, so the divider lines up */}
+                    <div className={LEDGER_GRID} title="Totals right after each transaction">
+                      <span className="text-right">Bank</span>
+                      <span className="opacity-40">|</span>
+                      <span>Credit</span>
+                    </div>
                   </TableHead>
                 </TableRow>
               </TableHeader>
@@ -284,16 +290,16 @@ export function ProjectionTransactions({
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-right font-mono text-sm whitespace-nowrap">
+                      <TableCell className="font-mono text-sm whitespace-nowrap">
                         {tx.ledger ? (
-                          <>
-                            <CurrencyDisplay cents={tx.ledger.bank} />
-                            <span className="mx-2 text-muted-foreground opacity-40">|</span>
+                          <div className={LEDGER_GRID}>
+                            <CurrencyDisplay cents={tx.ledger.bank} className="text-right" />
+                            <span className="text-muted-foreground opacity-40">|</span>
                             <CurrencyDisplay
                               cents={-tx.ledger.credit}
                               className="text-muted-foreground"
                             />
-                          </>
+                          </div>
                         ) : null}
                       </TableCell>
                     </TableRow>
