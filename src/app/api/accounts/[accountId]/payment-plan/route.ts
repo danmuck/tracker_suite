@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { postDuePayments } from "@/lib/finance/post-payments";
 import { paymentPlanSetupSchema, paymentPlanUpdateSchema } from "@/lib/finance/validators";
 import {
   PaymentPlanError,
@@ -27,6 +28,7 @@ function validationError(issues: { message: string }[]) {
 export async function GET(_request: NextRequest, { params }: Ctx) {
   try {
     await connectDB();
+    await postDuePayments();
     const { accountId } = await params;
     return NextResponse.json({ data: await getPaymentPlan(accountId) });
   } catch (error) {
@@ -38,6 +40,7 @@ export async function GET(_request: NextRequest, { params }: Ctx) {
 export async function POST(request: NextRequest, { params }: Ctx) {
   try {
     await connectDB();
+    await postDuePayments();
     const { accountId } = await params;
     const parsed = paymentPlanSetupSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error.issues);
@@ -52,6 +55,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
 export async function PUT(request: NextRequest, { params }: Ctx) {
   try {
     await connectDB();
+    await postDuePayments();
     const { accountId } = await params;
     const parsed = paymentPlanUpdateSchema.safeParse(await request.json());
     if (!parsed.success) return validationError(parsed.error.issues);
@@ -66,6 +70,7 @@ export async function PUT(request: NextRequest, { params }: Ctx) {
 export async function DELETE(_request: NextRequest, { params }: Ctx) {
   try {
     await connectDB();
+    await postDuePayments();
     const { accountId } = await params;
     await unlinkPaymentPlan(accountId);
     return NextResponse.json({ data: await getPaymentPlan(accountId) });

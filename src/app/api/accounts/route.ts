@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { postDuePayments } from "@/lib/finance/post-payments";
 import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
 import { planFieldsToDb } from "@/lib/finance/account-plan-fields";
@@ -9,6 +10,7 @@ import { accountSchema } from "@/lib/finance/validators";
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
+    await postDuePayments();
 
     const { searchParams } = request.nextUrl;
     const type = searchParams.get("type");

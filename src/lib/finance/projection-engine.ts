@@ -99,6 +99,9 @@ export function buildProjection(input: ProjectionInput): ProjectionResult {
         type: t.type,
         categoryTags: t.categoryTags,
         isProjected: !isPast,
+        // Past occurrences are already in stored balances: payment plans post them,
+        // and other recurring items are kept current by the user
+        balanceApplied: isPast,
         sourceTransactionId: t._id.toString(),
       });
     }

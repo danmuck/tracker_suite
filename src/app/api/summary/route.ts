@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { postDuePayments } from "@/lib/finance/post-payments";
 import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
 import { buildProjection } from "@/lib/finance/projection-engine";
@@ -18,6 +19,7 @@ import type { SummaryView, SummaryResult, DaySummary, MonthSummary } from "@/typ
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
+    await postDuePayments();
     const { searchParams } = new URL(request.url);
 
     const view = (searchParams.get("view") || "monthly") as SummaryView;

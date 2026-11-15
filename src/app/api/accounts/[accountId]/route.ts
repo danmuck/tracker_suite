@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
+import { postDuePayments } from "@/lib/finance/post-payments";
 import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
 import { planFieldsToDb } from "@/lib/finance/account-plan-fields";
@@ -12,6 +13,7 @@ export async function GET(
 ) {
   try {
     await connectDB();
+    await postDuePayments();
 
     const { accountId } = await params;
 

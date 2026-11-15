@@ -28,6 +28,8 @@ export interface ITransaction extends Document {
   recurrenceRule?: IRecurrenceRule;
   /** Dated amounts for recurring transactions (written by the Datasheet) */
   amountSchedule?: IAmountStep[];
+  /** Payment plans: last occurrence date already posted to account balances */
+  postedThrough?: Date | null;
   categoryTags: string[];
   notes?: string;
   balanceApplied: boolean;
@@ -72,6 +74,7 @@ const TransactionSchema = new Schema<ITransaction>(
     isRecurring: { type: Boolean, default: false },
     recurrenceRule: { type: RecurrenceRuleSchema },
     amountSchedule: { type: [AmountStepSchema], default: undefined },
+    postedThrough: { type: Date, default: undefined },
     categoryTags: [{ type: String, trim: true }],
     notes: { type: String, trim: true },
     balanceApplied: { type: Boolean, default: true },

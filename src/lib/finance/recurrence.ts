@@ -26,6 +26,8 @@ function snapToDayOfWeek(date: Date, dayOfWeek: number | undefined): Date {
 /**
  * Expand a recurrence rule into occurrence dates within [windowStart, windowEnd].
  * All dates are treated as calendar days and returned at noon UTC (see ./dates).
+ * Every step is re-anchored to noon UTC: local-time date math drifts the UTC
+ * hour across DST changes, which would drop occurrences on the window's last day.
  */
 export function expandRecurrence(
   rule: RecurrenceRule,
@@ -51,29 +53,29 @@ export function expandRecurrence(
         if (!isBefore(current, windowStart)) {
           dates.push(new Date(current));
         }
-        current = addDays(current, interval);
+        current = normalizeDate(addDays(current, interval));
       }
       break;
     }
 
     case "weekly": {
-      let current = snapToDayOfWeek(start, rule.dayOfWeek);
+      let current = normalizeDate(snapToDayOfWeek(start, rule.dayOfWeek));
       while (!isAfter(current, effectiveEnd)) {
         if (!isBefore(current, windowStart)) {
           dates.push(new Date(current));
         }
-        current = addWeeks(current, interval);
+        current = normalizeDate(addWeeks(current, interval));
       }
       break;
     }
 
     case "biweekly": {
-      let current = snapToDayOfWeek(start, rule.dayOfWeek);
+      let current = normalizeDate(snapToDayOfWeek(start, rule.dayOfWeek));
       while (!isAfter(current, effectiveEnd)) {
         if (!isBefore(current, windowStart)) {
           dates.push(new Date(current));
         }
-        current = addWeeks(current, 2);
+        current = normalizeDate(addWeeks(current, 2));
       }
       break;
     }
@@ -81,13 +83,13 @@ export function expandRecurrence(
     case "monthly": {
       let current = start;
       const targetDay = rule.dayOfMonth || start.getDate();
-      current = clampDayOfMonth(current, targetDay);
+      current = normalizeDate(clampDayOfMonth(current, targetDay));
       while (!isAfter(current, effectiveEnd)) {
         if (!isBefore(current, windowStart)) {
           dates.push(new Date(current));
         }
-        current = addMonths(current, interval);
-        current = clampDayOfMonth(current, targetDay);
+        current = normalizeDate(addMonths(current, interval));
+        current = normalizeDate(clampDayOfMonth(current, targetDay));
       }
       break;
     }
@@ -99,7 +101,7 @@ export function expandRecurrence(
       );
       while (!isAfter(current, effectiveEnd)) {
         for (const day of days) {
-          const d = clampDayOfMonth(current, day);
+          const d = normalizeDate(clampDayOfMonth(current, day));
           if (
             !isBefore(d, start) &&
             !isBefore(d, windowStart) &&
@@ -108,7 +110,7 @@ export function expandRecurrence(
             dates.push(new Date(d));
           }
         }
-        current = addMonths(current, 1);
+        current = normalizeDate(addMonths(current, 1));
       }
       break;
     }
@@ -119,7 +121,7 @@ export function expandRecurrence(
         if (!isBefore(current, windowStart)) {
           dates.push(new Date(current));
         }
-        current = addYears(current, interval);
+        current = normalizeDate(addYears(current, interval));
       }
       break;
     }
@@ -130,7 +132,7 @@ export function expandRecurrence(
         if (!isBefore(current, windowStart)) {
           dates.push(new Date(current));
         }
-        current = addDays(current, interval);
+        current = normalizeDate(addDays(current, interval));
       }
       break;
     }
