@@ -19,7 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import {
   ChartContainer,
   ChartLegend,
@@ -67,7 +68,11 @@ interface ProjectionSettings {
   endDate: Date;
   granularity: Granularity;
   accountId: string;
+  view: ProjectionView;
 }
+
+const VIEWS = ["overview", "cashflow", "debt", "alerts"] as const;
+type ProjectionView = (typeof VIEWS)[number];
 
 const STORAGE_KEY = "finance.projections.settings";
 
@@ -81,6 +86,7 @@ function defaultSettings(): ProjectionSettings {
     endDate: addMonths(today, 3),
     granularity: "daily",
     accountId: "",
+    view: "overview",
   };
 }
 
@@ -99,6 +105,7 @@ function readStoredSettings(): ProjectionSettings | null {
         ? parsed.granularity
         : "daily",
       accountId: typeof parsed.accountId === "string" ? parsed.accountId : "",
+      view: VIEWS.includes(parsed.view) ? parsed.view : "overview",
     };
   } catch {
     return null;
@@ -278,6 +285,12 @@ export default function ProjectionsPage() {
     })) ?? [];
 
   const summary = projection?.summary;
+  // Matches how the alerts list groups repeats of the same item
+  const alertGroupCount = new Set(
+    projection?.alerts.map(
+      (a) => `${a.sourceTransactionId ?? a.description}-${a.reason}`
+    )
+  ).size;
   const spansYears = startDate.getFullYear() !== endDate.getFullYear();
 
   return (
@@ -503,46 +516,77 @@ export default function ProjectionsPage() {
             </Card>
           </div>
 
-          <ProjectionInsightCards summary={summary!} />
+          {/* Everything below the headline totals is grouped by topic */}
+          <Tabs
+            value={settings.view}
+            onValueChange={(v) => update({ view: v as ProjectionView })}
+            className="gap-6"
+          >
+            <TabsList variant="line" className="w-full justify-start border-b">
+              <TabsTrigger value="overview" className="flex-none">Overview</TabsTrigger>
+              <TabsTrigger value="cashflow" className="flex-none">Cash Flow</TabsTrigger>
+              <TabsTrigger value="debt" className="flex-none">Debt</TabsTrigger>
+              <TabsTrigger value="alerts" className="flex-none">
+                Alerts
+                {projection.alerts.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">
+                    {alertGroupCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
 
-          {/* Balance constraint alerts */}
-          {projection.alerts.length > 0 && (
-            <ProjectionAlerts
-              alerts={projection.alerts}
-              accounts={accounts}
-            />
-          )}
+            <TabsContent value="overview" className="space-y-6">
+              <ProjectionInsightCards summary={summary!} />
+              {chartData.length > 0 && chartSeries.length > 0 ? (
+                <BalanceChart
+                  title="Balance Over Time"
+                  data={chartData}
+                  series={chartSeries}
+                  config={chartConfig}
+                  granularity={granularity}
+                  spansYears={spansYears}
+                />
+              ) : null}
+              <NetWorthChart timeline={projection.timeline} accounts={filteredAccounts} granularity={granularity} />
+            </TabsContent>
 
-          <div className="grid gap-4 lg:grid-cols-2">
-            <PayoffDates payoffDates={summary!.payoffDates} accounts={filteredAccounts} />
-            <UpcomingItems timeline={projection.timeline} accounts={accounts} />
-          </div>
+            <TabsContent value="cashflow" className="space-y-6">
+              {chartData.length > 0 && liquidSeries.length > 0 ? (
+                <BalanceChart
+                  title="Balance Over Time (excluding debt)"
+                  data={chartData}
+                  series={liquidSeries}
+                  config={chartConfig}
+                  granularity={granularity}
+                  spansYears={spansYears}
+                />
+              ) : null}
+              <CashFlowChart timeline={projection.timeline} />
+              <UpcomingItems timeline={projection.timeline} accounts={accounts} />
+            </TabsContent>
 
-          {/* Area charts */}
-          {chartData.length > 0 && chartSeries.length > 0 ? (
-            <BalanceChart
-              title="Balance Over Time"
-              data={chartData}
-              series={chartSeries}
-              config={chartConfig}
-              granularity={granularity}
-              spansYears={spansYears}
-            />
-          ) : null}
-          {chartData.length > 0 && liquidSeries.length > 0 ? (
-            <BalanceChart
-              title="Balance Over Time (excluding debt)"
-              data={chartData}
-              series={liquidSeries}
-              config={chartConfig}
-              granularity={granularity}
-              spansYears={spansYears}
-            />
-          ) : null}
-          <NetWorthChart timeline={projection.timeline} accounts={filteredAccounts} granularity={granularity} />
-          <CashFlowChart timeline={projection.timeline} />
-          <UtilizationChart timeline={projection.timeline} accounts={filteredAccounts} granularity={granularity} />
+            <TabsContent value="debt" className="space-y-6">
+              <PayoffDates payoffDates={summary!.payoffDates} accounts={filteredAccounts} />
+              <UtilizationChart timeline={projection.timeline} accounts={filteredAccounts} granularity={granularity} />
+            </TabsContent>
 
+            <TabsContent value="alerts" className="space-y-6">
+              {projection.alerts.length > 0 ? (
+                <ProjectionAlerts
+                  alerts={projection.alerts}
+                  accounts={accounts}
+                  initialLimit={20}
+                />
+              ) : (
+                <EmptyState
+                  icon={TrendingUp}
+                  title="No alerts"
+                  description="Nothing in this range is stopped, reduced or paid off."
+                />
+              )}
+            </TabsContent>
+          </Tabs>
         </>
       )}
     </div>
