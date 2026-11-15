@@ -291,6 +291,30 @@ export default function ProjectionsPage() {
     })) ?? [];
 
   const summary = projection?.summary;
+  // Start and end totals per account type; liabilities count as negative
+  const typeTotals = (
+    [
+      { type: "bank", label: "Bank & Cash" },
+      { type: "credit_card", label: "Credit Cards" },
+      { type: "debt", label: "Debt" },
+    ] as const
+  )
+    .map(({ type, label }) => {
+      const ids = filteredAccounts
+        .filter((a) => a.type === type && summary?.endBalances[a._id] !== undefined)
+        .map((a) => a._id);
+      const sign = type === "bank" ? 1 : -1;
+      const total = (balances?: Record<string, number>) =>
+        ids.reduce((sum, id) => sum + sign * (balances?.[id] ?? 0), 0);
+      return {
+        type,
+        label,
+        count: ids.length,
+        start: total(summary?.startBalances),
+        end: total(summary?.endBalances),
+      };
+    })
+    .filter((t) => t.count > 0);
   // Matches how the alerts list groups repeats of the same item
   const alertGroupCount = new Set(
     projection?.alerts.map(
@@ -520,6 +544,32 @@ export default function ProjectionsPage() {
                 />
               </CardContent>
             </Card>
+          </div>
+
+          {/* Balance totals by account type, start → end of the range */}
+          <div className="grid gap-4 sm:grid-cols-3">
+            {typeTotals.map((t) => (
+              <Card key={t.type}>
+                <CardHeader className="pb-1">
+                  <CardTitle className="text-xs text-muted-foreground font-normal">
+                    {t.label}
+                    <span className="ml-1 opacity-70">
+                      ({t.count} {t.count === 1 ? "account" : "accounts"})
+                    </span>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CurrencyDisplay
+                    cents={t.end}
+                    colored
+                    className="text-lg font-bold"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    from <CurrencyDisplay cents={t.start} /> at start
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {/* Everything below the headline totals is grouped by topic */}
