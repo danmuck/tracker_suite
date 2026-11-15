@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AlertTriangle, CalendarClock, Unlink } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScheduleEditor } from "@/components/finance/schedule-editor";
 import { SetupPaymentsDialog } from "@/components/finance/debt/setup-payments-dialog";
@@ -32,6 +33,7 @@ export function PaymentPlanPanel({ account, banks }: { account: Account; banks: 
   const { plan, isLoading } = usePaymentPlan(account._id);
   const [setupOpen, setSetupOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmUnlink, setConfirmUnlink] = useState(false);
 
   if (isLoading || !plan) return <Skeleton className="h-16 w-full" />;
 
@@ -56,7 +58,8 @@ export function PaymentPlanPanel({ account, banks }: { account: Account; banks: 
     setBusy(true);
     try {
       await unlinkPaymentPlan(account._id);
-      toast.success("Payment plan unlinked (the transfer was kept)");
+      setConfirmUnlink(false);
+      toast.success(`Payment plan removed for ${account.name}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to unlink");
     } finally {
@@ -99,13 +102,33 @@ export function PaymentPlanPanel({ account, banks }: { account: Account; banks: 
             <button
               type="button"
               className="inline-flex items-center gap-1 hover:text-destructive disabled:opacity-50"
-              onClick={unlink}
+              onClick={() => setConfirmUnlink(true)}
               disabled={busy}
-              title="Stop managing this transfer's amount here"
+              title="Remove this payment plan and its transfer"
             >
               <Unlink className="h-3 w-3" /> Unlink
             </button>
           </div>
+
+          <Dialog open={confirmUnlink} onOpenChange={(o) => !busy && setConfirmUnlink(o)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Unlink payment plan?</DialogTitle>
+                <DialogDescription>
+                  Deletes the &ldquo;{plan.payment.fromAccountName} → {account.name}&rdquo; payment transfer and its
+                  timeline. Payments already posted stay in both balances. This can&apos;t be undone.
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setConfirmUnlink(false)} disabled={busy}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={unlink} disabled={busy}>
+                  Unlink and delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {plan.payoff && (
             <p className="text-xs">

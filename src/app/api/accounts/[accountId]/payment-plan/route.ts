@@ -66,7 +66,7 @@ export async function PUT(request: NextRequest, { params }: Ctx) {
   }
 }
 
-// DELETE — unlink the payment transfer (the transfer itself is kept)
+// DELETE — unlink the plan and delete its payment transfer (posted payments stay)
 export async function DELETE(_request: NextRequest, { params }: Ctx) {
   try {
     await connectDB();

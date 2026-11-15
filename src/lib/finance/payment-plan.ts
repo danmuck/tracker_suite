@@ -235,9 +235,12 @@ export async function updatePaymentPlan(
   await regenerateRapSchedule(accountId);
 }
 
+/**
+ * Remove the payment plan: unlink it and delete its payment transfer. Payments it
+ * already posted stay in the balances (that money moved), so nothing is reversed.
+ */
 export async function unlinkPaymentPlan(accountId: string) {
   const account = await loadAccount(accountId);
-  const tx = await loadPaymentTx(account);
-  if (tx) await Transaction.updateOne({ _id: tx._id }, { $unset: { amountSchedule: 1 } });
+  if (account.paymentTransactionId) await Transaction.deleteOne({ _id: account.paymentTransactionId });
   await Account.updateOne({ _id: account._id }, { $unset: { paymentTransactionId: 1 } });
 }
