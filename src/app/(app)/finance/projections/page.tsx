@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { addMonths, addYears } from "date-fns";
-import { CalendarIcon, TrendingUp } from "lucide-react";
+import { useEffect, useState } from "react";
+import { addDays, addMonths, differenceInCalendarDays, isSameDay } from "date-fns";
+import { CalendarIcon, ChevronLeft, ChevronRight, TrendingUp } from "lucide-react";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,6 +61,49 @@ const PRESETS = [
   { label: "6M", months: 6 },
   { label: "1Y", months: 12 },
 ];
+
+interface ProjectionSettings {
+  startDate: Date;
+  endDate: Date;
+  granularity: Granularity;
+  accountId: string;
+}
+
+const STORAGE_KEY = "finance.projections.settings";
+
+// Survives client-side navigation; sessionStorage covers a full reload
+let savedSettings: ProjectionSettings | null = null;
+
+function defaultSettings(): ProjectionSettings {
+  const today = new Date();
+  return {
+    startDate: today,
+    endDate: addMonths(today, 3),
+    granularity: "daily",
+    accountId: "",
+  };
+}
+
+function readStoredSettings(): ProjectionSettings | null {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const startDate = new Date(parsed.startDate);
+    const endDate = new Date(parsed.endDate);
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return null;
+    return {
+      startDate,
+      endDate,
+      granularity: ["daily", "weekly", "monthly"].includes(parsed.granularity)
+        ? parsed.granularity
+        : "daily",
+      accountId: typeof parsed.accountId === "string" ? parsed.accountId : "",
+    };
+  } catch {
+    return null;
+  }
+}
 
 interface ChartSeries {
   id: string;
@@ -138,13 +181,58 @@ function BalanceChart({
 }
 
 export default function ProjectionsPage() {
-  const today = new Date();
-  const [startDate, setStartDate] = useState(today);
-  const [endDate, setEndDate] = useState(addMonths(today, 3));
-  const [granularity, setGranularity] = useState<Granularity>("monthly");
-  const [accountId, setAccountId] = useState("");
+  const [settings, setSettings] = useState<ProjectionSettings>(
+    () => savedSettings ?? defaultSettings()
+  );
+  const { startDate, endDate, granularity } = settings;
+  const update = (patch: Partial<ProjectionSettings>) =>
+    setSettings((s) => ({ ...s, ...patch }));
+
+  // Restore after a full reload (done post-mount to keep hydration consistent)
+  useEffect(() => {
+    if (savedSettings) return;
+    const stored = readStoredSettings();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (stored) setSettings(stored);
+  }, []);
+
+  useEffect(() => {
+    savedSettings = settings;
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    } catch {
+      // storage unavailable; in-memory copy still covers navigation
+    }
+  }, [settings]);
 
   const { accounts } = useAccounts();
+  // Ignore a remembered account that no longer exists
+  const accountId =
+    accounts.length > 0 && !accounts.some((a) => a._id === settings.accountId)
+      ? ""
+      : settings.accountId;
+
+  // Presets measure from the chosen start date; the arrows page by the same span
+  const activePreset = PRESETS.find((p) =>
+    isSameDay(addMonths(startDate, p.months), endDate)
+  );
+  const shiftRange = (direction: 1 | -1) => {
+    if (activePreset) {
+      const newStart = addMonths(startDate, direction * activePreset.months);
+      update({
+        startDate: newStart,
+        endDate: addMonths(newStart, activePreset.months),
+      });
+    } else {
+      const days = Math.max(1, differenceInCalendarDays(endDate, startDate));
+      update({
+        startDate: addDays(startDate, direction * days),
+        endDate: addDays(endDate, direction * days),
+      });
+    }
+  };
+  const isFromToday = isSameDay(startDate, new Date());
+
   const { projection, isLoading } = useProjections(
     startDate,
     endDate,
@@ -203,20 +291,56 @@ export default function ProjectionsPage() {
       <div className="flex flex-wrap gap-3 items-center">
         {/* Preset buttons */}
         <div className="flex gap-1">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Previous period"
+            title={`Back ${activePreset?.label ?? "one range"}`}
+            onClick={() => shiftRange(-1)}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
           {PRESETS.map((preset) => (
             <Button
               key={preset.label}
-              variant="outline"
+              variant={activePreset === preset ? "default" : "outline"}
               size="sm"
-              onClick={() => {
-                setStartDate(today);
-                setEndDate(addMonths(today, preset.months));
-              }}
+              title={`${preset.label} from the start date`}
+              onClick={() =>
+                update({ endDate: addMonths(startDate, preset.months) })
+              }
             >
               {preset.label}
             </Button>
           ))}
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label="Next period"
+            title={`Forward ${activePreset?.label ?? "one range"}`}
+            onClick={() => shiftRange(1)}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isFromToday}
+          onClick={() => {
+            const now = new Date();
+            const days = Math.max(1, differenceInCalendarDays(endDate, startDate));
+            update({
+              startDate: now,
+              endDate: activePreset
+                ? addMonths(now, activePreset.months)
+                : addDays(now, days),
+            });
+          }}
+        >
+          Today
+        </Button>
 
         {/* Start date */}
         <Popover>
@@ -231,7 +355,7 @@ export default function ProjectionsPage() {
               mode="single"
               selected={startDate}
               defaultMonth={startDate}
-              onSelect={(d) => d && setStartDate(d)}
+              onSelect={(d) => d && update({ startDate: d })}
               initialFocus
             />
           </PopoverContent>
@@ -252,7 +376,7 @@ export default function ProjectionsPage() {
               mode="single"
               selected={endDate}
               defaultMonth={endDate}
-              onSelect={(d) => d && setEndDate(d)}
+              onSelect={(d) => d && update({ endDate: d })}
               initialFocus
             />
           </PopoverContent>
@@ -261,7 +385,7 @@ export default function ProjectionsPage() {
         {/* Granularity */}
         <Tabs
           value={granularity}
-          onValueChange={(v) => setGranularity(v as Granularity)}
+          onValueChange={(v) => update({ granularity: v as Granularity })}
         >
           <TabsList>
             <TabsTrigger value="daily">Daily</TabsTrigger>
@@ -273,7 +397,7 @@ export default function ProjectionsPage() {
         {/* Account filter */}
         <Select
           value={accountId}
-          onValueChange={(v) => setAccountId(v === "_all" ? "" : v)}
+          onValueChange={(v) => update({ accountId: v === "_all" ? "" : v })}
         >
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="All accounts" />
