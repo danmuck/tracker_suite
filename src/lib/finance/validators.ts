@@ -7,6 +7,8 @@ export const accountSchema = z.object({
   creditLimit: z.number().optional(),
   isLoan: z.boolean().optional(),
   linkedAccountId: z.string().optional(),
+  /** Create only: deposit the loan amount into the linked bank account */
+  depositFunds: z.boolean().optional(),
   currency: z.string().default("USD"),
   notes: z.string().max(500).optional(),
   apr: z.number().min(0).max(100).nullable().optional(), // percent

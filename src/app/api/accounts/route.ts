@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
     const accountData: Record<string, unknown> = { ...data, balance: balanceInCents };
     delete accountData.apr;
     delete accountData.minimumPayment;
+    delete accountData.depositFunds; // one-time action, not stored
     Object.assign(accountData, planFieldsToDb(data).set);
 
     if (data.creditLimit !== undefined && data.creditLimit !== null) {
@@ -127,9 +128,11 @@ export async function POST(request: NextRequest) {
     const account = await Account.create(accountData);
 
     // Side-effect: loan disbursement
-    // If the new account is a debt, is a loan, and has a linked bank account,
-    // atomically credit the linked account and record a disbursement transaction.
+    // Only when asked: a new loan paying out now deposits its amount into the
+    // linked bank account and records a disbursement transaction. Loans that
+    // already exist are linked without moving any money.
     if (
+      data.depositFunds === true &&
       account.type === "debt" &&
       account.isLoan === true &&
       account.linkedAccountId
@@ -150,10 +153,13 @@ export async function POST(request: NextRequest) {
         $inc: { balance: balanceInCents },
       });
 
-      // Create a disbursement transaction on the linked account
+      // Record the disbursement as a debt → bank transfer so both sides of the
+      // loan are on the ledger (projections rewind them together, and it is not
+      // counted as income)
       await Transaction.create({
-        accountId: account.linkedAccountId,
-        type: "credit",
+        accountId: account._id,
+        toAccountId: account.linkedAccountId,
+        type: "transfer",
         amount: balanceInCents,
         description: `Loan disbursement from ${account.name}`,
         categoryTags: ["transfer"],

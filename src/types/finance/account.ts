@@ -28,6 +28,8 @@ export interface AccountFormData {
   creditLimit?: number;
   isLoan?: boolean;
   linkedAccountId?: string;
+  /** Create only: deposit the loan amount into the linked bank account */
+  depositFunds?: boolean;
   currency?: string;
   notes?: string;
   apr?: number | null; // percent in the form (6.5), null clears

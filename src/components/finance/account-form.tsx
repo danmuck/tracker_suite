@@ -40,6 +40,8 @@ export function AccountForm({ defaultValues, isCash, hasSubLoans, onSubmit, onCa
   const [linkedAccountId, setLinkedAccountId] = useState(
     defaultValues?.linkedAccountId ?? ""
   );
+  const [depositFunds, setDepositFunds] = useState(false);
+  const isCreate = !defaultValues;
   const [apr, setApr] = useState(defaultValues?.apr != null ? String(defaultValues.apr) : "");
   const [minimumPayment, setMinimumPayment] = useState(
     defaultValues?.minimumPayment != null ? String(defaultValues.minimumPayment) : ""
@@ -91,6 +93,9 @@ export function AccountForm({ defaultValues, isCash, hasSubLoans, onSubmit, onCa
           ? {
               isLoan,
               ...(isLoan && linkedAccountId ? { linkedAccountId } : {}),
+              ...(isCreate && isLoan && linkedAccountId && depositFunds
+                ? { depositFunds: true }
+                : {}),
             }
           : {}),
       };
@@ -224,6 +229,22 @@ export function AccountForm({ defaultValues, isCash, hasSubLoans, onSubmit, onCa
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+          )}
+
+          {isCreate && isLoan && linkedAccountId && (
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="depositFunds"
+                  checked={depositFunds}
+                  onCheckedChange={setDepositFunds}
+                />
+                <Label htmlFor="depositFunds">Deposit the loan amount into this bank account</Label>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Turn on for a new loan paying out now. Leave off for a loan you already have.
+              </p>
             </div>
           )}
         </>

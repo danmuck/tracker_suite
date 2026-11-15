@@ -54,6 +54,81 @@ const PRESETS = [
   { label: "1Y", months: 12 },
 ];
 
+interface ChartSeries {
+  id: string;
+  name: string;
+  color: string;
+}
+
+function BalanceChart({
+  title,
+  data,
+  series,
+  config,
+  granularity,
+  spansYears,
+}: {
+  title: string;
+  data: Record<string, string | number>[];
+  series: ChartSeries[];
+  config: ChartConfig;
+  granularity: Granularity;
+  spansYears: boolean;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={config} className="h-[300px] w-full">
+          <AreaChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="date"
+              tickFormatter={(v) => {
+                const d = new Date(v + "T12:00:00.000Z");
+                if (granularity === "monthly") return format(d, "MMM yyyy");
+                return spansYears ? format(d, "MMM d ''yy") : format(d, "MMM d");
+              }}
+              tick={{ fontSize: 11 }}
+            />
+            <YAxis
+              tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
+              tick={{ fontSize: 11 }}
+            />
+            <ChartTooltip
+              content={
+                <ChartTooltipContent
+                  labelFormatter={(label) => {
+                    const d = new Date(label + "T12:00:00.000Z");
+                    return granularity === "monthly"
+                      ? format(d, "MMM yyyy")
+                      : format(d, "MMM d, yyyy");
+                  }}
+                />
+              }
+            />
+            <ChartLegend content={<ChartLegendContent />} />
+            {series.map((s) => (
+              <Area
+                key={s.id}
+                type="monotone"
+                dataKey={s.id}
+                name={s.name}
+                stroke={s.color}
+                fill={s.color}
+                fillOpacity={0.15}
+                strokeWidth={2}
+              />
+            ))}
+          </AreaChart>
+        </ChartContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function ProjectionsPage() {
   const today = new Date();
   const [startDate, setStartDate] = useState(today);
@@ -79,6 +154,15 @@ export default function ProjectionsPage() {
       { label: a.name, color: CHART_COLORS[i % CHART_COLORS.length] },
     ])
   );
+
+  // Colors are assigned once so an account keeps its color in every chart
+  const chartSeries: ChartSeries[] = filteredAccounts.map((a, i) => ({
+    id: a._id,
+    name: a.name,
+    color: CHART_COLORS[i % CHART_COLORS.length],
+  }));
+  // Cash, bank and credit cards only (no debt accounts)
+  const liquidSeries = chartSeries.filter((_, i) => filteredAccounts[i].type !== "debt");
 
   const debtAccountIds = new Set(
     accounts
@@ -295,58 +379,26 @@ export default function ProjectionsPage() {
             />
           )}
 
-          {/* Area chart */}
-          {chartData.length > 0 && filteredAccounts.length > 0 ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Balance Over Time</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                  <AreaChart data={chartData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="date"
-                      tickFormatter={(v) => {
-                        const d = new Date(v + "T12:00:00.000Z");
-                        if (granularity === "monthly") return format(d, "MMM yyyy");
-                        return spansYears ? format(d, "MMM d ''yy") : format(d, "MMM d");
-                      }}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <YAxis
-                      tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                      tick={{ fontSize: 11 }}
-                    />
-                    <ChartTooltip
-                      content={
-                        <ChartTooltipContent
-                          labelFormatter={(label) => {
-                            const d = new Date(label + "T12:00:00.000Z");
-                            return granularity === "monthly"
-                              ? format(d, "MMM yyyy")
-                              : format(d, "MMM d, yyyy");
-                          }}
-                        />
-                      }
-                    />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    {filteredAccounts.map((account, i) => (
-                      <Area
-                        key={account._id}
-                        type="monotone"
-                        dataKey={account._id}
-                        name={account.name}
-                        stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                        fill={CHART_COLORS[i % CHART_COLORS.length]}
-                        fillOpacity={0.15}
-                        strokeWidth={2}
-                      />
-                    ))}
-                  </AreaChart>
-                </ChartContainer>
-              </CardContent>
-            </Card>
+          {/* Area charts */}
+          {chartData.length > 0 && chartSeries.length > 0 ? (
+            <BalanceChart
+              title="Balance Over Time"
+              data={chartData}
+              series={chartSeries}
+              config={chartConfig}
+              granularity={granularity}
+              spansYears={spansYears}
+            />
+          ) : null}
+          {chartData.length > 0 && liquidSeries.length > 0 ? (
+            <BalanceChart
+              title="Balance Over Time (excluding debt)"
+              data={chartData}
+              series={liquidSeries}
+              config={chartConfig}
+              granularity={granularity}
+              spansYears={spansYears}
+            />
           ) : null}
         </>
       )}
