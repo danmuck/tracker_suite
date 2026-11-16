@@ -7,6 +7,8 @@ import {
   DollarSign,
   FolderKanban,
   Link2,
+  Dumbbell,
+  Salad,
   type LucideIcon,
 } from "lucide-react";
 
@@ -57,6 +59,17 @@ export const modules: ModuleConfig[] = [
     basePath: "/links",
     accentColor: "var(--chart-4)",
     navItems: [],
+  },
+  {
+    id: "figure",
+    label: "Figure",
+    icon: Dumbbell,
+    basePath: "/figure",
+    accentColor: "var(--chart-5)",
+    navItems: [
+      { href: "/figure/fitness", label: "Fitness", icon: Dumbbell },
+      { href: "/figure/diet", label: "Diet", icon: Salad },
+    ],
   },
 ];
 
