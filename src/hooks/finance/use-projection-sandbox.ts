@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { TransactionFormData } from "@/types/finance/transaction";
+import type { FinanceProfileData } from "@/types/finance/datasheet";
 
 /**
  * What-if changes for the Projections page. They live only in this browser
@@ -14,10 +15,12 @@ export interface SandboxState {
   added: { id: string; data: TransactionFormData }[];
   edited: Record<string, TransactionFormData>;
   removed: string[];
+  /** What-if Datasheet (cents); null means the real Datasheet applies */
+  profile: FinanceProfileData | null;
 }
 
 const STORAGE_KEY = "finance.projections.sandbox";
-const EMPTY: SandboxState = { version: null, added: [], edited: {}, removed: [] };
+const EMPTY: SandboxState = { version: null, added: [], edited: {}, removed: [], profile: null };
 
 let state: SandboxState = EMPTY;
 let loaded = false;
@@ -35,6 +38,7 @@ function load() {
       added: Array.isArray(p.added) ? p.added : [],
       edited: p.edited && typeof p.edited === "object" ? p.edited : {},
       removed: Array.isArray(p.removed) ? p.removed : [],
+      profile: p.profile && typeof p.profile === "object" ? p.profile : null,
     };
   } catch {
     state = EMPTY;
@@ -42,7 +46,7 @@ function load() {
 }
 
 export function sandboxChangeCount(s: SandboxState) {
-  return s.added.length + Object.keys(s.edited).length + s.removed.length;
+  return s.added.length + Object.keys(s.edited).length + s.removed.length + (s.profile ? 1 : 0);
 }
 
 function commit(next: SandboxState) {
@@ -84,6 +88,23 @@ export const projectionSandbox = {
       delete edited[id];
       commit({ ...state, edited, removed: state.removed.includes(id) ? state.removed : [...state.removed, id] });
     }
+  },
+  /** Undo a single edit or removal of a real transaction */
+  restore(id: string) {
+    load();
+    const edited = { ...state.edited };
+    delete edited[id];
+    commit({ ...state, edited, removed: state.removed.filter((r) => r !== id) });
+  },
+  /** Set the what-if Datasheet; null goes back to the real one */
+  setProfile(profile: FinanceProfileData | null) {
+    load();
+    commit({ ...state, profile });
+  },
+  /** Put back changes that could not be applied; they attach to the data as it is now */
+  replace(next: Omit<SandboxState, "version">) {
+    load();
+    commit({ ...next, version: null });
   },
   clear() {
     load();

@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { applySandbox, sandboxSchema } from "./projection-sandbox";
+import { applySandbox, applySandboxProfile, sandboxSchema } from "./projection-sandbox";
 import { buildProjection } from "./projection-engine";
 
 const id = (s: string) => ({ toString: () => s });
@@ -71,4 +71,37 @@ test("an edit keeps a managed amount schedule unless the amount changes", () => 
   const changed = applySandbox([managed], sandboxSchema.parse({ edited: { rent: form({ amount: 400 }) } }));
   assert.equal((same[0] as { amountSchedule?: unknown[] }).amountSchedule?.length, 1);
   assert.equal((changed[0] as { amountSchedule?: unknown[] }).amountSchedule, undefined);
+});
+
+test("a what-if Datasheet re-prices the linked Rent without touching other transactions", () => {
+  const rent = {
+    ...real,
+    isRecurring: true,
+    recurrenceRule: { frequency: "monthly", interval: 1, startDate: new Date("2099-01-05"), endDate: null, dayOfMonth: 5 },
+    amountSchedule: [{ effectiveDate: new Date("2099-01-01"), amount: 50_000 }],
+  };
+  const other = { ...real, _id: id("other"), amount: 1_000, date: new Date("2099-01-20") };
+  const profile = {
+    filingStatus: "single" as const,
+    hoursPerWeek: 40,
+    nycResident: false,
+    raiseRate: 0.03,
+    salaryTransactionId: null,
+    rentTransactionId: "rent",
+    salarySteps: [],
+    retirementSteps: [],
+    healthSteps: [],
+    rentSteps: [{ effectiveDate: "2099-01-01", monthly: 80_000 }],
+    whatIfSalaries: [],
+  };
+  const transactions = applySandboxProfile([rent, other], profile, "2098-12-31");
+  const r = buildProjection({
+    accounts: [bank] as never,
+    transactions: transactions as never,
+    startDate: new Date("2099-01-01"),
+    endDate: new Date("2099-01-31"),
+    today: "2098-12-31",
+  });
+  // 100,000 − 80,000 rent − 1,000 other
+  assert.equal(r.summary.endBalances.bank, 19_000);
 });

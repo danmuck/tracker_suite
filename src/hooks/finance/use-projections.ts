@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import type { ProjectionResult, Granularity } from "@/types/finance/projection";
 import { formatDateISO } from "@/lib/finance/formatters";
+import { profileToDollars } from "@/lib/finance/finance-profile";
 import { sandboxChangeCount, type SandboxState } from "@/hooks/finance/use-projection-sandbox";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -39,7 +40,13 @@ export function useProjections(
           "/api/projections",
           JSON.stringify({
             ...range,
-            sandbox: { added: sandbox.added, edited: sandbox.edited, removed: sandbox.removed },
+            sandbox: {
+              added: sandbox.added,
+              edited: sandbox.edited,
+              removed: sandbox.removed,
+              // The API takes Datasheet money in dollars
+              profile: sandbox.profile ? profileToDollars(sandbox.profile) : null,
+            },
           }),
         ]
       : null,
@@ -66,7 +73,8 @@ export function useProjections(
   return {
     projection,
     /** Fingerprint of the real data behind this projection */
-    dataVersion: data?.dataVersion as string | undefined,
+    // Taken from the real-data request, which is refreshed whenever real data changes
+    dataVersion: real.data?.dataVersion as string | undefined,
     isLoading,
     isError: !!error || !!data?.error,
   };

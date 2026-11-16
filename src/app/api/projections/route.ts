@@ -6,7 +6,15 @@ import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
 import { buildProjection } from "@/lib/finance/projection-engine";
 import { localTodayStr } from "@/lib/finance/dates";
-import { applySandbox, sandboxSchema, type SandboxInput } from "@/lib/finance/projection-sandbox";
+import {
+  applySandbox,
+  applySandboxProfile,
+  sandboxSchema,
+  type SandboxInput,
+} from "@/lib/finance/projection-sandbox";
+import { loadProfile } from "@/lib/finance/apply-profile";
+import { profileFromDollars } from "@/lib/finance/finance-profile";
+import FinanceProfile from "@/models/finance/FinanceProfile";
 import type { Granularity } from "@/types/finance/projection";
 
 interface ProjectionParams {
@@ -21,15 +29,16 @@ interface ProjectionParams {
  * it between responses to notice that accounts or transactions changed.
  */
 async function dataVersion(accounts: { _id: unknown; balance: number; updatedAt?: Date }[]) {
-  const [count, latest] = await Promise.all([
+  const [count, latest, profile] = await Promise.all([
     Transaction.countDocuments(),
     Transaction.findOne().sort({ updatedAt: -1 }).select("updatedAt").lean<{ updatedAt?: Date }>(),
+    FinanceProfile.findOne().select("updatedAt").lean<{ updatedAt?: Date }>(),
   ]);
   const acct = accounts
     .map((a) => `${a._id}:${a.balance}:${a.updatedAt?.getTime() ?? 0}`)
     .sort()
     .join(",");
-  return `${count}|${latest?.updatedAt?.getTime() ?? 0}|${acct}`;
+  return `${count}|${latest?.updatedAt?.getTime() ?? 0}|${profile?.updatedAt?.getTime() ?? 0}|${acct}`;
 }
 
 async function project(params: ProjectionParams, sandbox?: SandboxInput) {
@@ -40,7 +49,19 @@ async function project(params: ProjectionParams, sandbox?: SandboxInput) {
   if (sandbox) {
     // Sandbox edits can move a transaction into the range, so start from
     // everything and let the engine pick what falls inside the window
-    transactions = applySandbox(await Transaction.find(), sandbox);
+    let all: unknown[] = await Transaction.find();
+    if (sandbox.profile) {
+      // The what-if Datasheet re-prices Salary and Rent; which transactions
+      // those are always comes from the real Datasheet
+      const realProfile = await loadProfile();
+      const whatIf = {
+        ...profileFromDollars(sandbox.profile),
+        salaryTransactionId: realProfile.salaryTransactionId,
+        rentTransactionId: realProfile.rentTransactionId,
+      };
+      all = applySandboxProfile(all as never, whatIf, localTodayStr());
+    }
+    transactions = applySandbox(all as never, sandbox);
   } else {
     // A window starting in the future is projected forward from today, so the
     // engine also needs the transactions between today and the window start

@@ -19,6 +19,8 @@ import {
 } from "@/hooks/finance/use-projection-sandbox";
 import { ReportsPanel } from "@/components/finance/reports-panel";
 import { ProjectionTransactions } from "@/components/finance/projection-transactions";
+import { ProjectionSandboxPanel } from "@/components/finance/projection-sandbox-panel";
+import { useFinanceProfile } from "@/hooks/finance/use-finance-profile";
 import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -87,7 +89,7 @@ interface ProjectionSettings {
   view: ProjectionView;
 }
 
-const VIEWS = ["overview", "cashflow", "debt", "transactions", "alerts", "reports"] as const;
+const VIEWS = ["overview", "cashflow", "debt", "transactions", "alerts", "sandbox", "reports"] as const;
 type ProjectionView = (typeof VIEWS)[number];
 
 const STORAGE_KEY = "finance.projections.settings";
@@ -263,6 +265,13 @@ export default function ProjectionsPage() {
 
   const sandbox = useProjectionSandbox();
   const sandboxChanges = sandboxChangeCount(sandbox);
+  // Salary and Rent come from the Datasheet, so the sandbox changes them there
+  const { profile: realProfile } = useFinanceProfile();
+  const lockedIds = new Set(
+    [realProfile?.salaryTransactionId, realProfile?.rentTransactionId].filter(
+      (id): id is string => !!id
+    )
+  );
   const { projection, dataVersion, isLoading } = useProjections(
     startDate,
     endDate,
@@ -507,6 +516,9 @@ export default function ProjectionsPage() {
                   below. Your real transactions are untouched.
                 </span>
               </div>
+              <Button size="sm" onClick={() => update({ view: "sandbox" })}>
+                Review &amp; apply
+              </Button>
               <Button variant="outline" size="sm" onClick={() => projectionSandbox.clear()}>
                 <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
                 Reset to real data
@@ -639,6 +651,15 @@ export default function ProjectionsPage() {
                   </Badge>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="sandbox" className="flex-none">
+                <FlaskConical className="h-4 w-4" />
+                Sandbox
+                {sandboxChanges > 0 && (
+                  <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">
+                    {sandboxChanges}
+                  </Badge>
+                )}
+              </TabsTrigger>
               {/* Reports look back at recorded activity, so they sit apart from the forecast tabs */}
               <TabsTrigger value="reports" className="ml-auto flex-none">
                 <BarChart3 className="h-4 w-4" />
@@ -686,6 +707,7 @@ export default function ProjectionsPage() {
                 timeline={projection.timeline}
                 accounts={accounts}
                 sandbox={sandbox}
+                lockedIds={lockedIds}
               />
             </TabsContent>
 
@@ -703,6 +725,10 @@ export default function ProjectionsPage() {
                   description="Nothing in this range is stopped, reduced or paid off."
                 />
               )}
+            </TabsContent>
+
+            <TabsContent value="sandbox">
+              <ProjectionSandboxPanel sandbox={sandbox} />
             </TabsContent>
 
             <TabsContent value="reports">

@@ -23,6 +23,8 @@ interface Props {
   onChange: (patch: Partial<FinanceProfileData>) => void;
   recurring: Transaction[];
   payCycleLabel: string;
+  /** Hide the Salary / Rent transaction pickers (the projections sandbox keeps the real links) */
+  hideLinks?: boolean;
 }
 
 function TxSelect({
@@ -53,7 +55,7 @@ function TxSelect({
   );
 }
 
-export function SettingsCard({ profile, onChange, recurring, payCycleLabel }: Props) {
+export function SettingsCard({ profile, onChange, recurring, payCycleLabel, hideLinks }: Props) {
   return (
     <Card>
       <CardHeader>
@@ -100,6 +102,8 @@ export function SettingsCard({ profile, onChange, recurring, payCycleLabel }: Pr
           <Label>Pay cycle</Label>
           <p className="flex h-9 items-center text-sm text-muted-foreground">{payCycleLabel}</p>
         </div>
+        {!hideLinks && (
+          <>
         <div className="space-y-1 sm:col-span-2">
           <Label htmlFor="salary-tx">Salary transaction</Label>
           <TxSelect
@@ -118,6 +122,8 @@ export function SettingsCard({ profile, onChange, recurring, payCycleLabel }: Pr
             onChange={(id) => onChange({ rentTransactionId: id })}
           />
         </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );

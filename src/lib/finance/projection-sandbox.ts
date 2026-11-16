@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { transactionSchema, type TransactionInput } from "./validators";
+import { financeProfileSchema, transactionSchema, type TransactionInput } from "./validators";
+import { buildRentSchedule, buildSalarySchedule } from "./datasheet";
+import { amountOn } from "./amount-schedule";
+import { getPeriodsPerYear } from "./tax-calculator";
+import type { FinanceProfileData, ScheduleEntry } from "@/types/finance/datasheet";
 
 /**
  * What-if changes layered over real transactions for a projection.
@@ -12,6 +16,8 @@ export const sandboxSchema = z.object({
   edited: z.record(z.string(), transactionSchema).default({}),
   /** Real transactions left out of the projection */
   removed: z.array(z.string()).max(500).default([]),
+  /** What-if Datasheet (money in dollars, like the profile API); drives the linked Salary and Rent */
+  profile: financeProfileSchema.nullable().optional(),
 });
 
 export type SandboxInput = z.infer<typeof sandboxSchema>;
@@ -66,4 +72,43 @@ export function applySandbox<T extends SandboxBaseTx>(transactions: T[], sandbox
   }
   for (const a of sandbox.added) out.push(toEngineTransaction(a.id, a.data));
   return out;
+}
+
+interface ProfileTx extends SandboxBaseTx {
+  recurrenceRule?: { frequency: string; startDate?: Date } | null;
+  toObject?: () => object;
+}
+
+/**
+ * Re-price the linked Salary and Rent transactions from a what-if Datasheet,
+ * the same way saving the real Datasheet does, without saving anything.
+ * `profile` is in cents.
+ */
+export function applySandboxProfile<T extends ProfileTx>(transactions: T[], profile: FinanceProfileData, today: string) {
+  const withSchedule = (t: T, schedule: ScheduleEntry[], rentStart: boolean) => {
+    const plain = (typeof t.toObject === "function" ? t.toObject() : t) as T;
+    if (schedule.length === 0) return { ...plain, amountSchedule: undefined };
+    const start = new Date(schedule[0].effectiveDate);
+    return {
+      ...plain,
+      amountSchedule: schedule.map((e) => ({ effectiveDate: new Date(e.effectiveDate), amount: e.amount })),
+      amount: amountOn(schedule[0].amount, schedule, today),
+      // Rent begins when its first Datasheet step does
+      ...(rentStart && plain.recurrenceRule
+        ? { date: start, recurrenceRule: { ...plain.recurrenceRule, startDate: start } }
+        : {}),
+    };
+  };
+
+  return transactions.map((t) => {
+    const id = t._id.toString();
+    if (id === profile.salaryTransactionId) {
+      const periods = getPeriodsPerYear(t.recurrenceRule?.frequency ?? "biweekly");
+      return withSchedule(t, buildSalarySchedule(profile, periods), false);
+    }
+    if (id === profile.rentTransactionId) {
+      return withSchedule(t, buildRentSchedule(profile), true);
+    }
+    return t;
+  });
 }

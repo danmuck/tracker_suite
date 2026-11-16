@@ -8,6 +8,7 @@ import {
   ArrowUpDown,
   FlaskConical,
   ListX,
+  Lock,
   Pencil,
   Plus,
   Repeat,
@@ -70,10 +71,13 @@ export function ProjectionTransactions({
   timeline,
   accounts,
   sandbox,
+  lockedIds,
 }: {
   timeline: ProjectionDay[];
   accounts: Account[];
   sandbox: SandboxState;
+  /** Transactions driven by the Datasheet (Salary, Rent): changed on the Sandbox tab, not here */
+  lockedIds: Set<string>;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<{ id: string; values: Partial<TransactionFormData> } | null>(null);
@@ -370,7 +374,14 @@ export function ProjectionTransactions({
                       </TableCell>
                       <TableCell>
                         {/* Projected interest lines have no transaction behind them to change */}
-                        {sourceId ? (
+                        {sourceId && lockedIds.has(sourceId) ? (
+                          <span
+                            className="flex h-7 w-7 items-center justify-center text-muted-foreground"
+                            title="Managed by the Datasheet. Change it on the Sandbox tab."
+                          >
+                            <Lock className="h-3.5 w-3.5" />
+                          </span>
+                        ) : sourceId ? (
                           <div className="flex gap-1">
                             <Button
                               variant="ghost"
