@@ -26,6 +26,7 @@ import { WorkoutLogCard } from "@/components/figure/workout-log-card";
 import { WorkoutLogEditor } from "@/components/figure/workout-log-editor";
 import { RunForm } from "@/components/figure/run-form";
 import { RunsPanel } from "@/components/figure/runs-panel";
+import { FitnessDashboard } from "@/components/figure/fitness-dashboard";
 import { createRun, deleteRun, updateRun, useRuns } from "@/hooks/figure/use-runs";
 import { useTabParam } from "@/hooks/figure/use-tab-param";
 import { createWorkout, deleteWorkout, updateWorkout, useWorkouts } from "@/hooks/figure/use-workouts";
@@ -48,7 +49,7 @@ import type {
   WorkoutLogFormData,
 } from "@/types/figure/fitness";
 
-const TABS = ["log", "runs", "workouts"] as const;
+const TABS = ["dashboard", "log", "runs", "workouts"] as const;
 
 export default function FitnessPage() {
   return (
@@ -78,7 +79,7 @@ function logFromWorkout(w: Workout, date: string): WorkoutLogFormData {
 type EditorState = { initial: WorkoutLogFormData; logId?: string } | null;
 
 function FitnessContent() {
-  const [tab, setTab] = useTabParam(TABS, "log");
+  const [tab, setTab] = useTabParam(TABS, "dashboard");
   const [day, setDay] = useState(todayDay);
   const [dayOpen, setDayOpen] = useState(false);
 
@@ -214,7 +215,7 @@ function FitnessContent() {
         title="Fitness"
         description="Plan reusable workouts, log lifts and runs"
         action={
-          tab === "log" ? (
+          tab === "log" || tab === "dashboard" ? (
             logMenu
           ) : tab === "runs" ? (
             <Button onClick={() => setRunFormOpen(true)}>
@@ -232,6 +233,9 @@ function FitnessContent() {
 
       <Tabs value={tab} onValueChange={setTab} className="gap-6">
         <TabsList variant="line" className="w-full justify-start border-b">
+          <TabsTrigger value="dashboard" className="flex-none">
+            Dashboard
+          </TabsTrigger>
           <TabsTrigger value="log" className="flex-none">
             Log
           </TabsTrigger>
@@ -242,6 +246,10 @@ function FitnessContent() {
             Workouts ({workouts.length})
           </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="dashboard">
+          <FitnessDashboard />
+        </TabsContent>
 
         <TabsContent value="log" className="space-y-6">
           <div className="flex items-center gap-2">
