@@ -59,3 +59,27 @@ export interface ExerciseHistory {
   date: string;
   sets: LoggedSet[];
 }
+
+export type RunType = "easy" | "tempo" | "intervals" | "long" | "race" | "other";
+
+export interface RunLog {
+  _id: string;
+  /** Calendar day, yyyy-MM-dd */
+  date: string;
+  /** Miles */
+  distance: number;
+  /** Total seconds */
+  durationSeconds: number;
+  type: RunType;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RunLogFormData {
+  date: string;
+  distance: number;
+  durationSeconds: number;
+  type: RunType;
+  notes?: string;
+}

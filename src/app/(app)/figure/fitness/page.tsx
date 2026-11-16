@@ -24,6 +24,9 @@ import { WorkoutCard } from "@/components/figure/workout-card";
 import { WorkoutForm } from "@/components/figure/workout-form";
 import { WorkoutLogCard } from "@/components/figure/workout-log-card";
 import { WorkoutLogEditor } from "@/components/figure/workout-log-editor";
+import { RunForm } from "@/components/figure/run-form";
+import { RunsPanel } from "@/components/figure/runs-panel";
+import { createRun, deleteRun, updateRun, useRuns } from "@/hooks/figure/use-runs";
 import { useTabParam } from "@/hooks/figure/use-tab-param";
 import { createWorkout, deleteWorkout, updateWorkout, useWorkouts } from "@/hooks/figure/use-workouts";
 import {
@@ -36,9 +39,16 @@ import {
 import { formatDay, fromDay, toDay, todayDay } from "@/lib/figure/format";
 import { addDays } from "date-fns";
 import { useSWRConfig } from "swr";
-import type { Workout, WorkoutFormData, WorkoutLog, WorkoutLogFormData } from "@/types/figure/fitness";
+import type {
+  RunLog,
+  RunLogFormData,
+  Workout,
+  WorkoutFormData,
+  WorkoutLog,
+  WorkoutLogFormData,
+} from "@/types/figure/fitness";
 
-const TABS = ["log", "workouts"] as const;
+const TABS = ["log", "runs", "workouts"] as const;
 
 export default function FitnessPage() {
   return (
@@ -83,6 +93,31 @@ function FitnessContent() {
   const [workoutFormOpen, setWorkoutFormOpen] = useState(false);
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null);
+
+  const { runs, isLoading: runsLoading, mutate: mutateRuns } = useRuns();
+  const [runFormOpen, setRunFormOpen] = useState(false);
+  const [editingRun, setEditingRun] = useState<RunLog | null>(null);
+  const [deletingRun, setDeletingRun] = useState<RunLog | null>(null);
+
+  async function saveRun(data: RunLogFormData) {
+    if (editingRun) {
+      await updateRun(editingRun._id, data);
+      setEditingRun(null);
+      toast.success("Run updated");
+    } else {
+      await createRun(data);
+      setRunFormOpen(false);
+      toast.success("Run logged");
+    }
+    mutateRuns();
+  }
+
+  async function handleDeleteRun() {
+    if (!deletingRun) return;
+    await deleteRun(deletingRun._id);
+    toast.success("Run deleted");
+    mutateRuns();
+  }
 
   /** Revalidate every log list + "last time" + autocomplete after a change */
   const refreshLogs = () =>
@@ -177,10 +212,15 @@ function FitnessContent() {
       <ExerciseNameDatalist names={exerciseNames} />
       <PageHeader
         title="Fitness"
-        description="Plan reusable workouts and log what you lift"
+        description="Plan reusable workouts, log lifts and runs"
         action={
           tab === "log" ? (
             logMenu
+          ) : tab === "runs" ? (
+            <Button onClick={() => setRunFormOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Log run
+            </Button>
           ) : (
             <Button onClick={() => setWorkoutFormOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
@@ -194,6 +234,9 @@ function FitnessContent() {
         <TabsList variant="line" className="w-full justify-start border-b">
           <TabsTrigger value="log" className="flex-none">
             Log
+          </TabsTrigger>
+          <TabsTrigger value="runs" className="flex-none">
+            Runs
           </TabsTrigger>
           <TabsTrigger value="workouts" className="flex-none">
             Workouts ({workouts.length})
@@ -270,6 +313,16 @@ function FitnessContent() {
           )}
         </TabsContent>
 
+        <TabsContent value="runs">
+          <RunsPanel
+            runs={runs}
+            isLoading={runsLoading}
+            onNew={() => setRunFormOpen(true)}
+            onEdit={setEditingRun}
+            onDelete={setDeletingRun}
+          />
+        </TabsContent>
+
         <TabsContent value="workouts">
           {workoutsLoading ? (
             <LoadingState variant="cards" />
@@ -339,6 +392,40 @@ function FitnessContent() {
         </DialogContent>
       </Dialog>
 
+      {/* Run form */}
+      <Dialog
+        open={runFormOpen || !!editingRun}
+        onOpenChange={(o) => {
+          if (!o) {
+            setRunFormOpen(false);
+            setEditingRun(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>{editingRun ? "Edit run" : "Log run"}</DialogTitle>
+          </DialogHeader>
+          <RunForm
+            key={editingRun?._id ?? "new"}
+            defaultDate={todayDay()}
+            defaultValues={editingRun ?? undefined}
+            onSubmit={saveRun}
+            onCancel={() => {
+              setRunFormOpen(false);
+              setEditingRun(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <DeleteConfirmDialog
+        open={!!deletingRun}
+        onOpenChange={(o) => !o && setDeletingRun(null)}
+        onConfirm={handleDeleteRun}
+        title="Delete run"
+        description="This action cannot be undone."
+      />
       <DeleteConfirmDialog
         open={!!deletingLog}
         onOpenChange={(o) => !o && setDeletingLog(null)}

@@ -43,6 +43,17 @@ export const modules: ModuleConfig[] = [
     ],
   },
   {
+    id: "figure",
+    label: "Figure",
+    icon: Dumbbell,
+    basePath: "/figure",
+    accentColor: "var(--chart-5)",
+    navItems: [
+      { href: "/figure/fitness", label: "Fitness", icon: Dumbbell },
+      { href: "/figure/diet", label: "Diet", icon: Salad },
+    ],
+  },
+  {
     id: "projects",
     label: "Projects",
     icon: FolderKanban,
@@ -59,17 +70,6 @@ export const modules: ModuleConfig[] = [
     basePath: "/links",
     accentColor: "var(--chart-4)",
     navItems: [],
-  },
-  {
-    id: "figure",
-    label: "Figure",
-    icon: Dumbbell,
-    basePath: "/figure",
-    accentColor: "var(--chart-5)",
-    navItems: [
-      { href: "/figure/fitness", label: "Fitness", icon: Dumbbell },
-      { href: "/figure/diet", label: "Diet", icon: Salad },
-    ],
   },
 ];
 

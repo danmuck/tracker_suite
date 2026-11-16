@@ -56,3 +56,38 @@ export function formatQuantity(quantity?: number, unit?: string): string {
         : String(Math.round(quantity * 100) / 100);
   return [q, unit ?? ""].filter(Boolean).join(" ");
 }
+
+/** 1530 → "25:30", 3900 → "1:05:00" */
+export function formatDuration(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+}
+
+/**
+ * "25:30" → 1530, "1:05:00" → 3900, "25" → 1500 (a bare number is minutes).
+ * Returns undefined for anything else.
+ */
+export function parseDuration(input: string): number | undefined {
+  const v = input.trim();
+  if (!v) return undefined;
+  if (/^\d+(\.\d+)?$/.test(v)) return Math.round(Number(v) * 60);
+  const parts = v.split(":");
+  if (parts.length < 2 || parts.length > 3 || parts.some((p) => !/^\d+$/.test(p))) return undefined;
+  const nums = parts.map(Number);
+  if (nums.slice(1).some((n) => n >= 60)) return undefined;
+  return nums.length === 3 ? nums[0] * 3600 + nums[1] * 60 + nums[2] : nums[0] * 60 + nums[1];
+}
+
+/** Pace as "8:30 /mi" */
+export function formatPace(durationSeconds: number, miles: number): string {
+  if (!miles) return "—";
+  return `${formatDuration(durationSeconds / miles)} /mi`;
+}
+
+export function formatMiles(miles: number): string {
+  return `${Math.round(miles * 100) / 100} mi`;
+}

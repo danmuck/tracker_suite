@@ -64,3 +64,15 @@ export type WorkoutInput = z.infer<typeof workoutSchema>;
 export type WorkoutLogInput = z.infer<typeof workoutLogSchema>;
 export type RecipeInput = z.infer<typeof recipeSchema>;
 export type ShoppingItemInput = z.infer<typeof shoppingItemSchema>;
+
+export const RUN_TYPES = ["easy", "tempo", "intervals", "long", "race", "other"] as const;
+
+export const runLogSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be yyyy-MM-dd"),
+  distance: z.number().positive("Distance must be more than 0").max(1000),
+  durationSeconds: z.number().int().positive("Time must be more than 0").max(7 * 24 * 3600),
+  type: z.enum(RUN_TYPES).default("easy"),
+  notes: z.string().max(2000).optional(),
+});
+
+export type RunLogInput = z.infer<typeof runLogSchema>;
