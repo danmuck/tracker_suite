@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { fetcher, send } from "./request";
+import { fetcher, send } from "@/hooks/request";
 import type { ShoppingItem, ShoppingItemFormData } from "@/types/figure/diet";
 
 export const SHOPPING_ITEMS_KEY = "/api/figure/shopping-items";

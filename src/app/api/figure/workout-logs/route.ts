@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import WorkoutLog from "@/models/figure/WorkoutLog";
 import { workoutLogSchema } from "@/lib/figure/validators";
-import { isValidObjectId, serverError, validationError } from "@/lib/figure/api";
+import { isValidObjectId, serverError, validationError } from "@/lib/api-helpers";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 

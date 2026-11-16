@@ -3,7 +3,7 @@ import { connectDB } from "@/lib/db";
 import ShoppingItem from "@/models/figure/ShoppingItem";
 import Recipe from "@/models/figure/Recipe";
 import { shoppingItemSchema } from "@/lib/figure/validators";
-import { serverError, validationError } from "@/lib/figure/api";
+import { serverError, validationError } from "@/lib/api-helpers";
 
 // GET /api/figure/shopping-items — unchecked first, each with its source recipe's name
 export async function GET() {

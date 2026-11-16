@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { fetcher, send } from "./request";
+import { fetcher, send } from "@/hooks/request";
 import type { ExerciseHistory, WorkoutLog, WorkoutLogFormData } from "@/types/figure/fitness";
 
 export function useWorkoutLogs(params: { date?: string; limit?: number } = {}) {

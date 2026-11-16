@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import WorkoutLog from "@/models/figure/WorkoutLog";
-import { escapeRegex, serverError } from "@/lib/figure/api";
+import { escapeRegex, serverError } from "@/lib/api-helpers";
 import { computeExerciseProgress } from "@/lib/figure/stats";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;

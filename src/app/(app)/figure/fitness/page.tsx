@@ -28,7 +28,7 @@ import { RunForm } from "@/components/figure/run-form";
 import { RunsPanel } from "@/components/figure/runs-panel";
 import { FitnessDashboard } from "@/components/figure/fitness-dashboard";
 import { createRun, deleteRun, updateRun, useRuns } from "@/hooks/figure/use-runs";
-import { useTabParam } from "@/hooks/figure/use-tab-param";
+import { useTabParam } from "@/hooks/use-tab-param";
 import { createWorkout, deleteWorkout, updateWorkout, useWorkouts } from "@/hooks/figure/use-workouts";
 import {
   createWorkoutLog,

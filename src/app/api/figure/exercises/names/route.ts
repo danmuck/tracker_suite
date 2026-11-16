@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Workout from "@/models/figure/Workout";
 import WorkoutLog from "@/models/figure/WorkoutLog";
-import { serverError } from "@/lib/figure/api";
+import { serverError } from "@/lib/api-helpers";
 
 // GET /api/figure/exercises/names — every exercise name used so far, for autocomplete
 export async function GET() {

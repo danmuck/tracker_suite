@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import WorkoutLog from "@/models/figure/WorkoutLog";
 import { workoutLogSchema } from "@/lib/figure/validators";
-import { isValidObjectId, notFound, serverError, validationError } from "@/lib/figure/api";
+import { isValidObjectId, notFound, serverError, validationError } from "@/lib/api-helpers";
 
 type Ctx = { params: Promise<{ logId: string }> };
 

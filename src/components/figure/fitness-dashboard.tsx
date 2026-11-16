@@ -9,6 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
+import { StatTile } from "@/components/stat-tile";
+import { ChartCard } from "@/components/chart-card";
 import {
   ActivityHeatmap,
   ExerciseProgressChart,
@@ -210,43 +212,6 @@ export function FitnessDashboard() {
         </>
       )}
     </div>
-  );
-}
-
-function StatTile({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <Card className="gap-1 py-4">
-      <CardContent className="px-4">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-2xl font-bold tabular-nums">{value}</p>
-        <p className="text-xs text-muted-foreground">{sub}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ChartCard({
-  title,
-  description,
-  action,
-  children,
-}: {
-  title: string;
-  description: string;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-2">
-        <div className="space-y-1">
-          <CardTitle className="text-base">{title}</CardTitle>
-          <CardDescription>{description}</CardDescription>
-        </div>
-        {action}
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </Card>
   );
 }
 

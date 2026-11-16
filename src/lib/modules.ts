@@ -9,6 +9,7 @@ import {
   Link2,
   Dumbbell,
   Salad,
+  Building2,
   type LucideIcon,
 } from "lucide-react";
 
@@ -51,6 +52,16 @@ export const modules: ModuleConfig[] = [
     navItems: [
       { href: "/figure/fitness", label: "Fitness", icon: Dumbbell },
       { href: "/figure/diet", label: "Diet", icon: Salad },
+    ],
+  },
+  {
+    id: "future",
+    label: "Future",
+    icon: Building2,
+    basePath: "/future",
+    accentColor: "var(--chart-1)",
+    navItems: [
+      { href: "/future/apartments", label: "Apartments", icon: Building2 },
     ],
   },
   {

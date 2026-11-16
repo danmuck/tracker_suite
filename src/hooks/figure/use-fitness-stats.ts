@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { fetcher } from "./request";
+import { fetcher } from "@/hooks/request";
 import { todayDay } from "@/lib/figure/format";
 import type { ExerciseProgressPoint, FitnessStats } from "@/lib/figure/stats";
 

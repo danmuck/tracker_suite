@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import RunLog from "@/models/figure/RunLog";
 import { runLogSchema } from "@/lib/figure/validators";
-import { isValidObjectId, notFound, serverError, validationError } from "@/lib/figure/api";
+import { isValidObjectId, notFound, serverError, validationError } from "@/lib/api-helpers";
 
 type Ctx = { params: Promise<{ runId: string }> };
 

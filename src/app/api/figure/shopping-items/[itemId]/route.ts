@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import ShoppingItem from "@/models/figure/ShoppingItem";
 import { shoppingItemUpdateSchema } from "@/lib/figure/validators";
-import { isValidObjectId, notFound, serverError, validationError } from "@/lib/figure/api";
+import { isValidObjectId, notFound, serverError, validationError } from "@/lib/api-helpers";
 
 type Ctx = { params: Promise<{ itemId: string }> };
 

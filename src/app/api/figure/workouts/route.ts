@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Workout from "@/models/figure/Workout";
 import { workoutSchema } from "@/lib/figure/validators";
-import { serverError, validationError } from "@/lib/figure/api";
+import { serverError, validationError } from "@/lib/api-helpers";
 
 // GET /api/figure/workouts — list workout definitions
 export async function GET() {

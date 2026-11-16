@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { PipelineStage } from "mongoose";
 import { connectDB } from "@/lib/db";
 import WorkoutLog from "@/models/figure/WorkoutLog";
-import { escapeRegex, serverError } from "@/lib/figure/api";
+import { escapeRegex, serverError } from "@/lib/api-helpers";
 
 // GET /api/figure/exercises/history?name=Bench&name=Squat[&before=yyyy-MM-dd][&excludeLogId=]
 // → { [lowercased name]: { name, date, sets } } — the most recent logged sets for each exercise

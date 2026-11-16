@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import RunLog from "@/models/figure/RunLog";
 import { runLogSchema } from "@/lib/figure/validators";
-import { serverError, validationError } from "@/lib/figure/api";
+import { serverError, validationError } from "@/lib/api-helpers";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 

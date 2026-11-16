@@ -16,7 +16,7 @@ import { RecipeCard } from "@/components/figure/recipe-card";
 import { RecipeDetail } from "@/components/figure/recipe-detail";
 import { RecipeForm } from "@/components/figure/recipe-form";
 import { ShoppingList } from "@/components/figure/shopping-list";
-import { useTabParam } from "@/hooks/figure/use-tab-param";
+import { useTabParam } from "@/hooks/use-tab-param";
 import { addRecipeToList, createRecipe, deleteRecipe, updateRecipe, useRecipes } from "@/hooks/figure/use-recipes";
 import { SHOPPING_ITEMS_KEY, useShoppingItems } from "@/hooks/figure/use-shopping-items";
 import { useSWRConfig } from "swr";

@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { fetcher, send } from "./request";
+import { fetcher, send } from "@/hooks/request";
 import type { RunLog, RunLogFormData } from "@/types/figure/fitness";
 
 export const RUNS_KEY = "/api/figure/runs";

@@ -1,0 +1,30 @@
+import mongoose, { Schema, Document, Model } from "mongoose";
+
+/** One document for the whole module, found by its fixed key */
+export const SETTINGS_KEY = "default";
+
+export interface IFutureSettings extends Document {
+  key: string;
+  /** Gross annual salary in cents */
+  annualSalary?: number;
+  commuteDestination?: string;
+}
+
+const FutureSettingsSchema = new Schema<IFutureSettings>(
+  {
+    key: { type: String, required: true, unique: true, default: SETTINGS_KEY },
+    annualSalary: { type: Number, min: 1 },
+    commuteDestination: { type: String, trim: true },
+  },
+  { timestamps: true }
+);
+
+if (process.env.NODE_ENV !== "production" && mongoose.models.FutureSettings) {
+  delete mongoose.models.FutureSettings;
+}
+
+const FutureSettings: Model<IFutureSettings> =
+  mongoose.models.FutureSettings ||
+  mongoose.model<IFutureSettings>("FutureSettings", FutureSettingsSchema);
+
+export default FutureSettings;

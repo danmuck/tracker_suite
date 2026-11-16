@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Recipe from "@/models/figure/Recipe";
 import { recipeSchema } from "@/lib/figure/validators";
-import { serverError, validationError } from "@/lib/figure/api";
+import { serverError, validationError } from "@/lib/api-helpers";
 
 // GET /api/figure/recipes — optional ?tag= filter
 export async function GET(request: NextRequest) {

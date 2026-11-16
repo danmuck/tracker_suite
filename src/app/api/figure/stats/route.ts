@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import WorkoutLog from "@/models/figure/WorkoutLog";
 import RunLog from "@/models/figure/RunLog";
-import { serverError } from "@/lib/figure/api";
+import { serverError } from "@/lib/api-helpers";
 import { computeFitnessStats, rangeStart } from "@/lib/figure/stats";
 import { fromDay } from "@/lib/figure/format";
 

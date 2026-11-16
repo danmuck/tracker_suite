@@ -1,7 +1,7 @@
 "use client";
 
 import useSWR from "swr";
-import { fetcher, send } from "./request";
+import { fetcher, send } from "@/hooks/request";
 import type { Recipe, RecipeFormData } from "@/types/figure/diet";
 
 export function useRecipes() {

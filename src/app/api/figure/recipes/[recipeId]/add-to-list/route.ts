@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Recipe from "@/models/figure/Recipe";
 import ShoppingItem from "@/models/figure/ShoppingItem";
-import { escapeRegex, isValidObjectId, notFound, serverError } from "@/lib/figure/api";
+import { escapeRegex, isValidObjectId, notFound, serverError } from "@/lib/api-helpers";
 
 type Ctx = { params: Promise<{ recipeId: string }> };
 

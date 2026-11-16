@@ -14,6 +14,10 @@ import { useLinkGroups } from "@/hooks/links/use-link-groups";
 import { useWorkoutLogs } from "@/hooks/figure/use-workout-logs";
 import { useShoppingItems } from "@/hooks/figure/use-shopping-items";
 import { formatDay } from "@/lib/figure/format";
+import { useListings } from "@/hooks/future/use-listings";
+import { useTours } from "@/hooks/future/use-tours";
+import { formatDay as formatTourDay, formatRent, todayDay } from "@/lib/future/format";
+import { activeListings, splitTours } from "@/lib/future/stats";
 import { modules } from "@/lib/modules";
 import { computeAccountTotals } from "@/lib/finance/account-utils";
 
@@ -51,6 +55,7 @@ function ModuleCard({ moduleId }: { moduleId: string }) {
   if (moduleId === "projects") return <ProjectsModuleCard />;
   if (moduleId === "links") return <LinksModuleCard />;
   if (moduleId === "figure") return <FigureModuleCard />;
+  if (moduleId === "future") return <FutureModuleCard />;
   return null;
 }
 
@@ -265,6 +270,60 @@ function FigureModuleCard() {
               <span className="text-muted-foreground">{last ? formatDay(last.date) : "Log one to get started"}</span>
               <Link href="/figure/diet?tab=shopping" className="text-muted-foreground hover:underline">
                 {toBuy} item{toBuy !== 1 ? "s" : ""} to buy
+              </Link>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FutureModuleCard() {
+  const { listings, isLoading: listingsLoading } = useListings();
+  const { tours, isLoading: toursLoading } = useTours();
+
+  const active = activeListings(listings);
+  const avg = active.length ? Math.round(active.reduce((n, l) => n + l.rent, 0) / active.length) : null;
+  const next = splitTours(tours, todayDay()).upcoming[0];
+
+  const mod = modules.find((m) => m.id === "future")!;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div
+              className="flex h-8 w-8 items-center justify-center rounded-md text-white"
+              style={{ backgroundColor: mod.accentColor }}
+            >
+              <mod.icon className="h-4 w-4" />
+            </div>
+            <CardTitle className="text-base">{mod.label}</CardTitle>
+          </div>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/future/apartments">
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {listingsLoading || toursLoading ? (
+          <LoadingState variant="cards" />
+        ) : (
+          <>
+            <div>
+              <p className="text-xs text-muted-foreground">Average rent</p>
+              <p className="text-xl font-bold tabular-nums">{avg !== null ? formatRent(avg) : "No listings yet"}</p>
+            </div>
+            <div className="flex justify-between text-sm">
+              <Link href="/future/apartments?tab=listings" className="text-muted-foreground hover:underline">
+                {active.length} active listing{active.length !== 1 ? "s" : ""}
+              </Link>
+              <Link href="/future/apartments?tab=tours" className="text-muted-foreground hover:underline">
+                {next ? `Next tour ${formatTourDay(next.date, "MMM d")}` : "No tours scheduled"}
               </Link>
             </div>
           </>

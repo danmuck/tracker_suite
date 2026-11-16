@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import ShoppingItem from "@/models/figure/ShoppingItem";
-import { serverError } from "@/lib/figure/api";
+import { serverError } from "@/lib/api-helpers";
 
 // POST /api/figure/shopping-items/clear-checked — remove every checked item
 export async function POST() {
