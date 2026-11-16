@@ -18,6 +18,7 @@ import {
   useProjectionSandbox,
 } from "@/hooks/finance/use-projection-sandbox";
 import { ReportsPanel } from "@/components/finance/reports-panel";
+import { InfoTip } from "@/components/finance/info-tip";
 import { ProjectionTransactions } from "@/components/finance/projection-transactions";
 import { ProjectionSandboxPanel } from "@/components/finance/projection-sandbox-panel";
 import { useFinanceProfile } from "@/hooks/finance/use-finance-profile";
@@ -55,6 +56,7 @@ import { CurrencyDisplay } from "@/components/finance/currency-display";
 import { ProjectionAlerts } from "@/components/finance/projection-alerts";
 import {
   CashFlowChart,
+  DebtBreakdowns,
   NetWorthChart,
   PayoffDates,
   ProjectionInsightCards,
@@ -333,12 +335,24 @@ export default function ProjectionsPage() {
   // Start and end totals per account type; liabilities count as negative
   const typeTotals = (
     [
-      { type: "bank", label: "Bank & Cash" },
-      { type: "credit_card", label: "Credit Cards" },
-      { type: "debt", label: "Debt" },
+      {
+        type: "bank",
+        label: "Bank & Cash",
+        tip: "Combined balance of your bank and cash accounts at the end of the range, and where it started.",
+      },
+      {
+        type: "credit_card",
+        label: "Credit Cards",
+        tip: "Total owed across your credit cards at the end of the range, shown as a negative, and where it started.",
+      },
+      {
+        type: "debt",
+        label: "Debt",
+        tip: "Total owed on loans and other debts at the end of the range, shown as a negative, and where it started.",
+      },
     ] as const
   )
-    .map(({ type, label }) => {
+    .map(({ type, label, tip }) => {
       const ids = filteredAccounts
         .filter((a) => a.type === type && summary?.endBalances[a._id] !== undefined)
         .map((a) => a._id);
@@ -348,6 +362,7 @@ export default function ProjectionsPage() {
       return {
         type,
         label,
+        tip,
         count: ids.length,
         start: total(summary?.startBalances),
         end: total(summary?.endBalances),
@@ -530,8 +545,11 @@ export default function ProjectionsPage() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <Card>
               <CardHeader className="pb-1">
-                <CardTitle className="text-xs text-muted-foreground font-normal">
+                <CardTitle className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
                   Start Balance
+                  <InfoTip label="Start Balance">
+                    Everything you hold minus everything you owe on the first day of the range.
+                  </InfoTip>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -547,8 +565,11 @@ export default function ProjectionsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-1">
-                <CardTitle className="text-xs text-muted-foreground font-normal">
+                <CardTitle className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
                   End Balance
+                  <InfoTip label="End Balance">
+                    Everything you hold minus everything you owe on the last day of the range.
+                  </InfoTip>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -564,8 +585,11 @@ export default function ProjectionsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-1">
-                <CardTitle className="text-xs text-muted-foreground font-normal">
+                <CardTitle className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
                   Total Income
+                  <InfoTip label="Total Income">
+                    Money coming in during the range. Transfers between your own accounts are not counted.
+                  </InfoTip>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -578,8 +602,11 @@ export default function ProjectionsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-1">
-                <CardTitle className="text-xs text-muted-foreground font-normal">
+                <CardTitle className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
                   Total Expenses
+                  <InfoTip label="Total Expenses">
+                    Spending and projected interest during the range. Transfers and debt payments are not counted.
+                  </InfoTip>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -592,8 +619,11 @@ export default function ProjectionsPage() {
             </Card>
             <Card>
               <CardHeader className="pb-1">
-                <CardTitle className="text-xs text-muted-foreground font-normal">
+                <CardTitle className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
                   Net Change
+                  <InfoTip label="Net Change">
+                    Total income minus total expenses for the range.
+                  </InfoTip>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -611,11 +641,14 @@ export default function ProjectionsPage() {
             {typeTotals.map((t) => (
               <Card key={t.type}>
                 <CardHeader className="pb-1">
-                  <CardTitle className="text-xs text-muted-foreground font-normal">
-                    {t.label}
-                    <span className="ml-1 opacity-70">
-                      ({t.count} {t.count === 1 ? "account" : "accounts"})
+                  <CardTitle className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
+                    <span>
+                      {t.label}
+                      <span className="ml-1 opacity-70">
+                        ({t.count} {t.count === 1 ? "account" : "accounts"})
+                      </span>
                     </span>
+                    <InfoTip label={t.label}>{t.tip}</InfoTip>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -668,7 +701,13 @@ export default function ProjectionsPage() {
             </TabsList>
 
             <TabsContent value="overview" className="space-y-6">
-              <ProjectionInsightCards summary={summary!} />
+              <ProjectionInsightCards
+                summary={summary!}
+                alerts={projection.alerts}
+                accounts={filteredAccounts}
+                rangeDays={Math.max(1, differenceInCalendarDays(endDate, startDate))}
+              />
+              <DebtBreakdowns timeline={projection.timeline} accounts={accounts} />
               {chartData.length > 0 && chartSeries.length > 0 ? (
                 <BalanceChart
                   title="Balance Over Time"

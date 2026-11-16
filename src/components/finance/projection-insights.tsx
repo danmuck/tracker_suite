@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { ArrowRightLeft } from "lucide-react";
+import { InfoTip } from "@/components/finance/info-tip";
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -24,11 +25,27 @@ const fmtDay = (dateStr: string) => format(toDate(dateStr), "MMM d, yyyy");
 const fmtMonth = (dateStr: string) => format(toDate(dateStr), "MMM yyyy");
 const dollarAxis = (v: number) => `$${(v / 1000).toFixed(0)}k`;
 
-function StatCard({ title, children, hint }: { title: string; children: React.ReactNode; hint?: React.ReactNode }) {
+function StatCard({
+  title,
+  tip,
+  children,
+  hint,
+}: {
+  title: string;
+  /** One-line explanation shown from the info icon */
+  tip?: string;
+  children: React.ReactNode;
+  hint?: React.ReactNode;
+}) {
   return (
     <Card>
       <CardHeader className="pb-1">
-        <CardTitle className="text-xs text-muted-foreground font-normal">{title}</CardTitle>
+        <CardTitle className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
+          {title}
+          {tip && (
+            <InfoTip label={title}>{tip}</InfoTip>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="text-lg font-bold">{children}</div>
@@ -38,31 +55,77 @@ function StatCard({ title, children, hint }: { title: string; children: React.Re
   );
 }
 
-/** Lowest cash balance, savings rate, interest, and debt payments vs other spending */
-export function ProjectionInsightCards({ summary }: { summary: ProjectionResult["summary"] }) {
+const GOOD = "text-green-600 dark:text-green-500";
+const BAD = "text-red-600 dark:text-loss";
+
+/** Headline figures for the range, each with a short explanation on its info icon */
+export function ProjectionInsightCards({
+  summary,
+  alerts,
+  accounts,
+  rangeDays,
+}: {
+  summary: ProjectionResult["summary"];
+  alerts: ProjectionResult["alerts"];
+  accounts: Account[];
+  /** Length of the projection range in days */
+  rangeDays: number;
+}) {
   const { lowestCash, totalIncome, totalExpenses, netChange, interestCharged, debtPayments } = summary;
   const savingsRate = totalIncome > 0 ? (netChange / totalIncome) * 100 : null;
   const otherSpending = totalExpenses - interestCharged;
+  const months = rangeDays / 30.44;
+  const monthlyNet = months >= 1 ? Math.round(netChange / months) : null;
+
+  // Total owed on cards and loans, start vs end of the range
+  const owed = (balances: Record<string, number>) =>
+    accounts.filter(isLiability).reduce((sum, a) => sum + (balances[a._id] ?? 0), 0);
+  const debtPaidDown = owed(summary.startBalances) - owed(summary.endBalances);
+
+  // Money the projection could not move because a card or bank account ran out
+  const limited = alerts.filter((a) => a.reason !== "debt_paid_off");
+  const shortfall = limited.reduce((sum, a) => sum + (a.originalAmount - a.adjustedAmount), 0);
+
+  const payoffs = Object.entries(summary.payoffDates);
+  const cleared = payoffs
+    .filter((e): e is [string, string] => e[1] !== null)
+    .sort((a, b) => a[1].localeCompare(b[1]));
+  const nextCleared = cleared[0];
+  const nextName = nextCleared ? accounts.find((a) => a._id === nextCleared[0])?.name : undefined;
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      <StatCard title="Lowest Cash Balance" hint={lowestCash ? `on ${fmtDay(lowestCash.date)}` : "No bank accounts in view"}>
+      <StatCard
+        title="Lowest Cash Balance"
+        tip="The smallest combined bank and cash balance on any day in this range."
+        hint={lowestCash ? `on ${fmtDay(lowestCash.date)}` : "No bank accounts in view"}
+      >
         {lowestCash ? <CurrencyDisplay cents={lowestCash.amount} colored /> : "—"}
       </StatCard>
-      <StatCard title="Savings Rate" hint="Net change as a share of income">
-        {savingsRate === null ? (
-          "—"
-        ) : (
-          <span className={savingsRate < 0 ? "text-red-600 dark:text-loss" : "text-green-600 dark:text-green-500"}>
-            {savingsRate.toFixed(1)}%
-          </span>
-        )}
+      <StatCard
+        title="Savings Rate"
+        tip="Net change divided by income. Transfers and debt payments are not counted as spending."
+        hint="Net change as a share of income"
+      >
+        {savingsRate === null ? "—" : <span className={savingsRate < 0 ? BAD : GOOD}>{savingsRate.toFixed(1)}%</span>}
       </StatCard>
-      <StatCard title="Interest Charged" hint={interestCharged === 0 ? "Set an APR on cards and debt to project interest" : "Projected, at month end"}>
-        <CurrencyDisplay cents={interestCharged} />
+      <StatCard
+        title="Average Monthly Net"
+        tip="Income minus expenses, averaged per month across the range."
+        hint={monthlyNet === null ? "Needs a range of a month or more" : `over ${months.toFixed(1)} months`}
+      >
+        {monthlyNet === null ? "—" : <CurrencyDisplay cents={monthlyNet} colored />}
+      </StatCard>
+      <StatCard
+        title="Cut by Limits"
+        tip="Spending and payments left out because a card was at its limit or a bank account was empty."
+        hint={limited.length === 0 ? "Everything fits" : `${limited.length} ${limited.length === 1 ? "item" : "items"} stopped or reduced`}
+      >
+        {shortfall === 0 ? <span className={GOOD}>$0.00</span> : <CurrencyDisplay cents={-shortfall} colored />}
       </StatCard>
       <StatCard
         title="Debt Payments"
+        tip="Money moved into cards and loans in this range, including payments already made."
         hint={
           <>
             vs <CurrencyDisplay cents={otherSpending} /> other spending
@@ -71,6 +134,148 @@ export function ProjectionInsightCards({ summary }: { summary: ProjectionResult[
       >
         <CurrencyDisplay cents={debtPayments} />
       </StatCard>
+      <StatCard
+        title="Interest Charged"
+        tip="Interest added to cards and loans at each month end, from each account's APR."
+        hint={interestCharged === 0 ? "Set an APR on cards and debt to project interest" : "Projected, at month end"}
+      >
+        <CurrencyDisplay cents={interestCharged} />
+      </StatCard>
+      <StatCard
+        title="Debt Paid Down"
+        tip="How far total card and loan balances fall from the start to the end of the range. Negative means debt grew."
+        hint="Payments minus new charges and interest"
+      >
+        <CurrencyDisplay cents={debtPaidDown} colored />
+      </StatCard>
+      <StatCard
+        title="Next Debt-Free"
+        tip="The first card or loan to reach a zero balance in this range."
+        hint={
+          payoffs.length === 0
+            ? "No debts owing at the start"
+            : `${cleared.length} of ${payoffs.length} cleared in range`
+        }
+      >
+        {nextCleared ? (
+          <span className={GOOD}>
+            {nextName ?? "Account"} · {format(toDate(nextCleared[1]), "MMM d")}
+          </span>
+        ) : (
+          "—"
+        )}
+      </StatCard>
+    </div>
+  );
+}
+
+interface BreakdownRow {
+  id: string;
+  name: string;
+  amount: number;
+}
+
+function BreakdownCard({
+  title,
+  tip,
+  rows,
+  empty,
+  barClass,
+}: {
+  title: string;
+  tip: string;
+  rows: BreakdownRow[];
+  empty: string;
+  barClass: string;
+}) {
+  const total = rows.reduce((sum, r) => sum + r.amount, 0);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-1.5">
+          {title}
+          <InfoTip label={title}>{tip}</InfoTip>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">{empty}</p>
+        ) : (
+          <div className="space-y-3">
+            {rows.map((r) => {
+              const share = total > 0 ? (r.amount / total) * 100 : 0;
+              return (
+                <div key={r.id} className="space-y-1">
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="truncate font-medium">{r.name}</span>
+                    <span className="shrink-0 font-mono">
+                      <CurrencyDisplay cents={r.amount} />
+                      <span className="ml-2 text-xs text-muted-foreground">{share.toFixed(0)}%</span>
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div className={`h-full rounded-full ${barClass}`} style={{ width: `${share}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+            <div className="flex items-baseline justify-between border-t pt-2 text-sm">
+              <span className="text-muted-foreground">Total</span>
+              <span className="font-mono font-medium">
+                <CurrencyDisplay cents={total} />
+              </span>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Debt payments and interest for the range, split by the card or loan they belong to */
+export function DebtBreakdowns({
+  timeline,
+  accounts,
+}: {
+  timeline: ProjectionResult["timeline"];
+  accounts: Account[];
+}) {
+  const liabilities = new Map(accounts.filter(isLiability).map((a) => [a._id, a.name]));
+  const paid: Record<string, number> = {};
+  const interest: Record<string, number> = {};
+  for (const day of timeline) {
+    for (const t of day.transactions) {
+      if (t.categoryTags.includes("interest")) {
+        interest[t.accountId] = (interest[t.accountId] ?? 0) + t.amount;
+      } else if (t.type === "transfer" && t.toAccountId && liabilities.has(t.toAccountId)) {
+        paid[t.toAccountId] = (paid[t.toAccountId] ?? 0) + t.amount;
+      } else if (t.type === "credit" && liabilities.has(t.accountId) && !t.categoryTags.includes("rap_match")) {
+        paid[t.accountId] = (paid[t.accountId] ?? 0) + t.amount;
+      }
+    }
+  }
+  const rows = (totals: Record<string, number>): BreakdownRow[] =>
+    Object.entries(totals)
+      .filter(([id, amount]) => amount > 0 && liabilities.has(id))
+      .map(([id, amount]) => ({ id, name: liabilities.get(id)!, amount }))
+      .sort((a, b) => b.amount - a.amount);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <BreakdownCard
+        title="Debt Payments by Account"
+        tip="How much goes toward each card and loan in this range, and its share of all debt payments."
+        rows={rows(paid)}
+        empty="No payments toward cards or loans in this range."
+        barClass="bg-primary"
+      />
+      <BreakdownCard
+        title="Interest Charged by Account"
+        tip="Projected interest on each card and loan in this range, and its share of all interest."
+        rows={rows(interest)}
+        empty="No interest projected. Set an APR on a card or loan to see it here."
+        barClass="bg-red-500 dark:bg-loss"
+      />
     </div>
   );
 }
