@@ -1,7 +1,9 @@
 import Account, { type IAccount } from "@/models/finance/Account";
 import Transaction, { type ITransaction } from "@/models/finance/Transaction";
 import FinanceProfile from "@/models/finance/FinanceProfile";
-import { localTodayStr, toDateStr } from "./dates";
+import { addYears } from "date-fns";
+import { fromDateStr, localTodayStr, toDateStr } from "./dates";
+import { expandRecurrence } from "./recurrence";
 import { amountOn } from "./amount-schedule";
 import { blendedApr } from "./interest";
 import { estimatePayoff, type PayoffEstimate } from "./payoff";
@@ -11,6 +13,38 @@ import { getPeriodsPerYear } from "./tax-calculator";
 import { profileDocToData } from "./apply-profile";
 
 const RAP_YEARS_AHEAD = 10;
+const PAYOFF_YEARS_AHEAD = 50;
+const WEEKDAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function ordinal(n: number) {
+  const s = ["th", "st", "nd", "rd"];
+  const v = n % 100;
+  return `${n}${s[(v - 20) % 10] ?? s[v] ?? s[0]}`;
+}
+
+/** A recurrence rule in words, including its interval (weekly × 4 = "every 4 weeks"). */
+export function describeCadence(rule: ITransaction["recurrenceRule"] | null | undefined): string {
+  if (!rule) return "monthly";
+  const interval = rule.interval || 1;
+  const weekday = rule.dayOfWeek != null ? ` on ${WEEKDAYS[rule.dayOfWeek]}` : "";
+  switch (rule.frequency) {
+    case "monthly":
+      if (interval > 1) return `every ${interval} months`;
+      return rule.dayOfMonth ? `monthly on the ${ordinal(rule.dayOfMonth)}` : "monthly";
+    case "weekly":
+      return interval > 1 ? `every ${interval} weeks${weekday}` : `weekly${weekday}`;
+    case "biweekly":
+      return `every 2 weeks${weekday}`; // the biweekly rule has a fixed two-week step
+    case "semi_monthly":
+      return "twice a month";
+    case "annually":
+      return interval > 1 ? `every ${interval} years` : "yearly";
+    case "daily":
+      return interval > 1 ? `every ${interval} days` : "daily";
+    default:
+      return rule.frequency;
+  }
+}
 const DEFAULT_RAP = { enabled: false, autoSchedule: true, recertDate: "07-01", dependents: 0 };
 
 export class PaymentPlanError extends Error {
@@ -27,7 +61,15 @@ export interface PaymentPlanDTO {
   minimumPayment: number | null;
   subLoans: { name: string; balance: number; apr: number }[];
   rap: { enabled: boolean; autoSchedule: boolean; recertDate: string; dependents: number } | null;
-  payment: { transactionId: string; fromAccountId: string; fromAccountName: string; dayOfMonth: number | null; frequency: string } | null;
+  payment: {
+    transactionId: string;
+    fromAccountId: string;
+    fromAccountName: string;
+    dayOfMonth: number | null;
+    frequency: string;
+    /** How often it is paid, in words: "monthly on the 12th", "every 4 weeks on Friday" */
+    cadence: string;
+  } | null;
   schedule: ScheduleEntry[];
   nextRap: { effectiveDate: string; amount: number; incomeYear: number; agi: number } | null;
   payoff: PayoffEstimate | null;
@@ -144,6 +186,7 @@ export async function getPaymentPlan(accountId: string): Promise<PaymentPlanDTO>
       fromAccountName: from?.name ?? "Unknown account",
       dayOfMonth: tx.recurrenceRule?.dayOfMonth ?? null,
       frequency: tx.recurrenceRule?.frequency ?? "monthly",
+      cadence: describeCadence(tx.recurrenceRule),
     };
   }
 
@@ -158,9 +201,29 @@ export async function getPaymentPlan(accountId: string): Promise<PaymentPlanDTO>
   }
 
   const paymentDay = payment?.dayOfMonth ?? Number((schedule[0]?.effectiveDate ?? today).slice(8, 10));
+  // Payments already posted are in the balance; estimate from the ones still to come
+  const rule = tx?.recurrenceRule;
+  const posted = tx?.postedThrough ? toDateStr(tx.postedThrough) : "";
+  const paymentDates = rule
+    ? expandRecurrence(
+        {
+          frequency: rule.frequency,
+          interval: rule.interval,
+          startDate: rule.startDate.toISOString(),
+          endDate: rule.endDate?.toISOString() ?? null,
+          dayOfWeek: rule.dayOfWeek,
+          dayOfMonth: rule.dayOfMonth,
+          daysOfMonth: rule.daysOfMonth,
+        },
+        fromDateStr(today),
+        addYears(fromDateStr(today), PAYOFF_YEARS_AHEAD)
+      )
+        .map((d) => toDateStr(d))
+        .filter((d) => d > posted)
+    : undefined;
   const payoff =
     tx && schedule.length > 0
-      ? estimatePayoff({ balance: account.balance, apr, schedule, paymentDay, startDate: today, rap: !!rap?.enabled })
+      ? estimatePayoff({ balance: account.balance, apr, schedule, paymentDay, startDate: today, rap: !!rap?.enabled, paymentDates })
       : null;
 
   return {

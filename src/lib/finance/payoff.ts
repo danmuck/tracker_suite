@@ -19,6 +19,8 @@ export function estimatePayoff(args: {
   paymentDay: number;
   startDate: string;
   rap?: boolean;
+  /** Exact payment dates (sorted, yyyy-MM-dd) for plans that are not monthly; replaces paymentDay */
+  paymentDates?: string[];
 }): PayoffEstimate {
   let owed = args.balance;
   let totalInterest = 0;
@@ -35,11 +37,14 @@ export function estimatePayoff(args: {
     const monthEnd = `${ym}-${String(lastDay).padStart(2, "0")}`;
 
     let paid = 0;
-    if (payDate >= args.startDate) {
-      paid = Math.min(owed, amountOn(0, args.schedule, payDate));
-      owed -= paid;
-      if (paid > 0) months++;
-      if (owed <= 0) return { payoffDate: payDate, totalInterest, months };
+    const payDates = args.paymentDates ? args.paymentDates.filter((d) => d.startsWith(ym)) : [payDate];
+    for (const date of payDates) {
+      if (date < args.startDate) continue;
+      const amount = Math.min(owed, amountOn(0, args.schedule, date));
+      owed -= amount;
+      paid += amount;
+      if (amount > 0) months++;
+      if (owed <= 0) return { payoffDate: date, totalInterest, months };
     }
 
     if (monthEnd > args.startDate) {

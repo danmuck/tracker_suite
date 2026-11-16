@@ -12,7 +12,7 @@ export interface PaymentPlan {
   minimumPayment: number | null;
   subLoans: { name: string; balance: number; apr: number }[];
   rap: RapSettings | null;
-  payment: { transactionId: string; fromAccountId: string; fromAccountName: string; dayOfMonth: number | null; frequency: string } | null;
+  payment: { transactionId: string; fromAccountId: string; fromAccountName: string; dayOfMonth: number | null; frequency: string; cadence: string } | null;
   schedule: { effectiveDate: string; amount: number; source?: "rap" }[];
   nextRap: { effectiveDate: string; amount: number; incomeYear: number; agi: number } | null;
   payoff: { payoffDate: string | null; totalInterest: number; months: number } | null;

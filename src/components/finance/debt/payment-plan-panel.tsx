@@ -14,12 +14,6 @@ import { localTodayStr } from "@/lib/finance/dates";
 import { amountOn } from "@/lib/finance/amount-schedule";
 import type { Account } from "@/types/finance/account";
 
-function ordinal(n: number) {
-  const s = ["th", "st", "nd", "rd"];
-  const v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-}
-
 function rateLine(plan: PaymentPlan) {
   const parts: string[] = [];
   if (plan.blendedApr != null) parts.push(`APR ${plan.blendedApr}% (blended)`);
@@ -94,9 +88,7 @@ export function PaymentPlanPanel({ account, banks }: { account: Account; banks: 
           <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
             <span>
               {plan.payment.fromAccountName} → {account.name}
-              {plan.payment.frequency === "monthly" && plan.payment.dayOfMonth
-                ? `, monthly on the ${ordinal(plan.payment.dayOfMonth)}`
-                : `, ${plan.payment.frequency}`}
+              {`, ${plan.payment.cadence ?? plan.payment.frequency}`}
               {currentCents != null && ` · now ${formatCurrency(currentCents)}`}
             </span>
             <button
@@ -146,7 +138,7 @@ export function PaymentPlanPanel({ account, banks }: { account: Account; banks: 
           <ScheduleEditor
             entries={scheduleCents.map((e) => ({ effectiveDate: e.effectiveDate, value: e.amount, source: e.source }))}
             valueMode="money"
-            unit="/mo"
+            unit={plan.payment.frequency === "monthly" ? "/mo" : "/payment"}
             disabled={busy}
             warnBelow={minCents}
             emptyLabel="No payments scheduled"
