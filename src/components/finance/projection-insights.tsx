@@ -14,7 +14,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { CurrencyDisplay } from "@/components/finance/currency-display";
-import { centsToDollars } from "@/lib/finance/formatters";
+import { centsToDollars, formatCurrency } from "@/lib/finance/formatters";
 import { isLiability } from "@/lib/finance/account-utils";
 import type { Account } from "@/types/finance/account";
 import type { Granularity, ProjectionResult } from "@/types/finance/projection";
@@ -173,6 +173,14 @@ interface BreakdownRow {
   id: string;
   name: string;
   amount: number;
+  /** Bar fill and percentage (0-100); defaults to this row's share of the total */
+  percent?: number;
+  /** Small line under the row, e.g. the credit limit or the starting balance */
+  note?: string;
+  /** Paid off by the end of the range: the row's text is crossed out */
+  paidOff?: boolean;
+  /** Shown after the name, not crossed out (e.g. the date the account closes) */
+  suffix?: string;
 }
 
 function BreakdownCard({
@@ -203,12 +211,21 @@ function BreakdownCard({
         ) : (
           <div className="space-y-3">
             {rows.map((r) => {
-              const share = total > 0 ? (r.amount / total) * 100 : 0;
+              const share = Math.min(100, Math.max(0, r.percent ?? (total > 0 ? (r.amount / total) * 100 : 0)));
+              // Struck per element so the closing date after the name stays readable
+              const strike = r.paidOff ? " line-through" : "";
               return (
-                <div key={r.id} className="space-y-1">
+                <div key={r.id} className={r.paidOff ? "space-y-1 text-muted-foreground" : "space-y-1"}>
                   <div className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="truncate font-medium">{r.name}</span>
-                    <span className="shrink-0 font-mono">
+                    <span className="flex min-w-0 items-baseline gap-2">
+                      <span className={`truncate font-medium${strike}`}>{r.name}</span>
+                      {r.suffix && (
+                        <span className="shrink-0 text-xs text-green-600 dark:text-green-500">
+                          {r.suffix}
+                        </span>
+                      )}
+                    </span>
+                    <span className={`shrink-0 font-mono${strike}`}>
                       <CurrencyDisplay cents={r.amount} />
                       <span className="ml-2 text-xs text-muted-foreground">{share.toFixed(0)}%</span>
                     </span>
@@ -216,6 +233,7 @@ function BreakdownCard({
                   <div className="h-1.5 overflow-hidden rounded-full bg-muted">
                     <div className={`h-full rounded-full ${barClass}`} style={{ width: `${share}%` }} />
                   </div>
+                  {r.note && <p className={`text-xs text-muted-foreground${strike}`}>{r.note}</p>}
                 </div>
               );
             })}
@@ -235,12 +253,16 @@ function BreakdownCard({
 /** Debt payments and interest for the range, split by the card or loan they belong to */
 export function DebtBreakdowns({
   timeline,
+  summary,
   accounts,
 }: {
   timeline: ProjectionResult["timeline"];
+  summary: ProjectionResult["summary"];
   accounts: Account[];
 }) {
   const liabilities = new Map(accounts.filter(isLiability).map((a) => [a._id, a.name]));
+  // Cards stay open at a zero balance, so only loans and other debts count as paid off
+  const debtIds = new Set(accounts.filter((a) => a.type === "debt").map((a) => a._id));
   const paid: Record<string, number> = {};
   const interest: Record<string, number> = {};
   for (const day of timeline) {
@@ -254,20 +276,64 @@ export function DebtBreakdowns({
       }
     }
   }
-  const rows = (totals: Record<string, number>): BreakdownRow[] =>
+  /** Owed something at the start and nothing at the end of the range */
+  const paidOff = (id: string) =>
+    debtIds.has(id) && (summary.startBalances[id] ?? 0) > 0 && (summary.endBalances[id] ?? 0) <= 0;
+  const rows = (totals: Record<string, number>, strike = false): BreakdownRow[] =>
     Object.entries(totals)
       .filter(([id, amount]) => amount > 0 && liabilities.has(id))
-      .map(([id, amount]) => ({ id, name: liabilities.get(id)!, amount }))
+      .map(([id, amount]) => ({ id, name: liabilities.get(id)!, amount, paidOff: strike && paidOff(id) }))
       .sort((a, b) => b.amount - a.amount);
 
+  // Balance owed at the end of the range: cards against their limit, loans against where they started
+  const balances: BreakdownRow[] = accounts
+    .filter(isLiability)
+    .map((a) => {
+      const start = Math.max(0, summary.startBalances[a._id] ?? 0);
+      const end = Math.max(0, summary.endBalances[a._id] ?? 0);
+      const closed = paidOff(a._id) ? summary.payoffDates[a._id] : null;
+      const suffix = closed ? `closed ${fmtDay(closed)}` : undefined;
+      const from = start !== end ? ` · from ${formatCurrency(start)}` : "";
+      if (a.type === "credit_card" && a.creditLimit) {
+        return {
+          id: a._id,
+          name: a.name,
+          amount: end,
+          paidOff: paidOff(a._id),
+          suffix,
+          percent: (end / a.creditLimit) * 100,
+          note: `of ${formatCurrency(a.creditLimit)} limit used${from}`,
+        };
+      }
+      return {
+        id: a._id,
+        name: a.name,
+        amount: end,
+        paidOff: paidOff(a._id),
+          suffix,
+        percent: start > 0 ? (end / start) * 100 : end > 0 ? 100 : 0,
+        note: start > 0 ? `of ${formatCurrency(start)} at the start still owed` : "new in this range",
+      };
+    })
+    .filter((r) => r.amount > 0 || (summary.startBalances[r.id] ?? 0) > 0)
+    // Same order as the payments card (most paid first) so rows line up; unpaid accounts follow by balance
+    .sort((a, b) => (paid[b.id] ?? 0) - (paid[a.id] ?? 0) || b.amount - a.amount);
+
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-3">
       <BreakdownCard
         title="Debt Payments by Account"
         tip="How much goes toward each card and loan in this range, and its share of all debt payments."
-        rows={rows(paid)}
+        rows={rows(paid, true)}
         empty="No payments toward cards or loans in this range."
         barClass="bg-primary"
+      />
+      <BreakdownCard
+        title="Debt Balances by Account"
+        tip="What each card and loan owes at the end of this range. Cards show how much of the limit is used; loans show how much of the starting balance is left."
+        rows={balances}
+        empty="No card or loan balances in this range."
+        barClass="bg-amber-500 dark:bg-amber-400"
       />
       <BreakdownCard
         title="Interest Charged by Account"

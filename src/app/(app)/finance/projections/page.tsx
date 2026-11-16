@@ -707,7 +707,7 @@ export default function ProjectionsPage() {
                 accounts={filteredAccounts}
                 rangeDays={Math.max(1, differenceInCalendarDays(endDate, startDate))}
               />
-              <DebtBreakdowns timeline={projection.timeline} accounts={accounts} />
+              <DebtBreakdowns timeline={projection.timeline} summary={summary!} accounts={accounts} />
               {chartData.length > 0 && chartSeries.length > 0 ? (
                 <BalanceChart
                   title="Balance Over Time"
