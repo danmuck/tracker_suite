@@ -265,6 +265,9 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
 
     for (const t of dayTx) {
       const origAmount = t.amount;
+      // Already reflected in stored balances (it happened): replay it in full.
+      // Limits only decide what can happen from here on.
+      const settled = t.balanceApplied === true;
 
       if (t.type === "transfer" && t.toAccountId) {
         let amount = t.amount;
@@ -273,7 +276,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         const isBankSource = bankAccountIds.has(t.accountId);
 
         // Credit limit enforcement on source (positive balance = owed, available = limit - owed)
-        if (creditLimits[t.accountId] !== undefined && runningBalances[t.accountId] !== undefined) {
+        if (!settled && creditLimits[t.accountId] !== undefined && runningBalances[t.accountId] !== undefined) {
           const availableCredit = creditLimits[t.accountId] - runningBalances[t.accountId];
           if (availableCredit <= 0) {
             amount = 0;
@@ -283,7 +286,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         }
 
         // Bank account zero-balance enforcement on source
-        if (isBankSource && runningBalances[t.accountId] !== undefined) {
+        if (!settled && isBankSource && runningBalances[t.accountId] !== undefined) {
           const available = runningBalances[t.accountId];
           if (available <= 0) {
             amount = 0;
@@ -293,7 +296,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         }
 
         // Debt payoff cap on destination (positive balance = owed)
-        if (isDebtDest && runningBalances[t.toAccountId] !== undefined) {
+        if (!settled && isDebtDest && runningBalances[t.toAccountId] !== undefined) {
           const owed = runningBalances[t.toAccountId];
           if (owed <= 0) {
             amount = 0;
@@ -348,7 +351,9 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         if (t.type === "credit" && isDebtAccount) {
           // Credit (payment) on debt/CC: decreases what's owed (cap at owed amount)
           const owed = runningBalances[accountId];
-          if (owed <= 0) {
+          if (settled) {
+            runningBalances[accountId] -= t.amount;
+          } else if (owed <= 0) {
             t.amount = 0;
           } else {
             if (t.amount > owed) t.amount = owed;
@@ -371,7 +376,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         } else if (t.type === "debit" && isDebtAccount) {
           // Debit (charge) on debt/CC: increases what's owed
           // Credit limit enforcement: cap charge at available credit
-          if (creditLimits[accountId] !== undefined) {
+          if (!settled && creditLimits[accountId] !== undefined) {
             const availableCredit = creditLimits[accountId] - runningBalances[accountId];
             if (availableCredit <= 0) {
               t.amount = 0;
@@ -397,7 +402,9 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         } else if (t.type === "debit" && isBankAccount) {
           // Debit on bank: cap at available balance (don't go below 0)
           const available = runningBalances[accountId];
-          if (available <= 0) {
+          if (settled) {
+            // keep the full amount
+          } else if (available <= 0) {
             t.amount = 0;
           } else {
             t.amount = Math.min(t.amount, available);

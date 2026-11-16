@@ -82,3 +82,40 @@ test("each transaction carries running bank and credit card totals", () => {
     { bank: 97_000, credit: 22_000 },
   ]);
 });
+
+test("payments that already happened are replayed in full, never capped", () => {
+  // Today is Jan 20. Stored balances already include the Jan 15 payment and Jan 18 income.
+  const TODAY_MID = "2099-01-20";
+  const low = { _id: id("bank"), type: "bank", balance: 10_000, isArchived: false };
+  const debt = { _id: id("debt"), type: "debt", balance: 50_000, isArchived: false };
+  const monthly = (day: number) => ({
+    frequency: "monthly", interval: 1, startDate: new Date(`2098-12-${day}`), endDate: null, dayOfMonth: day,
+  });
+  const payment = {
+    _id: id("pay"), amount: 50_000, date: new Date("2098-12-15"), description: "Payment",
+    accountId: id("bank"), toAccountId: id("debt"), type: "transfer", isRecurring: true, categoryTags: [],
+    recurrenceRule: monthly(15),
+  };
+  const income = {
+    _id: id("inc"), amount: 50_000, date: new Date("2098-12-18"), description: "Income",
+    accountId: id("bank"), type: "credit", isRecurring: true, categoryTags: [],
+    recurrenceRule: monthly(18),
+  };
+  const r = buildProjection({
+    accounts: [low, debt] as never,
+    transactions: [payment, income] as never,
+    startDate: new Date("2099-01-01"),
+    endDate: new Date("2099-03-31"),
+    today: TODAY_MID,
+  });
+  // On the 15th the rewound bank balance (10,000) is below the payment, but it really was paid
+  const today = r.timeline.find((d) => d.date === TODAY_MID)!;
+  assert.deepEqual(today.balances, { bank: 10_000, debt: 50_000 });
+  const payments = r.timeline.flatMap((d) => d.transactions).filter((t) => t.description === "Payment");
+  assert.deepEqual(payments.map((t) => `${t.date}:${t.amount}`), [
+    "2099-01-15:50000", // already paid: full amount despite the low rewound balance
+    "2099-02-15:10000", // future: limited to the 10,000 in the bank before the Feb 18 income
+    "2099-03-15:40000", // future: the rest of the debt
+  ]);
+  assert.equal(r.alerts.filter((a) => a.date <= TODAY_MID).length, 0);
+});
