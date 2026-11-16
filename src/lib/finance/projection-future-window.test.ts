@@ -119,3 +119,32 @@ test("payments that already happened are replayed in full, never capped", () => 
   ]);
   assert.equal(r.alerts.filter((a) => a.date <= TODAY_MID).length, 0);
 });
+
+test("payments stop appearing once a debt is paid off, and the alert is dated the real payoff", () => {
+  const rich = { _id: id("bank"), type: "bank", balance: 1_000_000, isArchived: false };
+  const debt = { _id: id("debt"), type: "debt", balance: 100_000, isArchived: false };
+  const payment = {
+    _id: id("pay"), amount: 50_000, date: new Date("2099-01-10"), description: "Payment",
+    accountId: id("bank"), toAccountId: id("debt"), type: "transfer", isRecurring: true, categoryTags: [],
+    recurrenceRule: { frequency: "monthly", interval: 1, startDate: new Date("2099-01-10"), endDate: null, dayOfMonth: 10 },
+  };
+  const r = run([rich, debt], [payment], "2099-01-01", "2099-04-30");
+  const rows = r.timeline.flatMap((d) => d.transactions).filter((t) => t.description === "Payment");
+  assert.deepEqual(rows.map((t) => `${t.date}:${t.amount}`), ["2099-01-10:50000", "2099-02-10:50000"]);
+  assert.deepEqual(
+    r.alerts.map((a) => `${a.date}:${a.reason}:${a.adjustedAmount}`),
+    ["2099-02-10:debt_paid_off:50000"]
+  );
+  assert.equal(r.summary.payoffDates.debt, "2099-02-10");
+});
+
+test("a bank shortfall on a debt payment is reported as insufficient balance, not as paid off", () => {
+  const poor = { _id: id("bank"), type: "bank", balance: 20_000, isArchived: false };
+  const debt = { _id: id("debt"), type: "debt", balance: 100_000, isArchived: false };
+  const payment = {
+    _id: id("pay"), amount: 50_000, date: new Date("2099-01-10"), description: "Payment",
+    accountId: id("bank"), toAccountId: id("debt"), type: "transfer", isRecurring: false, balanceApplied: false, categoryTags: [],
+  };
+  const r = run([poor, debt], [payment], "2099-01-01", "2099-01-31");
+  assert.deepEqual(r.alerts.map((a) => `${a.reason}:${a.adjustedAmount}`), ["insufficient_balance:20000"]);
+});

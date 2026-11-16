@@ -263,6 +263,8 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
       paidThisMonth = {};
     }
 
+    // Payments toward a debt that is already cleared: left out of the timeline
+    const dropped = new Set<ProjectedTransaction>();
     for (const t of dayTx) {
       const origAmount = t.amount;
       // Already reflected in stored balances (it happened): replay it in full.
@@ -274,6 +276,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         const isDebtSource = debtAccountIds.has(t.accountId);
         const isDebtDest = debtAccountIds.has(t.toAccountId);
         const isBankSource = bankAccountIds.has(t.accountId);
+        let limitedBy: "credit_limit" | "insufficient_balance" | null = null;
 
         // Credit limit enforcement on source (positive balance = owed, available = limit - owed)
         if (!settled && creditLimits[t.accountId] !== undefined && runningBalances[t.accountId] !== undefined) {
@@ -283,50 +286,50 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
           } else {
             amount = Math.min(amount, availableCredit);
           }
+          if (amount < origAmount) limitedBy = "credit_limit";
         }
 
         // Bank account zero-balance enforcement on source
         if (!settled && isBankSource && runningBalances[t.accountId] !== undefined) {
           const available = runningBalances[t.accountId];
+          const before = amount;
           if (available <= 0) {
             amount = 0;
           } else {
             amount = Math.min(amount, available);
           }
+          if (amount < before) limitedBy = "insufficient_balance";
         }
 
         // Debt payoff cap on destination (positive balance = owed)
+        let paysOff = false;
         if (!settled && isDebtDest && runningBalances[t.toAccountId] !== undefined) {
           const owed = runningBalances[t.toAccountId];
           if (owed <= 0) {
-            amount = 0;
-          } else {
-            amount = Math.min(amount, owed);
+            // Nothing left to pay: this payment simply does not happen
+            t.amount = 0;
+            dropped.add(t);
+            continue;
           }
+          amount = Math.min(amount, owed);
+          paysOff = amount >= owed;
         }
 
         t.amount = amount;
-
-        // Track alert if amount was reduced
-        if (amount < origAmount) {
-          t.originalAmount = origAmount;
-          const reason =
-            creditLimits[t.accountId] !== undefined
-              ? "credit_limit" as const
-              : isDebtDest
-              ? "debt_paid_off" as const
-              : "insufficient_balance" as const;
-          alerts.push({
-            date: dateStr,
-            description: t.description,
-            accountId: t.accountId,
-            toAccountId: t.toAccountId,
-            originalAmount: origAmount,
-            adjustedAmount: amount,
-            reason,
-            sourceTransactionId: t.sourceTransactionId,
-          });
-        }
+        if (amount < origAmount) t.originalAmount = origAmount;
+        const alertBase = {
+          date: dateStr,
+          description: t.description,
+          accountId: t.accountId,
+          toAccountId: t.toAccountId,
+          originalAmount: origAmount,
+          adjustedAmount: amount,
+          sourceTransactionId: t.sourceTransactionId,
+        };
+        // A limit on the paying account cut the payment short
+        if (limitedBy) alerts.push({ ...alertBase, reason: limitedBy });
+        // The payment that clears the debt, dated when it actually happens
+        if (paysOff) alerts.push({ ...alertBase, reason: "debt_paid_off" });
 
         // Update balances: debt/CC accounts use reversed sign
         if (runningBalances[t.accountId] !== undefined) {
@@ -351,18 +354,18 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         if (t.type === "credit" && isDebtAccount) {
           // Credit (payment) on debt/CC: decreases what's owed (cap at owed amount)
           const owed = runningBalances[accountId];
-          if (settled) {
-            runningBalances[accountId] -= t.amount;
-          } else if (owed <= 0) {
+          if (!settled && owed <= 0) {
+            // Nothing left to pay: this payment simply does not happen
             t.amount = 0;
-          } else {
-            if (t.amount > owed) t.amount = owed;
-            runningBalances[accountId] -= t.amount;
+            dropped.add(t);
+            continue;
           }
+          if (!settled && t.amount > owed) t.amount = owed;
+          runningBalances[accountId] -= t.amount;
           paidThisMonth[accountId] = (paidThisMonth[accountId] ?? 0) + t.amount;
           if (targetIds.has(accountId)) debtPayments += t.amount;
-          if (t.amount < origAmount) {
-            t.originalAmount = origAmount;
+          if (t.amount < origAmount) t.originalAmount = origAmount;
+          if (!settled && runningBalances[accountId] <= 0) {
             alerts.push({
               date: dateStr,
               description: t.description,
@@ -427,6 +430,9 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         }
       }
       t.ledger = ledgerNow();
+    }
+    for (let i = dayTx.length - 1; i >= 0; i--) {
+      if (dropped.has(dayTx[i])) dayTx.splice(i, 1);
     }
 
     // Month-end interest (future months only; past interest is already in DB balances)

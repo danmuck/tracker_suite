@@ -300,9 +300,12 @@ export function ProjectionAlerts({
 
                 {/* Amount impact */}
                 <div className="shrink-0 text-right">
-                  <p className="font-mono text-xs text-muted-foreground line-through">
-                    <CurrencyDisplay cents={entry.alert.originalAmount} />
-                  </p>
+                  {/* A final payment made in full has nothing to strike through */}
+                  {entry.alert.originalAmount !== entry.alert.adjustedAmount && (
+                    <p className="font-mono text-xs text-muted-foreground line-through">
+                      <CurrencyDisplay cents={entry.alert.originalAmount} />
+                    </p>
+                  )}
                   <p
                     className={cn(
                       "font-mono text-sm font-medium",
