@@ -237,3 +237,39 @@ test("updateById with timestamps: false changes the document and leaves updatedA
   assert.ok(loud!.updatedAt > made.updatedAt);
   assert.equal(await links.updateById("a".repeat(24), { $set: { n: 3 } }, { timestamps: false }), null);
 });
+
+test("an injected clock stamps createdAt and updatedAt on every write path, once per call", async () => {
+  let ms = Date.UTC(2026, 0, 1);
+  let calls = 0;
+  const store = new BrowserStore(memoryStorage(), () => {
+    calls += 1;
+    return new Date(ms++);
+  });
+  const groups = store.collection<Group>("linkGroups");
+  const at = (n: number) => new Date(Date.UTC(2026, 0, 1) + n).toISOString();
+  const [a, b] = await groups.insertMany([
+    { name: "A", slug: "a", order: 1 },
+    { name: "B", slug: "b", order: 2 },
+  ]);
+  // One stamp for the whole insertMany, as before
+  assert.deepEqual([a.createdAt, a.updatedAt, b.createdAt, b.updatedAt], [at(0), at(0), at(0), at(0)]);
+  assert.equal((await groups.updateById(a._id, { $set: { order: 3 } }))?.updatedAt, at(1));
+  assert.equal((await groups.updateOne({ slug: "b" }, { $set: { order: 4 } }))?.updatedAt, at(2));
+  const up = await groups.updateOne({ slug: "c" }, { $setOnInsert: { name: "C", order: 0 } }, { upsert: true });
+  assert.deepEqual([up?.createdAt, up?.updatedAt], [at(3), at(3)]);
+  await groups.updateMany({ slug: "a" }, { $set: { order: 5 } });
+  assert.equal((await groups.findById(a._id))?.updatedAt, at(4));
+  await groups.batchUpdate([{ filter: { slug: "b" }, update: { $set: { order: 6 } } }]);
+  assert.equal((await groups.findById(b._id))?.updatedAt, at(5));
+  assert.equal((await groups.findById(b._id))?.createdAt, at(0));
+  assert.equal(calls, 6);
+});
+
+test("without a clock, timestamps come from the real clock", async () => {
+  const groups = new BrowserStore(memoryStorage()).collection<Group>("linkGroups");
+  const before = Date.now();
+  const a = await groups.insert({ name: "A", slug: "a", order: 1 });
+  const after = Date.now();
+  const stamped = Date.parse(a.createdAt);
+  assert.ok(stamped >= before && stamped <= after, `${a.createdAt} not within the call`);
+});

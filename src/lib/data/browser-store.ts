@@ -86,10 +86,13 @@ function equalityFields(filter: Filter): Doc {
 
 export class BrowserStore implements Store {
   private storage: StorageLike;
+  private clock: () => Date;
   private cache = new Map<CollectionName, Doc[]>();
 
-  constructor(storage: StorageLike) {
+  /** `clock` stamps createdAt / updatedAt (once per write call); tests pass a controlled one. */
+  constructor(storage: StorageLike, clock: () => Date = () => new Date()) {
     this.storage = storage;
+    this.clock = clock;
     if (storage.getItem(VERSION_KEY) !== String(DATA_VERSION)) {
       this.removeDataKeys(true);
       try {
@@ -112,6 +115,11 @@ export class BrowserStore implements Store {
   clear(): void {
     this.removeDataKeys(false);
     this.cache.clear();
+  }
+
+  /** @internal The createdAt / updatedAt stamp for one write call. */
+  timestamp(): string {
+    return this.clock().toISOString();
   }
 
   /** @internal */
@@ -242,7 +250,7 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
   }
 
   async insertMany(docs: Omit<T, keyof BaseDoc>[]): Promise<T[]> {
-    const now = new Date().toISOString();
+    const now = this.store.timestamp();
     const created = docs.map((d) => this.build(d as Doc, now));
     const next = [...this.docs(), ...created];
     this.checkUnique(next, created.map((doc) => ({ doc })));
@@ -266,7 +274,7 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
   ): Promise<T | null> {
     assertIdUnchanged(update);
     if (options.upsert) assertUpsertFilter(filter);
-    const now = new Date().toISOString();
+    const now = this.store.timestamp();
     const current = this.docs();
     const index = current.findIndex((d) => matches(d, filter));
     let next: Doc[];
@@ -290,7 +298,7 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
 
   async updateMany(filter: Filter, update: Update): Promise<number> {
     assertIdUnchanged(update);
-    const now = new Date().toISOString();
+    const now = this.store.timestamp();
     const changed: { doc: Doc; before: Doc }[] = [];
     const next = this.docs().map((d) => {
       if (!matches(d, filter)) return d;
@@ -306,7 +314,7 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
 
   async batchUpdate(ops: { filter: Filter; update: Update }[]): Promise<void> {
     for (const { update } of ops) assertIdUnchanged(update);
-    const now = new Date().toISOString();
+    const now = this.store.timestamp();
     const original = this.docs();
     let next = original;
     const changedIndexes = new Set<number>();

@@ -1,5 +1,5 @@
 // Finance parity transcripts: normalization (rules N1–N6), id substitution, comparison, and the
-// day-order check (N7, third check). Pure: no network, no database, no clock.
+// N7 order checks (ties in a response, same-day order). Pure: no network, no database, no clock.
 
 import type { Step } from "./scenario";
 
@@ -234,4 +234,37 @@ export function dayOrderConflicts(
     if (pairs.length > 0) messages.push(`${day.date}: same-day order is not fixed by stored date: ${pairs.join("; ")}`);
   }
   return messages;
+}
+
+/** N7, first two checks: where a response's order rests on a tie (empty when it does not). */
+export function tieChecks(step: Step, path: string, body: unknown): string[] {
+  const problems: string[] = [];
+  if (step.method === "GET" && path.startsWith("/api/transactions") && isPlainObject(body) && Array.isArray(body.data)) {
+    const sort = new URL(path, "http://x").searchParams.get("sort") || "date";
+    const items = body.data as Record<string, unknown>[];
+    for (let i = 1; i < items.length; i++) {
+      if (JSON.stringify(items[i - 1][sort]) === JSON.stringify(items[i][sort])) {
+        problems.push(`items ${i - 1} and ${i} tie on ${sort} = ${JSON.stringify(items[i][sort])} (${String(items[i - 1]._id)}, ${String(items[i]._id)})`);
+      }
+    }
+  }
+  const breakdown = isPlainObject(body) && isPlainObject(body.data) ? body.data.categoryBreakdown : undefined;
+  if (path.startsWith("/api/summary") && Array.isArray(breakdown)) {
+    for (let i = 1; i < breakdown.length; i++) {
+      if (breakdown[i - 1].amount === breakdown[i].amount) {
+        problems.push(`categoryBreakdown entries ${breakdown[i - 1].category} and ${breakdown[i].category} tie on amount ${breakdown[i].amount}`);
+      }
+    }
+  }
+  return problems;
+}
+
+export type Day = { date: string; transactions: { sourceTransactionId?: string; isRecurring?: boolean; date?: string }[] };
+
+export function daysOf(path: string, body: unknown): Day[] {
+  const data = isPlainObject(body) && isPlainObject(body.data) ? body.data : undefined;
+  if (!data) return [];
+  if (path.startsWith("/api/projections") && Array.isArray(data.timeline)) return data.timeline as Day[];
+  if (path.startsWith("/api/summary") && Array.isArray(data.days)) return data.days as Day[];
+  return [];
 }

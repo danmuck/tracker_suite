@@ -9,7 +9,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { buildScenario, type Step } from "./scenario";
-import { compareTranscripts, createNormalizer, dayOrderConflicts, substitute, type Transcript, type TranscriptStep } from "./normalize";
+import { compareTranscripts, createNormalizer, dayOrderConflicts, daysOf, substitute, tieChecks, type Transcript, type TranscriptStep } from "./normalize";
 
 const DEFAULT_GOLDEN = "scripts/finance-parity/golden/transcript.json";
 
@@ -95,39 +95,6 @@ async function probeEmpty(base: string) {
     list.length <= 1 &&
     list.every((a) => isRecord(a) && a.isCash === true);
   if (!ok) fail(`Refusing to run: GET /api/accounts?includeArchived=true returned ${accounts.status} ${JSON.stringify(list).slice(0, 300)}`);
-}
-
-/** N7, first two checks: a response whose order rests on a tie. */
-function tieChecks(step: Step, path: string, body: unknown): string[] {
-  const problems: string[] = [];
-  if (step.method === "GET" && path.startsWith("/api/transactions") && isRecord(body) && Array.isArray(body.data)) {
-    const sort = new URL(path, "http://x").searchParams.get("sort") || "date";
-    const items = body.data as Record<string, unknown>[];
-    for (let i = 1; i < items.length; i++) {
-      if (JSON.stringify(items[i - 1][sort]) === JSON.stringify(items[i][sort])) {
-        problems.push(`items ${i - 1} and ${i} tie on ${sort} = ${JSON.stringify(items[i][sort])} (${String(items[i - 1]._id)}, ${String(items[i]._id)})`);
-      }
-    }
-  }
-  const breakdown = isRecord(body) && isRecord(body.data) ? body.data.categoryBreakdown : undefined;
-  if (path.startsWith("/api/summary") && Array.isArray(breakdown)) {
-    for (let i = 1; i < breakdown.length; i++) {
-      if (breakdown[i - 1].amount === breakdown[i].amount) {
-        problems.push(`categoryBreakdown entries ${breakdown[i - 1].category} and ${breakdown[i].category} tie on amount ${breakdown[i].amount}`);
-      }
-    }
-  }
-  return problems;
-}
-
-type Day = { date: string; transactions: { sourceTransactionId?: string; isRecurring?: boolean; date?: string }[] };
-
-function daysOf(path: string, body: unknown): Day[] {
-  const data = isRecord(body) && isRecord(body.data) ? body.data : undefined;
-  if (!data) return [];
-  if (path.startsWith("/api/projections") && Array.isArray(data.timeline)) return data.timeline as Day[];
-  if (path.startsWith("/api/summary") && Array.isArray(data.days)) return data.days as Day[];
-  return [];
 }
 
 async function createdTransactions(base: string) {
