@@ -66,8 +66,14 @@ function isPlainObject(value: unknown): value is Doc {
 }
 
 // _id and createdAt never change after insert (callers reject updates to _id first).
-function applyKeepingImmutable(doc: Doc, update: Update, now: string): Doc {
-  return clone({ ...applyUpdate(doc, update), _id: doc._id, createdAt: doc.createdAt, updatedAt: now });
+// With `touch` false the stored updatedAt is kept as it was.
+function applyKeepingImmutable(doc: Doc, update: Update, now: string, touch = true): Doc {
+  return clone({
+    ...applyUpdate(doc, update),
+    _id: doc._id,
+    createdAt: doc.createdAt,
+    updatedAt: touch ? now : doc.updatedAt,
+  });
 }
 
 function equalityFields(filter: Filter): Doc {
@@ -237,13 +243,22 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
     return created.map((d) => this.out(d));
   }
 
-  async updateById(id: string, update: Update): Promise<T | null> {
-    return this.updateOne({ _id: id }, update);
+  async updateById(id: string, update: Update, options?: { timestamps?: boolean }): Promise<T | null> {
+    return this.applyOne({ _id: id }, update, {}, options?.timestamps !== false);
   }
 
   async updateOne(filter: Filter, update: Update, options?: { upsert?: boolean }): Promise<T | null> {
+    return this.applyOne(filter, update, options ?? {}, true);
+  }
+
+  private async applyOne(
+    filter: Filter,
+    update: Update,
+    options: { upsert?: boolean },
+    touch: boolean,
+  ): Promise<T | null> {
     assertIdUnchanged(update);
-    if (options?.upsert) assertUpsertFilter(filter);
+    if (options.upsert) assertUpsertFilter(filter);
     const now = new Date().toISOString();
     const current = this.docs();
     const index = current.findIndex((d) => matches(d, filter));
@@ -251,14 +266,14 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
     let result: Doc;
     let before: Doc | undefined;
     if (index === -1) {
-      if (!options?.upsert) return null;
+      if (!options.upsert) return null;
       // As in MongoDB, an upsert keeps an ObjectId-shaped _id from the filter.
       const id = typeof filter._id === "string" && isId(filter._id) ? filter._id : undefined;
       result = this.build(applyUpdate(equalityFields(filter), update, true), now, id);
       next = [...current, result];
     } else {
       before = current[index];
-      result = applyKeepingImmutable(before, update, now);
+      result = applyKeepingImmutable(before, update, now, touch);
       next = current.map((d, i) => (i === index ? result : d));
     }
     this.checkUnique(next, [{ doc: result, before }]);

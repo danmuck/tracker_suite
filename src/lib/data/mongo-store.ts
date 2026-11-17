@@ -54,6 +54,24 @@ function rethrow(error: unknown, collection: string): never {
   throw error;
 }
 
+/** Options for findByIdAndUpdate; `timestamps: false` is Mongoose's per-query switch and appears only when asked for. */
+export function updateByIdOptions(options?: { timestamps?: boolean }): {
+  returnDocument: "after";
+  runValidators: true;
+  timestamps?: false;
+} {
+  return {
+    returnDocument: "after",
+    runValidators: true,
+    ...(options?.timestamps === false ? { timestamps: false as const } : {}),
+  };
+}
+
+/** Every skip except undefined and 0 reaches MongoDB (NaN and negatives included, as before the Store). */
+export function passesSkip(skip: number | undefined): boolean {
+  return skip !== undefined && skip !== 0;
+}
+
 class MongoCollection<T extends BaseDoc> implements Collection<T> {
   private model: AnyModel;
   private name: CollectionName;
@@ -74,7 +92,7 @@ class MongoCollection<T extends BaseDoc> implements Collection<T> {
   private async list(filter: Filter, options: FindOptions = {}): Promise<T[]> {
     let query = this.model.find(filter);
     if (options.sort) query = query.sort(options.sort);
-    if (options.skip) query = query.skip(options.skip);
+    if (passesSkip(options.skip)) query = query.skip(options.skip as number);
     if (options.limit !== undefined) query = query.limit(options.limit);
     if (options.select) query = query.select(options.select.join(" "));
     return plain<T[]>(await query.lean());
@@ -117,11 +135,11 @@ class MongoCollection<T extends BaseDoc> implements Collection<T> {
     return plain<T[]>(created.map((d) => d.toObject()));
   }
 
-  async updateById(id: string, update: Update): Promise<T | null> {
+  async updateById(id: string, update: Update, options?: { timestamps?: boolean }): Promise<T | null> {
     assertIdUnchanged(update);
     if (!isId(id)) return null;
     const doc = await this.guard(() =>
-      this.model.findByIdAndUpdate(id, update, { returnDocument: "after", runValidators: true }).lean(),
+      this.model.findByIdAndUpdate(id, update, updateByIdOptions(options)).lean(),
     );
     return doc ? plain<T>(doc) : null;
   }

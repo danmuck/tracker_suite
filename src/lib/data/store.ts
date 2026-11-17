@@ -36,7 +36,8 @@ export interface Collection<T extends BaseDoc> {
   distinct(field: string, filter?: Filter): Promise<unknown[]>;
   insert(doc: Omit<T, keyof BaseDoc>): Promise<T>;
   insertMany(docs: Omit<T, keyof BaseDoc>[]): Promise<T[]>;
-  updateById(id: string, update: Update): Promise<T | null>; // returns the updated doc
+  // Returns the updated doc. `{ timestamps: false }` leaves the stored updatedAt exactly as it was.
+  updateById(id: string, update: Update, options?: { timestamps?: boolean }): Promise<T | null>;
   updateOne(filter: Filter, update: Update, options?: { upsert?: boolean }): Promise<T | null>;
   updateMany(filter: Filter, update: Update): Promise<number>; // count matched
   batchUpdate(ops: { filter: Filter; update: Update }[]): Promise<void>;

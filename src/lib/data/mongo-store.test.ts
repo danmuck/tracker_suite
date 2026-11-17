@@ -2,7 +2,7 @@
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { duplicateKeyField, mongoStore } from "./mongo-store";
+import { duplicateKeyField, mongoStore, passesSkip, updateByIdOptions } from "./mongo-store";
 
 test("updates that change _id reject before reaching Mongoose, with the browser store's message", async () => {
   const groups = mongoStore.collection("linkGroups");
@@ -39,4 +39,14 @@ test("upserts with _id in $setOnInsert or an invalid filter _id reject before re
   await assert.rejects(groups.updateOne({ _id: "xyz" }, { $set: { name: "x" } }, { upsert: true }), {
     message: "Invalid _id",
   });
+});
+
+test("updateById options: validators always on, timestamps off only on request", () => {
+  assert.deepEqual(updateByIdOptions(), { returnDocument: "after", runValidators: true });
+  assert.deepEqual(updateByIdOptions({ timestamps: true }), { returnDocument: "after", runValidators: true });
+  assert.deepEqual(updateByIdOptions({ timestamps: false }), { returnDocument: "after", runValidators: true, timestamps: false });
+});
+
+test("skip reaches MongoDB for every number except 0", () => {
+  assert.deepEqual([undefined, 0, 20, -20, NaN].map(passesSkip), [false, false, true, true, true]);
 });

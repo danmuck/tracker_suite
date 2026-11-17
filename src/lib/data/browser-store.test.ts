@@ -212,3 +212,16 @@ test("upserts reject _id in $setOnInsert and an invalid _id in the filter, befor
   assert.equal(created?._id, id);
   assert.equal(await groups.updateOne({ _id: "xyz" }, { $set: { name: "x" } }), null); // no upsert: unchanged behavior
 });
+
+test("updateById with timestamps: false changes the document and leaves updatedAt alone", async () => {
+  const store = new BrowserStore(memoryStorage());
+  const links = store.collection<BaseDoc & { name: string; n?: number }>("links");
+  const made = await links.insert({ name: "a" });
+  await new Promise((r) => setTimeout(r, 5));
+  const quiet = await links.updateById(made._id, { $set: { n: 1 } }, { timestamps: false });
+  assert.deepEqual([quiet!.n, quiet!.updatedAt, quiet!.createdAt], [1, made.updatedAt, made.createdAt]);
+  assert.equal((await links.findById(made._id))!.updatedAt, made.updatedAt);
+  const loud = await links.updateById(made._id, { $set: { n: 2 } });
+  assert.ok(loud!.updatedAt > made.updatedAt);
+  assert.equal(await links.updateById("a".repeat(24), { $set: { n: 3 } }, { timestamps: false }), null);
+});
