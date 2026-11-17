@@ -2,9 +2,11 @@
 
 import { format } from "date-fns";
 import { moduleCards } from "@/components/dashboard";
-import { modules } from "@/lib/modules";
+import { availableModules } from "@/lib/modules";
+import { useDataSource } from "@/lib/data/mode";
 
 export default function GlobalDashboardPage() {
+  const source = useDataSource();
   return (
     <div className="space-y-6">
       <div>
@@ -15,7 +17,7 @@ export default function GlobalDashboardPage() {
       </div>
 
       <div className="grid gap-6 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
-        {modules.map((mod) => {
+        {availableModules(source).map((mod) => {
           const ModuleCard = moduleCards[mod.id];
           return ModuleCard ? <ModuleCard key={mod.id} /> : null;
         })}

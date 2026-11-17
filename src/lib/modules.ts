@@ -12,6 +12,7 @@ import {
   Building2,
   type LucideIcon,
 } from "lucide-react";
+import type { DataSource } from "@/lib/data/mode";
 
 export interface NavItem {
   href: string;
@@ -26,6 +27,7 @@ export interface ModuleConfig {
   basePath: string;
   accentColor: string;
   navItems: NavItem[];
+  browserData: boolean; // works with browser-stored data
 }
 
 export const modules: ModuleConfig[] = [
@@ -42,6 +44,7 @@ export const modules: ModuleConfig[] = [
       { href: "/finance/projections", label: "Projections", icon: TrendingUp },
       { href: "/finance/datasheet", label: "Datasheet", icon: Calculator },
     ],
+    browserData: false,
   },
   {
     id: "figure",
@@ -53,6 +56,7 @@ export const modules: ModuleConfig[] = [
       { href: "/figure/fitness", label: "Fitness", icon: Dumbbell },
       { href: "/figure/diet", label: "Diet", icon: Salad },
     ],
+    browserData: false,
   },
   {
     id: "future",
@@ -63,6 +67,7 @@ export const modules: ModuleConfig[] = [
     navItems: [
       { href: "/future/apartments", label: "Apartments", icon: Building2 },
     ],
+    browserData: false,
   },
   {
     id: "projects",
@@ -73,6 +78,7 @@ export const modules: ModuleConfig[] = [
     navItems: [
       { href: "/projects", label: "Projects", icon: FolderKanban },
     ],
+    browserData: false,
   },
   {
     id: "links",
@@ -81,8 +87,13 @@ export const modules: ModuleConfig[] = [
     basePath: "/links",
     accentColor: "var(--chart-4)",
     navItems: [],
+    browserData: true,
   },
 ];
+
+export function availableModules(source: DataSource): ModuleConfig[] {
+  return source === "browser" ? modules.filter((m) => m.browserData) : modules;
+}
 
 export const globalNavItems: NavItem[] = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },

@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
+import { ModuleGate } from "@/components/module-gate";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -8,7 +9,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AppSidebar />
       <SidebarInset className="min-w-0">
         <AppHeader />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6"><ModuleGate>{children}</ModuleGate></main>
       </SidebarInset>
     </SidebarProvider>
   );
