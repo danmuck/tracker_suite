@@ -3,8 +3,7 @@
 import useSWR from "swr";
 import type { Account, AccountFormData } from "@/types/finance/account";
 import { dollarsToCents } from "@/lib/finance/formatters";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { fetcher, send } from "@/hooks/request";
 
 export function useAccounts(
   type?: string,
@@ -40,57 +39,25 @@ export function useAccount(id: string) {
 }
 
 export async function createAccount(data: AccountFormData) {
-  const res = await fetch("/api/accounts", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...data,
-      balance: data.balance,
-      creditLimit: data.creditLimit,
-    }),
+  return send("/api/accounts", "POST", {
+    ...data,
+    balance: data.balance,
+    creditLimit: data.creditLimit,
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to create account");
-  }
-  return res.json();
 }
 
 export async function updateAccount(id: string, data: Partial<AccountFormData>) {
-  const res = await fetch(`/api/accounts/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      ...data,
-      balance: data.balance,
-      creditLimit: data.creditLimit,
-    }),
+  return send(`/api/accounts/${id}`, "PUT", {
+    ...data,
+    balance: data.balance,
+    creditLimit: data.creditLimit,
   });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to update account");
-  }
-  return res.json();
 }
 
 export async function deleteAccount(id: string) {
-  const res = await fetch(`/api/accounts/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to delete account");
-  }
-  return res.json();
+  return send(`/api/accounts/${id}`, "DELETE");
 }
 
 export async function setAccountArchived(id: string, isArchived: boolean) {
-  const res = await fetch(`/api/accounts/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ isArchived }),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to update account");
-  }
-  return res.json();
+  return send(`/api/accounts/${id}`, "PATCH", { isArchived });
 }

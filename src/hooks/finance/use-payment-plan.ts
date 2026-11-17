@@ -1,8 +1,7 @@
 "use client";
 
 import useSWR, { mutate as globalMutate } from "swr";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { fetcher, send as request } from "@/hooks/request";
 
 /** Payment plan as returned by the API (dollars, percent). */
 export interface PaymentPlan {
@@ -46,13 +45,7 @@ async function refreshAfterWrite(accountId: string, plan: PaymentPlan) {
 }
 
 async function send(accountId: string, method: string, body?: unknown): Promise<PaymentPlan> {
-  const res = await fetch(planKey(accountId), {
-    method,
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const json = await res.json();
-  if (!res.ok) throw new Error(json.error || "Failed to update payment plan");
+  const json = await request<{ data: PaymentPlan }>(planKey(accountId), method, body);
   await refreshAfterWrite(accountId, json.data);
   return json.data;
 }

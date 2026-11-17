@@ -1,9 +1,9 @@
 "use client";
 
 import useSWR from "swr";
+import { fetcher } from "@/hooks/request";
 import type { Category } from "@/types/finance/category";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function useCategories() {
   const { data, error, isLoading, mutate } = useSWR("/api/categories", fetcher);

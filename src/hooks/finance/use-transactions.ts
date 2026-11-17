@@ -3,8 +3,7 @@
 import useSWR from "swr";
 import type { Transaction, TransactionFormData } from "@/types/finance/transaction";
 import type { TransactionFilters, PaginatedResponse } from "@/types/api";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { fetcher, send } from "@/hooks/request";
 
 export function useTransactions(filters: TransactionFilters = {}) {
   const params = new URLSearchParams();
@@ -41,36 +40,13 @@ export function useTransaction(id: string) {
 }
 
 export async function createTransaction(data: TransactionFormData) {
-  const res = await fetch("/api/transactions", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to create transaction");
-  }
-  return res.json();
+  return send("/api/transactions", "POST", data);
 }
 
 export async function updateTransaction(id: string, data: Partial<TransactionFormData>) {
-  const res = await fetch(`/api/transactions/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to update transaction");
-  }
-  return res.json();
+  return send(`/api/transactions/${id}`, "PUT", data);
 }
 
 export async function deleteTransaction(id: string) {
-  const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to delete transaction");
-  }
-  return res.json();
+  return send(`/api/transactions/${id}`, "DELETE");
 }

@@ -1,10 +1,10 @@
 "use client";
 
 import useSWR from "swr";
+import { fetcher } from "@/hooks/request";
 import type { SummaryResult, SummaryView } from "@/types/finance/summary";
 import { formatDateISO } from "@/lib/finance/formatters";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function useSummary(view: SummaryView, date: Date, accountId?: string) {
   const params = new URLSearchParams({

@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { fetcher } from "@/hooks/request";
 import { TransactionForm } from "@/components/finance/transaction-form";
 import {
   isSandboxId,
@@ -90,10 +91,9 @@ export function ProjectionTransactions({
       return;
     }
     try {
-      const res = await fetch(`/api/transactions/${id}`);
       // This endpoint returns the transaction itself, not wrapped in { data }
-      const tx = (await res.json()) as Transaction;
-      if (!res.ok || !tx?._id) throw new Error();
+      const tx = (await fetcher(`/api/transactions/${id}`)) as Transaction;
+      if (!tx?._id) throw new Error();
       setEditTarget({
         id,
         values: {
