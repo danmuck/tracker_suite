@@ -1,22 +1,21 @@
 // Browser-side request path: runs the shared route handlers against browser storage.
 
 import { allRoutes } from "./all-routes";
-import { BrowserStore, createMemoryStorage, type StorageLike } from "./browser-store";
+import { BrowserStore, type StorageLike } from "./browser-store";
 import { dispatch } from "./dispatch";
+import { createStorageResolver } from "./storage";
 import { COLLECTIONS, type CollectionName } from "./store";
 
 const PREFIX = "ts:data:";
 
 let store: BrowserStore | null = null;
 
-// Reading window.localStorage throws when site data is blocked; fall back to memory for this page.
-export function getBrowserStorage(): StorageLike {
-  try {
-    return window.localStorage;
-  } catch {
-    return createMemoryStorage();
-  }
-}
+// Reading window.localStorage throws when site data is blocked; the resolver then
+// falls back to one shared in-memory storage, so the store and the seed flag agree.
+const storage = createStorageResolver(() => window.localStorage);
+
+export const getBrowserStorage = (): StorageLike => storage.get();
+export const isBrowserStoragePersistent = (): boolean => storage.isPersistent();
 
 export function getBrowserStore(): BrowserStore {
   if (store) return store;
