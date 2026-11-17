@@ -167,6 +167,12 @@ function branches(op: "$or" | "$and", condition: unknown): Filter[] {
 
 const FIELD_OPERATORS = new Set(["$gt", "$gte", "$lt", "$lte", "$ne", "$in", "$exists", "$regex", "$options"]);
 
+// MongoDB compares objects and arrays as whole values; this evaluator does not, so they are refused.
+function assertScalarOperand(value: unknown, key: string): void {
+  if (Array.isArray(value)) throw new Error(`Array equality filters are not supported: ${key}`);
+  if (isPlainObject(value)) throw new Error(`Object equality filters are not supported: ${key}`);
+}
+
 // Checks the shape of the whole filter before anything is evaluated, so a
 // malformed filter throws whatever the document is.
 function validateFilter(filter: Filter): void {
@@ -178,10 +184,17 @@ function validateFilter(filter: Filter): void {
       throw new Error(`Unsupported filter operator: ${key}`);
     } else {
       if (key.includes(".")) splitPath(key);
-      if (!isOperatorObject(condition)) continue;
+      if (!isOperatorObject(condition)) {
+        assertScalarOperand(condition, key);
+        continue;
+      }
       for (const [op, arg] of Object.entries(condition)) {
         if (!FIELD_OPERATORS.has(op)) throw new Error(`Unsupported filter operator: ${op}`);
-        if (op === "$in" && !Array.isArray(arg)) throw new Error("$in needs an array");
+        if (op === "$in") {
+          if (!Array.isArray(arg)) throw new Error("$in needs an array");
+          for (const candidate of arg) assertScalarOperand(candidate, key);
+        }
+        if (op === "$ne") assertScalarOperand(arg, key);
         if (op === "$regex") new RegExp(String(arg), typeof condition.$options === "string" ? condition.$options : undefined);
       }
     }

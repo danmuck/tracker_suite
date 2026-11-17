@@ -118,6 +118,27 @@ test("duplicate update paths across operators conflict, and $setOnInsert is chec
   assert.deepEqual(applyUpdate({}, { $setOnInsert: { a: 1 }, $set: { b: 2 } }), { b: 2 });
 });
 
+test("object and array equality filters throw instead of differing from MongoDB", () => {
+  const d = { rap: { enabled: true }, tags: ["a", "b"] };
+  assert.throws(() => matches(d, { rap: { enabled: true } }), /Object equality filters are not supported: rap/);
+  assert.throws(() => matches(d, { tags: ["a", "b"] }), /Array equality filters are not supported: tags/);
+  assert.throws(() => matches(d, { x: 9, rap: {} }), /Object equality filters are not supported: rap/);
+  assert.throws(() => matches(d, { rap: { $ne: { enabled: true } } }), /Object equality filters are not supported: rap/);
+  assert.throws(() => matches(d, { tags: { $ne: ["a"] } }), /Array equality filters are not supported: tags/);
+  assert.throws(() => matches(d, { tags: { $in: ["a", ["b"]] } }), /Array equality filters are not supported: tags/);
+  assert.throws(() => matches(d, { tags: { $in: [{ a: 1 }] } }), /Object equality filters are not supported: tags/);
+  assert.throws(() => matches(d, { $or: [{ tags: "a" }, { rap: { enabled: true } }] }), /Object equality filters are not supported: rap/);
+});
+
+test("scalar, null, Date and dotted-key filters still pass validation", () => {
+  const d = { n: 1, s: "x", b: true, z: null, when: "2026-01-01T00:00:00.000Z", rap: { enabled: true }, tags: ["a"] };
+  assert.equal(matches(d, { n: 1, s: "x", b: true, z: null, missing: null }), true);
+  assert.equal(matches(d, { when: new Date("2026-01-01T00:00:00.000Z") }), true);
+  assert.equal(matches(d, { when: { $gte: new Date("2025-01-01") } }), true);
+  assert.equal(matches(d, { "rap.enabled": true, tags: "a" }), true);
+  assert.equal(matches(d, { s: { $in: ["x", "y"] }, n: { $ne: 2 } }), true);
+});
+
 test("sort follows dotted paths", () => {
   assert.deepEqual(sortDocs([{ r: { d: "b" } }, { r: { d: "a" } }, {}], { "r.d": 1 }), [{}, { r: { d: "a" } }, { r: { d: "b" } }]);
   assert.throws(() => sortDocs([{ r: [{ d: 1 }] }, { r: [] }], { "r.d": 1 }), /Dotted path crosses an array: r\.d/);
