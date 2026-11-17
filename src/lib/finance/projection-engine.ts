@@ -526,6 +526,18 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
     else totalExpenses += t.amount;
   }
 
+  // Loan payments are transfers, so the totals above skip them. Count money sent to loan / debt
+  // accounts on its own. Card payments stay out: card purchases are already expenses.
+  const loanIds = new Set(accounts.filter((a) => a.type === "debt").map((a) => a._id.toString()));
+  let loanPayments = 0;
+  for (const t of filteredProjected) {
+    if (dropped.has(t)) continue;
+    if (t.type === "transfer" && t.toAccountId && loanIds.has(t.toAccountId)) loanPayments += t.amount;
+  }
+  const loanInterest = visibleSynthetic
+    .filter((t) => t.categoryTags.includes("interest") && loanIds.has(t.accountId))
+    .reduce((sum, t) => sum + t.amount, 0);
+
   const lastDay = timeline[timeline.length - 1];
 
   return {
@@ -545,6 +557,9 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         .filter((t) => t.categoryTags.includes("interest"))
         .reduce((sum, t) => sum + t.amount, 0),
       debtPayments,
+      loanPayments,
+      // Interest is already an expense and the payment covers it, so it is only counted once
+      totalOut: totalExpenses + Math.max(0, loanPayments - loanInterest),
     },
     carry: { balances: { ...runningBalances }, paidThisMonth, month: currentMonth },
   };

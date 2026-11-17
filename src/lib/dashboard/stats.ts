@@ -1,3 +1,4 @@
+import type { DaySummary } from "../../types/finance/summary";
 import type { Project } from "../../types/projects/project";
 
 type ProjectLike = Pick<Project, "_id" | "name" | "status" | "taskCounts">;
@@ -54,4 +55,47 @@ export function weekDelta(thisWeek: number, lastWeek: number): string {
   const diff = Math.round((thisWeek - lastWeek) * 100) / 100;
   if (diff === 0) return "same as last week";
   return `${diff > 0 ? "+" : "-"}${Math.abs(diff)} vs last week`;
+}
+
+export interface ExpenseItem {
+  key: string;
+  /** yyyy-MM-dd */
+  date: string;
+  description: string;
+  /** Cents */
+  amount: number;
+  category?: string;
+}
+
+export interface MonthExpenses {
+  /** Dated today or earlier, latest first */
+  paid: ExpenseItem[];
+  /** Dated after today, soonest first */
+  upcoming: ExpenseItem[];
+  /** Cents */
+  paidTotal: number;
+  upcomingTotal: number;
+}
+
+type ExpenseDay = { date: string; transactions: Pick<DaySummary["transactions"][number], "type" | "amount" | "description" | "categoryTags">[] };
+
+/** A month's expense lines (debits only; transfers are not spending), split at `today` (yyyy-MM-dd) */
+export function monthExpenses(days: ExpenseDay[], today: string): MonthExpenses {
+  const items = days
+    .flatMap((d) =>
+      d.transactions
+        .filter((t) => t.type === "debit")
+        .map((t, i) => ({
+          key: `${d.date}-${i}-${t.description}`,
+          date: d.date.slice(0, 10),
+          description: t.description,
+          amount: t.amount,
+          category: t.categoryTags[0],
+        }))
+    )
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const paid = items.filter((i) => i.date <= today).reverse();
+  const upcoming = items.filter((i) => i.date > today);
+  const sum = (list: ExpenseItem[]) => list.reduce((n, i) => n + i.amount, 0);
+  return { paid, upcoming, paidTotal: sum(paid), upcomingTotal: sum(upcoming) };
 }

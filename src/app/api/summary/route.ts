@@ -104,24 +104,6 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Loan payments are transfers, so the totals above skip them. Count them on their own:
-    // money sent to a loan / debt account. Card payments stay out, since card purchases are
-    // already expenses and would be counted twice.
-    const loanIds = new Set(accounts.filter((a) => a.type === "debt").map((a) => String(a._id)));
-    let loanPayments = 0;
-    let loanInterest = 0;
-    for (const day of projection.timeline) {
-      for (const tx of day.transactions) {
-        if (tx.type === "transfer" && tx.toAccountId && loanIds.has(String(tx.toAccountId))) {
-          loanPayments += tx.amount;
-        } else if (tx.type === "debit" && tx.categoryTags.includes("interest") && loanIds.has(String(tx.accountId))) {
-          loanInterest += tx.amount;
-        }
-      }
-    }
-    // Interest is already an expense and the payment covers it, so it is only counted once
-    const totalOut = projection.summary.totalExpenses + Math.max(0, loanPayments - loanInterest);
-
     const totalExpenseAmount = Object.values(categoryAmounts).reduce((a, b) => a + b, 0);
     const categoryBreakdown = Object.entries(categoryAmounts)
       .map(([category, amount]) => ({
@@ -182,8 +164,8 @@ export async function GET(request: NextRequest) {
         income: projection.summary.totalIncome,
         expenses: projection.summary.totalExpenses,
         net: projection.summary.netChange,
-        loanPayments,
-        totalOut,
+        loanPayments: projection.summary.loanPayments,
+        totalOut: projection.summary.totalOut,
       },
       categoryBreakdown,
     };

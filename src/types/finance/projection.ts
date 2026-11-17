@@ -55,6 +55,10 @@ export interface ProjectionResult {
     interestCharged: number;
     /** Payments into credit cards and debt in the window (cents) */
     debtPayments: number;
+    /** Payments into loan / debt accounts (cents). Transfers, so not part of expenses or net. */
+    loanPayments: number;
+    /** Expenses plus loan payments, with loan interest counted once (cents) */
+    totalOut: number;
   };
 }
 

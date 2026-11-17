@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { projectRollup, weekDelta } from "./stats";
+import { monthExpenses, projectRollup, weekDelta } from "./stats";
 
 const project = (name: string, status: "active" | "archived" | "completed", total?: number, done?: number) => ({
   _id: name,
@@ -45,4 +45,40 @@ test("weekDelta words the change", () => {
   assert.equal(weekDelta(1.5, 3), "-1.5 vs last week");
   assert.equal(weekDelta(2, 2), "same as last week");
   assert.equal(weekDelta(0.1 + 0.2, 0.3), "same as last week");
+});
+
+const tx = (type: "credit" | "debit" | "transfer", amount: number, description: string, categoryTags: string[] = []) => ({
+  type,
+  amount,
+  description,
+  categoryTags,
+});
+
+test("monthExpenses keeps debits only and splits them at today", () => {
+  const r = monthExpenses(
+    [
+      { date: "2026-11-01", transactions: [tx("debit", 87500, "Rent", ["bills", "home"])] },
+      { date: "2026-11-13", transactions: [tx("credit", 186882, "Salary"), tx("transfer", 40000, "Card payment"), tx("debit", 5000, "Gas")] },
+      { date: "2026-11-16", transactions: [tx("debit", 1200, "Coffee")] },
+      { date: "2026-11-24", transactions: [tx("debit", 15000, "Phone")] },
+      { date: "2026-11-20", transactions: [tx("debit", 5000, "Gas")] },
+    ],
+    "2026-11-16"
+  );
+  assert.deepEqual(
+    r.paid.map((i) => i.description),
+    ["Coffee", "Gas", "Rent"]
+  );
+  assert.deepEqual(
+    r.upcoming.map((i) => i.date),
+    ["2026-11-20", "2026-11-24"]
+  );
+  assert.equal(r.paidTotal, 93700);
+  assert.equal(r.upcomingTotal, 20000);
+  assert.equal(r.paid[2].category, "bills");
+  assert.equal(r.paid[1].category, undefined);
+});
+
+test("monthExpenses handles an empty month", () => {
+  assert.deepEqual(monthExpenses([], "2026-11-16"), { paid: [], upcoming: [], paidTotal: 0, upcomingTotal: 0 });
 });

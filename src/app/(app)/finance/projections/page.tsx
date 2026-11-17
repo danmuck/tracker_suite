@@ -605,7 +605,9 @@ export default function ProjectionsPage() {
                 <CardTitle className="flex items-center gap-1.5 text-xs text-muted-foreground font-normal">
                   Total Expenses
                   <InfoTip label="Total Expenses">
-                    Spending and projected interest during the range. Transfers and debt payments are not counted.
+                    Spending and projected interest during the range. Transfers and card payments are not
+                    counted. Loan payments are listed underneath: they lower what you owe, so they are kept out
+                    of Net Change, and Total out adds them with loan interest counted once.
                   </InfoTip>
                 </CardTitle>
               </CardHeader>
@@ -615,6 +617,12 @@ export default function ProjectionsPage() {
                   colored
                   className="text-lg font-bold"
                 />
+                {summary!.loanPayments > 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    + {formatCurrency(summary!.loanPayments)} loan payments · {formatCurrency(summary!.totalOut)}{" "}
+                    total out
+                  </p>
+                )}
               </CardContent>
             </Card>
             <Card>

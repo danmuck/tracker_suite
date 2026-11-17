@@ -91,7 +91,7 @@ export function HBarList({ rows, color }: { rows: HBarRow[]; color: string }) {
                 style={{ width: `${Math.max(0, Math.min(1, r.fraction)) * 100}%`, backgroundColor: color }}
               />
             </span>
-            <span className="w-14 shrink-0 text-right tabular-nums text-muted-foreground">{r.value}</span>
+            <span className="min-w-14 shrink-0 text-right tabular-nums text-muted-foreground">{r.value}</span>
           </>
         );
         const className = "flex items-center gap-2 text-xs";

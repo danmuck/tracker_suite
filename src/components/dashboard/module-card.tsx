@@ -11,16 +11,19 @@ export function ModuleCard({
   moduleId,
   href,
   isLoading,
+  wide = false,
   children,
 }: {
   moduleId: string;
   href: string;
   isLoading: boolean;
+  /** Take two grid columns instead of one */
+  wide?: boolean;
   children: React.ReactNode;
 }) {
   const mod = modules.find((m) => m.id === moduleId)!;
   return (
-    <Card className="h-full">
+    <Card className={cn("h-full", wide && "sm:col-span-2")}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
