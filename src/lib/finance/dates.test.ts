@@ -34,3 +34,15 @@ test("localDateStr and startOfTomorrow use the local calendar day of the given c
   startOfTomorrow(now);
   assert.equal(now.toISOString(), "2026-11-17T15:00:00.000Z");
 });
+
+test("localDateStr and startOfTomorrow across DST, year end and a UTC date that is already tomorrow", () => {
+  const cases: [string, string, string][] = [
+    ["2026-03-08T06:30:00Z", "2026-03-08", "2026-03-09T04:00:00.000Z"],
+    ["2026-12-31T23:30:00Z", "2026-12-31", "2027-01-01T05:00:00.000Z"],
+    ["2026-11-17T03:00:00Z", "2026-11-16", "2026-11-17T05:00:00.000Z"],
+  ];
+  for (const [instant, day, tomorrow] of cases) {
+    assert.equal(localDateStr(new Date(instant)), day);
+    assert.equal(startOfTomorrow(new Date(instant)).toISOString(), tomorrow);
+  }
+});

@@ -12,11 +12,13 @@ const txs = (date: (s: string) => Date | string) => [
   { _id: id("pay"), amount: 5_000, date: date("2026-10-15"), description: "pay", accountId: id("bank"), toAccountId: id("card"), type: "transfer", isRecurring: true, categoryTags: ["credit", "transfer"], balanceApplied: false,
     recurrenceRule: { frequency: "monthly", interval: 1, startDate: date("2026-10-15"), endDate: null, dayOfMonth: 15, daysOfMonth: [] } },
 ];
-const run = (date: (s: string) => Date | string) =>
-  buildProjection({ accounts: accounts as never, transactions: txs(date) as never, startDate: new Date("2026-11-01"), endDate: new Date("2027-03-31"), granularity: "monthly", today: "2026-11-17" });
+const run = (date: (s: string) => Date | string, granularity: "daily" | "weekly" | "monthly" = "monthly") =>
+  buildProjection({ accounts: accounts as never, transactions: txs(date) as never, startDate: new Date("2026-11-01"), endDate: new Date("2027-03-31"), granularity, today: "2026-11-17" });
 
-test("buildProjection gives the same result for ISO-string dates as for Date objects", () => {
-  const withDates = run((s) => new Date(s));
-  assert.ok(withDates.timeline.length > 0 && withDates.timeline.some((d) => d.transactions.length > 0));
-  assert.deepEqual(run((s) => new Date(s).toISOString()), withDates);
-});
+for (const granularity of ["daily", "weekly", "monthly"] as const) {
+  test(`buildProjection gives the same result for ISO-string dates as for Date objects (${granularity})`, () => {
+    const withDates = run((s) => new Date(s), granularity);
+    assert.ok(withDates.timeline.length > 0 && withDates.timeline.some((d) => d.transactions.length > 0));
+    assert.deepEqual(run((s) => new Date(s).toISOString(), granularity), withDates);
+  });
+}
