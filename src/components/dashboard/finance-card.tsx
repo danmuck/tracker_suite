@@ -35,6 +35,19 @@ export function FinanceCard() {
   const topCategory = summary?.categoryBreakdown[0];
   const monthLabel = summary?.period.label ?? "This month";
   const expenses = monthExpenses(summary?.days ?? [], formatDateISO(new Date()));
+  // This month's payments into loan / debt accounts, by date. They are transfers, so the expense lists skip them.
+  const today = formatDateISO(new Date());
+  const loanNames = new Map(accounts.filter((a) => a.type === "debt").map((a) => [a._id, a.name]));
+  const loanPayments: ExpenseItem[] = (summary?.days ?? []).flatMap((d) =>
+    d.transactions
+      .filter((t) => t.type === "transfer" && t.toAccountId && loanNames.has(t.toAccountId))
+      .map((t, i) => ({
+        key: `${d.date}-${i}-${t.toAccountId}`,
+        date: d.date.slice(0, 10),
+        description: loanNames.get(t.toAccountId!)!,
+        amount: t.amount,
+      }))
+  );
   const categories = (summary?.categoryBreakdown ?? []).slice(0, MAX_CATEGORIES);
   const maxCategory = Math.max(...categories.map((c) => c.amount), 1);
 
@@ -91,6 +104,10 @@ export function FinanceCard() {
               />
             )}
           </StatRows>
+
+          {loanPayments.length > 0 && (
+            <ExpenseList title={`Loan payments in ${monthLabel}`} items={loanPayments} more={0} mutedAfter={today} />
+          )}
         </div>
 
         <div className="space-y-4">
@@ -140,6 +157,7 @@ function ExpenseList({
   more,
   empty,
   muted = false,
+  mutedAfter,
 }: {
   title: string;
   items: ExpenseItem[];
@@ -147,13 +165,17 @@ function ExpenseList({
   more: number;
   empty?: string;
   muted?: boolean;
+  /** Lines dated after this day (yyyy-MM-dd) are dimmed as not yet paid */
+  mutedAfter?: string;
 }) {
   return (
     <div className="space-y-1.5 border-t pt-3 text-sm">
       <p className="text-xs text-muted-foreground">{title}</p>
       {items.length === 0 && empty && <p className="text-muted-foreground">{empty}</p>}
       {items.map((item) => (
-        <div key={item.key} className={`flex items-baseline gap-3 ${muted ? "text-muted-foreground" : ""}`}>
+        <div key={item.key} className={`flex items-baseline gap-3 ${
+            muted || (mutedAfter && item.date > mutedAfter) ? "text-muted-foreground" : ""
+          }`}>
           <span className="w-12 shrink-0 text-xs text-muted-foreground tabular-nums">{formatDateShort(item.date)}</span>
           <span className="min-w-0 flex-1 truncate" title={item.description}>
             {item.description}
