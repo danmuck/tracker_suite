@@ -5,7 +5,10 @@ import { memoryStorage } from "@/lib/data/test-helpers";
 import { availableModules, modules } from "@/lib/modules";
 import type { LinkGroup } from "@/types/links/link-group";
 import type { LinkItem } from "@/types/links/link";
+import type { Listing, Tour } from "@/types/future/apartments";
+import { listingSchema } from "@/lib/future/validators";
 import { ensureDemoSeed, loadSampleData } from "./index";
+import { futureSample } from "./future";
 import { linksSample } from "./links";
 
 test("loadSampleData fills groups and links, and running it twice does not duplicate", async () => {
@@ -32,6 +35,31 @@ test("ensureDemoSeed seeds once", async () => {
 });
 
 test("availableModules hides modules without browser data in browser mode", () => {
-  assert.deepEqual(availableModules("browser").map((m) => m.id), ["links"]);
+  assert.deepEqual(availableModules("browser").map((m) => m.id), ["future", "links"]);
   assert.equal(availableModules("server").length, modules.length);
+});
+
+test("loadSampleData fills the Future module relative to today, and twice does not duplicate", async () => {
+  const store = new BrowserStore(memoryStorage());
+  const today = new Date(2026, 10, 17);
+  await loadSampleData(store, today);
+  await loadSampleData(store, today);
+  const listings = await store.collection<Listing>("listings").find();
+  const tours = await store.collection<Tour>("tours").find({}, { sort: { date: 1 } });
+  const sample = futureSample(today);
+  assert.equal(listings.length, sample.listings.length);
+  assert.equal(tours.length, sample.listings.reduce((n, l) => n + l.tours.length, 0));
+  assert.ok(tours.every((t) => listings.some((l) => l._id === t.listingId)));
+  assert.ok(tours[0].date < "2026-11-17" && tours[tours.length - 1].date > "2026-11-17");
+  assert.ok(listings.every((l) => l.rent >= 140000 && l.rent <= 320000));
+  assert.ok(listings.some((l) => l.status === "rejected") && listings.some((l) => l.status === "toured"));
+  assert.equal(await store.collection("futureSettings").count(), 1);
+  assert.ok(new Set(listings.map((l) => l.city)).size === 3);
+});
+
+test("sample listings pass the module's own validation", () => {
+  for (const { tours, ...data } of futureSample(new Date(2026, 10, 17)).listings) {
+    assert.equal(listingSchema.safeParse(data).success, true, data.name);
+    assert.ok(Array.isArray(tours));
+  }
 });

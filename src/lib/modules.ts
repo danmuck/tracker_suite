@@ -67,7 +67,7 @@ export const modules: ModuleConfig[] = [
     navItems: [
       { href: "/future/apartments", label: "Apartments", icon: Building2 },
     ],
-    browserData: false,
+    browserData: true,
   },
   {
     id: "projects",
