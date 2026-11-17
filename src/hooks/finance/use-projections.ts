@@ -70,6 +70,6 @@ export function useProjections(
     // Taken from the real-data request, which is refreshed whenever real data changes
     dataVersion: real.data?.dataVersion as string | undefined,
     isLoading,
-    isError: !!error || !!data?.error,
+    isError: !!error,
   };
 }

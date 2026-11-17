@@ -27,8 +27,11 @@ export interface RapSettings {
 const planKey = (accountId: string) => `/api/accounts/${accountId}/payment-plan`;
 
 export function usePaymentPlan(accountId: string) {
-  const { data, error, isLoading } = useSWR(accountId ? planKey(accountId) : null, fetcher);
-  return { plan: data?.data as PaymentPlan | undefined, isLoading, isError: !!error || !!data?.error };
+  const { data, error, isLoading } = useSWR(accountId ? planKey(accountId) : null, fetcher, {
+    // 400 (bank account) and 404 (missing) are expected answers, not transient failures
+    shouldRetryOnError: false,
+  });
+  return { plan: data?.data as PaymentPlan | undefined, isLoading, isError: !!error };
 }
 
 /** Plans change what projections, reports and transaction lists show: refresh them all. */
