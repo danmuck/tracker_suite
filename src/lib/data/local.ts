@@ -1,6 +1,7 @@
 // Browser-side request path: runs the shared route handlers against browser storage.
 
 import { allRoutes } from "./all-routes";
+import type { ApiResult } from "./api";
 import { BrowserStore, type StorageLike } from "./browser-store";
 import { dispatch, unwrap } from "./dispatch";
 import { createSerialQueue } from "./serial-queue";
@@ -41,14 +42,29 @@ export function getBrowserStore(): BrowserStore {
 // request does not block the ones after it.
 const serial = createSerialQueue();
 
+/**
+ * One browser-mode request on `store`. It first drops the tab's cached collections: another tab
+ * may have written since, and the `storage` event that says so can still be queued. A request
+ * then decides (the Cash check, the categories seed, a claim) on what is in storage now, and a
+ * write never puts back this tab's stale copy over another tab's newer one.
+ */
+export function dispatchFresh(store: BrowserStore, method: string, url: string, body?: unknown): Promise<ApiResult> {
+  store.refresh();
+  return dispatch(allRoutes, store, method, url, body);
+}
+
 export function localRequest<T>(method: string, url: string, body?: unknown): Promise<T> {
-  return serial(async () => unwrap<T>(await dispatch(allRoutes, getBrowserStore(), method, url, body)));
+  return serial(async () => unwrap<T>(await dispatchFresh(getBrowserStore(), method, url, body)));
 }
 
 /**
  * Runs a job that touches browser storage directly (loading the sample, a reset, the demo seed)
- * on the same queue, so it never interleaves with an in-flight local request.
+ * on the same queue, so it never interleaves with an in-flight local request. It starts from
+ * storage too, not from this tab's cached copy.
  */
 export function runExclusive<T>(job: () => Promise<T>): Promise<T> {
-  return serial(job);
+  return serial(() => {
+    getBrowserStore().refresh();
+    return job();
+  });
 }

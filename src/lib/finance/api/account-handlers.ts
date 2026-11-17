@@ -6,12 +6,38 @@ import { fail, invalid, isId, notFound, ok, type Handler } from "@/lib/data/api"
 import { planFieldsToDb } from "@/lib/finance/account-plan-fields";
 import { firstFutureInstant, todayStoredDate } from "@/lib/finance/dates";
 import { accountArchiveSchema, accountSchema } from "@/lib/finance/validators";
-import { accounts, assertId, isDebtType, requiredText, shapeAccount, shapeTransaction, transactions, type AccountDoc } from "./docs";
+import type { Store } from "@/lib/data/store";
+import { accounts, assertId, isDebtType, requiredText, shapeAccount, shapeTransaction, transactions, type AccountDoc, type TransactionDoc } from "./docs";
 import { clearAccountLinks, clearTransactionLinks } from "./links";
 import { postDuePayments } from "./post-payments";
 
 const ACCOUNT = "Account";
 
+
+/** One pending transaction's effect on its account balances (A3–A6). */
+async function applyBalance(store: Store, tx: TransactionDoc): Promise<void> {
+  const acc = accounts(store);
+  if (tx.type === "transfer" && tx.toAccountId) {
+    const [sourceRaw, destRaw] = await Promise.all([acc.findById(tx.accountId), acc.findById(tx.toAccountId)]); // A3
+    const isDebtSource = isDebtType(sourceRaw ? shapeAccount(sourceRaw).type : undefined);
+    const isDebtDest = isDebtType(destRaw ? shapeAccount(destRaw).type : undefined);
+    // A4
+    await acc.batchUpdate([
+      { filter: { _id: tx.accountId }, update: { $inc: { balance: isDebtSource ? tx.amount : -tx.amount } } },
+      { filter: { _id: tx.toAccountId }, update: { $inc: { balance: isDebtDest ? -tx.amount : tx.amount } } },
+    ]);
+    return;
+  }
+  const raw = await acc.findById(tx.accountId); // A5
+  const isDebt = isDebtType(raw ? shapeAccount(raw).type : undefined);
+  let balanceChange: number;
+  if (isDebt) {
+    balanceChange = tx.type === "credit" ? -tx.amount : tx.amount;
+  } else {
+    balanceChange = tx.type === "credit" ? tx.amount : -tx.amount;
+  }
+  await acc.updateById(tx.accountId, { $inc: { balance: balanceChange } }); // A6
+}
 
 /** GET /api/accounts — post due payments, apply pending transactions, then list. */
 export const listAccounts: Handler = async ({ store, query, now }) => {
@@ -27,40 +53,28 @@ export const listAccounts: Handler = async ({ store, query, now }) => {
   const txs = transactions(store);
 
   // Apply any pending transactions whose date has arrived (A1)
-  const pending = (
-    await txs.find({ balanceApplied: false, isRecurring: { $ne: true }, date: { $lt: firstFutureInstant(now) } })
-  ).map(shapeTransaction);
+  const due = { balanceApplied: false, isRecurring: { $ne: true }, date: { $lt: firstFutureInstant(now) } };
+  const pending = await txs.find(due);
 
-  for (const tx of pending) {
-    if (tx.amount === 0) {
-      await txs.updateById(tx._id, { $set: { balanceApplied: true } }); // A2
-      continue;
-    }
+  for (const { _id } of pending) {
+    // A2: claim it before touching a balance (bug 9). Only the request whose conditional update
+    // matched applies it; the claimed document is the one applied.
+    const claimed = await txs.updateOne({ ...due, _id }, { $set: { balanceApplied: true } });
+    if (!claimed) continue;
+    const tx = shapeTransaction(claimed);
+    if (tx.amount === 0) continue;
 
-    if (tx.type === "transfer" && tx.toAccountId) {
-      const [sourceRaw, destRaw] = await Promise.all([acc.findById(tx.accountId), acc.findById(tx.toAccountId)]); // A3
-      const source = sourceRaw ? shapeAccount(sourceRaw) : null;
-      const dest = destRaw ? shapeAccount(destRaw) : null;
-      const isDebtSource = isDebtType(source?.type);
-      const isDebtDest = isDebtType(dest?.type);
-      // A4
-      await acc.batchUpdate([
-        { filter: { _id: tx.accountId }, update: { $inc: { balance: isDebtSource ? tx.amount : -tx.amount } } },
-        { filter: { _id: tx.toAccountId }, update: { $inc: { balance: isDebtDest ? -tx.amount : tx.amount } } },
-      ]);
-    } else {
-      const raw = await acc.findById(tx.accountId); // A5
-      const isDebt = isDebtType(raw ? shapeAccount(raw).type : undefined);
-      let balanceChange: number;
-      if (isDebt) {
-        balanceChange = tx.type === "credit" ? -tx.amount : tx.amount;
-      } else {
-        balanceChange = tx.type === "credit" ? tx.amount : -tx.amount;
+    try {
+      await applyBalance(store, tx);
+    } catch (error) {
+      // Release the claim so a later request applies it (A7)
+      try {
+        await txs.updateOne({ _id, balanceApplied: true }, { $set: { balanceApplied: false } });
+      } catch {
+        // The balance failure is the one reported; a failed release must not replace it
       }
-      await acc.updateById(tx.accountId, { $inc: { balance: balanceChange } }); // A6
+      throw error;
     }
-
-    await txs.updateById(tx._id, { $set: { balanceApplied: true } }); // A7
   }
 
   const list = await acc.find(filter, { sort: { createdAt: -1 } }); // A8

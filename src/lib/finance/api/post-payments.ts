@@ -46,31 +46,52 @@ export async function postDuePayments(store: Store, now: Date): Promise<void> {
     );
     if (due.length === 0) continue;
 
-    // P3: claim the batch first; if another request already moved postedThrough, skip
-    const claimed = await txs.updateOne(
-      { _id: tx._id, postedThrough: previous ?? null }, // null matches null or missing
-      { $set: { postedThrough: toIso(due[due.length - 1].date) } },
-    );
-    if (!claimed) continue;
-
-    // P4
-    const sourceRaw = await acc.findById(tx.accountId);
-    const source = sourceRaw ? shapeAccount(sourceRaw) : null;
+    // Capped at what is owed. A period that finds nothing owed is not marked posted (bug 10):
+    // postedThrough stops at the last period before it, which stays due for a later request.
     let owed = debt.balance;
     let total = 0;
+    let through: string | null = null;
     for (const o of due) {
+      if (owed <= 0) break;
       const amount = Math.max(0, Math.min(o.amount, owed));
       owed -= amount;
       total += amount;
+      through = o.date;
     }
+    if (through === null) continue;
+
+    // P3: claim the batch first; if another request already moved postedThrough, skip
+    const claimed = await txs.updateOne(
+      { _id: tx._id, postedThrough: previous ?? null }, // null matches null or missing
+      { $set: { postedThrough: toIso(through) } },
+    );
+    if (!claimed) continue;
     if (total === 0) continue;
 
-    // P5
-    await acc.batchUpdate([
-      { filter: { _id: debt._id }, update: { $inc: { balance: -total } } },
-      ...(source
-        ? [{ filter: { _id: source._id }, update: { $inc: { balance: isDebtType(source.type) ? total : -total } } }]
-        : []),
-    ]);
+    try {
+      // P4
+      const sourceRaw = await acc.findById(tx.accountId);
+      const source = sourceRaw ? shapeAccount(sourceRaw) : null;
+
+      // P5
+      await acc.batchUpdate([
+        { filter: { _id: debt._id }, update: { $inc: { balance: -total } } },
+        ...(source
+          ? [{ filter: { _id: source._id }, update: { $inc: { balance: isDebtType(source.type) ? total : -total } } }]
+          : []),
+      ]);
+    } catch (error) {
+      // Give the batch back: postedThrough returns to what it was (missing stays missing), and only
+      // if no other request has moved it since
+      try {
+        await txs.updateOne(
+          { _id: tx._id, postedThrough: toIso(through) },
+          raw?.postedThrough === undefined ? { $unset: { postedThrough: 1 } } : { $set: { postedThrough: previous } },
+        );
+      } catch {
+        // The posting failure is the one reported; a failed release must not replace it
+      }
+      throw error;
+    }
   }
 }

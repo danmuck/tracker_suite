@@ -3,7 +3,7 @@
 import type { ApiResult } from "@/lib/data/api";
 import { BrowserStore } from "@/lib/data/browser-store";
 import { dispatch } from "@/lib/data/dispatch";
-import type { CollectionName } from "@/lib/data/store";
+import type { BaseDoc, Collection, CollectionName, Store } from "@/lib/data/store";
 import { memoryStorage } from "@/lib/data/test-helpers";
 import { financeRoutes } from "./routes";
 
@@ -32,6 +32,32 @@ export function countingStore(): { store: BrowserStore; writes: (name: Collectio
     setItem(key, value);
   };
   return { store: new BrowserStore(storage), writes: (name) => counts.get(`ts:data:${name}`) ?? 0 };
+}
+
+type Method = keyof Collection<BaseDoc>;
+
+/**
+ * `store` with every collection call yielding to the macrotask queue before it runs, so two
+ * requests dispatched together interleave step by step, as two HTTP requests can on MongoDB.
+ * `fault(name, method)` may throw to make one call fail.
+ */
+export function interleavingStore(store: Store, fault?: (name: CollectionName, method: Method) => void): Store {
+  return {
+    collection<T extends BaseDoc>(name: CollectionName): Collection<T> {
+      const real = store.collection<T>(name);
+      return new Proxy(real, {
+        get(target, prop) {
+          const value = Reflect.get(target, prop, target);
+          if (typeof value !== "function") return value;
+          return async (...args: unknown[]) => {
+            await new Promise((resolve) => setImmediate(resolve));
+            fault?.(name, prop as Method);
+            return value.apply(target, args);
+          };
+        },
+      });
+    },
+  };
 }
 
 /** A counting store plus `call`, which dispatches to `financeRoutes` with a clock starting at NOW. */

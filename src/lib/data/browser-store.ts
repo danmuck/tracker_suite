@@ -107,6 +107,15 @@ export class BrowserStore implements Store {
     return new BrowserCollection<T>(this, name);
   }
 
+  /**
+   * Drops every cached collection, so the next read of each comes from storage and sees what
+   * other tabs wrote since. Browser-mode requests call it before they start; the cost is one
+   * JSON.parse per collection a request touches.
+   */
+  refresh(): void {
+    this.cache.clear();
+  }
+
   invalidate(collection?: CollectionName): void {
     if (collection) this.cache.delete(collection);
     else this.cache.clear();

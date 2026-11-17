@@ -3,6 +3,7 @@
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import { fail, ok, type Handler } from "@/lib/data/api";
+import { ConflictError } from "@/lib/data/store";
 import { DEFAULT_CATEGORIES } from "@/lib/finance/constants";
 import { categorySchema, type CategoryInput } from "@/lib/finance/validators";
 import { categories, shapeCategory } from "./docs";
@@ -10,7 +11,15 @@ import { categories, shapeCategory } from "./docs";
 /** GET /api/categories — seed the defaults into an empty collection, then list defaults first, by name. */
 export const listCategories: Handler = async ({ store }) => {
   const cat = categories(store);
-  if ((await cat.count()) === 0) await cat.insertMany(DEFAULT_CATEGORIES.map((c) => ({ ...c }))); // C1, C2
+  if ((await cat.count()) === 0) {
+    try {
+      await cat.insertMany(DEFAULT_CATEGORIES.map((c) => ({ ...c }))); // C1, C2
+    } catch (error) {
+      // An overlapping first request seeded them first (bug 16): read what it wrote. On MongoDB
+      // create() settles every insert before it rejects, so the read sees the whole seed.
+      if (!(error instanceof ConflictError)) throw error;
+    }
+  }
   const list = await cat.find({}, { sort: { isDefault: -1, name: 1 } }); // C3
   return ok({ data: list.map(shapeCategory) });
 };

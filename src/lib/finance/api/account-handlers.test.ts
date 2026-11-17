@@ -1,8 +1,10 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { dispatch } from "@/lib/data/dispatch";
 import type { BaseDoc } from "@/lib/data/store";
 import { accounts, transactions, type AccountDoc } from "./docs";
-import { setup, withTimeZone } from "./test-helpers";
+import { financeRoutes } from "./routes";
+import { interleavingStore, NOW, setup, withTimeZone } from "./test-helpers";
 
 let t = setup();
 test.beforeEach(() => { t = setup(); });
@@ -205,8 +207,85 @@ test("due plan payments post once, capped at what is owed, and nothing moves onc
   t.setNow(new Date("2026-12-16T15:00:00.000Z"));
   await t.call("GET", `/api/accounts/${card._id}`);
   assert.deepEqual(await balances(), { Bank: 88000, Card: 0 });
-  // current behavior: the December payment is marked posted although nothing was owed
+  // Nothing was owed on 15 Dec: that period is not marked posted (bug 10)
+  assert.equal((await tx().findById(pay._id))!.postedThrough, "2026-11-15T00:00:00.000Z");
+  // A new charge: the skipped December payment posts now (capped at 30), January waits again
+  await accounts(t.store).updateById(card._id, { $set: { balance: 3000 } });
+  t.setNow(new Date("2027-01-16T15:00:00.000Z"));
+  await t.call("GET", "/api/accounts");
+  await t.call("GET", "/api/accounts");
+  assert.deepEqual(await balances(), { Bank: 85000, Card: 0 });
   assert.equal((await tx().findById(pay._id))!.postedThrough, "2026-12-15T00:00:00.000Z");
+});
+
+test("a scheduled payment of 0 while something is owed still counts as posted (no stall)", async () => {
+  const bank = await acct({ name: "Bank", type: "bank", balance: 1000 });
+  const card = await acct({ name: "Card", type: "credit_card", balance: 120 });
+  const pay = await tx().insert({ amount: 5000, date: "2026-10-15T00:00:00.000Z", description: "p", accountId: bank._id, toAccountId: card._id, type: "transfer", isRecurring: true,
+    recurrenceRule: { frequency: "monthly", interval: 1, startDate: "2026-10-15T00:00:00.000Z", endDate: null, dayOfMonth: 15, daysOfMonth: [] }, categoryTags: [], balanceApplied: false,
+    amountSchedule: [{ effectiveDate: "2026-11-01T00:00:00.000Z", amount: 0 }] });
+  await accounts(t.store).updateById(card._id, { $set: { paymentTransactionId: pay._id } });
+  await t.call("GET", "/api/accounts");
+  assert.deepEqual(await balances(), { Bank: 95000, Card: 7000 });
+  assert.equal((await tx().findById(pay._id))!.postedThrough, "2026-11-15T00:00:00.000Z");
+});
+
+test("a failed balance write after the payment claim restores postedThrough, and the payments post once later (bug 10)", async () => {
+  const bank = await acct({ name: "Bank", type: "bank", balance: 1000 });
+  const card = await acct({ name: "Card", type: "credit_card", balance: 120 });
+  const pay = await tx().insert({ amount: 5000, date: "2026-10-15T00:00:00.000Z", description: "p", accountId: bank._id, toAccountId: card._id, type: "transfer", isRecurring: true,
+    recurrenceRule: { frequency: "monthly", interval: 1, startDate: "2026-10-15T00:00:00.000Z", endDate: null, dayOfMonth: 15, daysOfMonth: [] }, categoryTags: [], balanceApplied: false });
+  await accounts(t.store).updateById(card._id, { $set: { paymentTransactionId: pay._id } });
+  const failing = interleavingStore(t.store, (name, method) => {
+    if (name === "accounts" && method === "batchUpdate") throw new Error("write failed");
+  });
+  assert.deepEqual(await dispatch(financeRoutes, failing, "GET", "/api/accounts", undefined, NOW), { status: 500, body: { error: "Failed to fetch accounts" } });
+  assert.equal("postedThrough" in (await tx().findById(pay._id))!, false);
+  assert.deepEqual(await balances(), { Bank: 100000, Card: 12000 });
+  await t.call("GET", "/api/accounts");
+  await t.call("GET", "/api/accounts");
+  assert.deepEqual(await balances(), { Bank: 90000, Card: 2000 });
+  assert.equal((await tx().findById(pay._id))!.postedThrough, "2026-11-15T00:00:00.000Z");
+});
+
+test("two interleaved account lists apply a pending transaction and post a due payment once (bugs 9, 10)", async () => {
+  const bank = await acct({ name: "Bank", type: "bank", balance: 1000 });
+  const card = await acct({ name: "Card", type: "credit_card", balance: 500 });
+  const base = { description: "p", isRecurring: false, categoryTags: [], balanceApplied: false, date: "2026-11-16T00:00:00.000Z" };
+  await tx().insert({ ...base, amount: 2500, type: "debit", accountId: bank._id });
+  await tx().insert({ ...base, amount: 1000, type: "transfer", accountId: bank._id, toAccountId: card._id });
+  const pay = await tx().insert({ amount: 5000, date: "2026-11-15T00:00:00.000Z", description: "plan", accountId: bank._id, toAccountId: card._id, type: "transfer", isRecurring: true,
+    recurrenceRule: { frequency: "monthly", interval: 1, startDate: "2026-11-15T00:00:00.000Z", endDate: null, dayOfMonth: 15, daysOfMonth: [] }, categoryTags: [], balanceApplied: false });
+  await accounts(t.store).updateById(card._id, { $set: { paymentTransactionId: pay._id } });
+  const racing = interleavingStore(t.store);
+  const both = await Promise.all([1, 2].map(() => dispatch(financeRoutes, racing, "GET", "/api/accounts", undefined, NOW)));
+  assert.deepEqual(both.map((r) => r.status), [200, 200]);
+  // Bank: 1000 - 25 - 10 - 50; Card: 500 - 10 - 50
+  assert.deepEqual(await balances(), { Bank: 91500, Card: 44000 });
+  assert.deepEqual((await tx().find({ balanceApplied: false })).map((x) => x._id), [pay._id]);
+});
+
+test("a failed balance write releases the pending transaction's claim; the next list applies it once (bug 9)", async () => {
+  const bank = await acct({ name: "Bank", type: "bank", balance: 100 });
+  const card = await acct({ name: "Card", type: "credit_card", balance: 50 });
+  const base = { description: "p", isRecurring: false, categoryTags: [], balanceApplied: false, date: "2026-11-16T00:00:00.000Z" };
+  await tx().insert({ ...base, amount: 2500, type: "debit", accountId: bank._id });
+  await tx().insert({ ...base, amount: 1000, type: "transfer", accountId: bank._id, toAccountId: card._id });
+  const failOn = (method: string) => interleavingStore(t.store, (name, m) => {
+    if (name === "accounts" && m === method) throw new Error("write failed");
+  });
+  // The debit's balance write fails: nothing moves, both stay pending
+  assert.equal((await dispatch(financeRoutes, failOn("updateById"), "GET", "/api/accounts", undefined, NOW)).status, 500);
+  assert.deepEqual(await balances(), { Bank: 10000, Card: 5000 });
+  assert.equal(await tx().count({ balanceApplied: false }), 2);
+  // The debit applies; the transfer's balance write fails and it stays pending
+  assert.equal((await dispatch(financeRoutes, failOn("batchUpdate"), "GET", "/api/accounts", undefined, NOW)).status, 500);
+  assert.deepEqual(await balances(), { Bank: 7500, Card: 5000 });
+  assert.equal(await tx().count({ balanceApplied: false }), 1);
+  await t.call("GET", "/api/accounts");
+  await t.call("GET", "/api/accounts");
+  assert.deepEqual(await balances(), { Bank: 6500, Card: 4000 });
+  assert.equal(await tx().count({ balanceApplied: false }), 0);
 });
 
 test("payments are not posted for an archived account, and a second request with nothing due writes nothing", async () => {
