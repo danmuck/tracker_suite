@@ -1,9 +1,8 @@
 "use client";
 
 import useSWR from "swr";
+import { fetcher, send } from "@/hooks/request";
 import type { LinkItem, LinkFormData } from "@/types/links/link";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function useLinks(groupId?: string) {
   const url = groupId ? `/api/links?groupId=${groupId}` : null;
@@ -17,36 +16,13 @@ export function useLinks(groupId?: string) {
 }
 
 export async function createLink(data: LinkFormData) {
-  const res = await fetch("/api/links", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to create link");
-  }
-  return res.json();
+  return send("/api/links", "POST", data);
 }
 
 export async function updateLink(id: string, data: LinkFormData) {
-  const res = await fetch(`/api/links/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to update link");
-  }
-  return res.json();
+  return send(`/api/links/${id}`, "PUT", data);
 }
 
 export async function deleteLink(id: string) {
-  const res = await fetch(`/api/links/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to delete link");
-  }
-  return res.json();
+  return send(`/api/links/${id}`, "DELETE");
 }
