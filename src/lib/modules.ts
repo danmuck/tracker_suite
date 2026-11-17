@@ -44,7 +44,7 @@ export const modules: ModuleConfig[] = [
       { href: "/finance/projections", label: "Projections", icon: TrendingUp },
       { href: "/finance/datasheet", label: "Datasheet", icon: Calculator },
     ],
-    browserData: false,
+    browserData: true,
   },
   {
     id: "figure",
