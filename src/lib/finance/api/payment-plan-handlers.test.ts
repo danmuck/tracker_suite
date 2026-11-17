@@ -257,3 +257,13 @@ test("a schedule emptied of every entry is removed from the transaction", async 
   assert.deepEqual([res.data.schedule, res.data.payoff], [[], null]);
   assert.equal("amountSchedule" in (await tx().find())[0], false);
 });
+
+test("removing a plan clears every link to its deleted transfer (bug 7)", async () => {
+  const pay = (await (async () => { await t.call("POST", plan(card._id), setupBody()); return dto(card._id); })()).payment!.transactionId;
+  await profiles(t.store).updateOne({}, { $set: { salaryTransactionId: pay, rentTransactionId: null } }, { upsert: true });
+  await accounts(t.store).updateById(loan._id, { $set: { paymentTransactionId: pay } });
+  assert.equal((await t.call("DELETE", plan(card._id))).status, 200);
+  assert.equal(await tx().findById(pay), null);
+  assert.equal((await profiles(t.store).findOne({}))!.salaryTransactionId, null);
+  assert.deepEqual(["paymentTransactionId" in (await accounts(t.store).findById(card._id))!, "paymentTransactionId" in (await accounts(t.store).findById(loan._id))!], [false, false]);
+});

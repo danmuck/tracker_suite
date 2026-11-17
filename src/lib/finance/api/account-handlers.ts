@@ -225,7 +225,8 @@ export const deleteAccount: Handler = async ({ store, params }) => {
   // belongs to its own account and stays
   const owned = { $or: [{ accountId }, { toAccountId: accountId, type: "transfer" }] };
   const deletedIds = (await txs.find(owned)).map((t) => t._id);
-  await txs.deleteMany(owned); // A19
+  // Exactly the ones read: each has its links cleared below
+  if (deletedIds.length > 0) await txs.deleteMany({ _id: { $in: deletedIds } }); // A19
   await acc.deleteById(accountId); // A20
 
   // Links are cleared after the deletes, so the deleted account is never written

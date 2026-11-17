@@ -5,7 +5,7 @@
 //   transaction.accountId, transaction.toAccountId → account   (deleteAccount removes or clears them)
 //   account.linkedAccountId                         → account   (clearAccountLinks)
 //   account.paymentTransactionId                    → transaction
-//   profile.salaryTransactionId, rentTransactionId   → transaction
+//   profile.salaryTransactionId, rentTransactionId   → transaction (merge-rent moves a Rent link)
 // The last three are the transaction references below. Each write matches only the documents that
 // hold the reference, so a delete that references nothing writes nothing here.
 
@@ -18,11 +18,6 @@ export async function clearTransactionLinks(store: Store, ids: string[]): Promis
   await accounts(store).updateMany({ paymentTransactionId: { $in: ids } }, { $unset: { paymentTransactionId: 1 } });
   await profiles(store).updateMany({ salaryTransactionId: { $in: ids } }, { $set: { salaryTransactionId: null } });
   await profiles(store).updateMany({ rentTransactionId: { $in: ids } }, { $set: { rentTransactionId: null } });
-}
-
-/** Points every account reference to transaction `from` at `to` instead (the profile's links are the caller's). */
-export async function moveTransactionLinks(store: Store, from: string, to: string): Promise<void> {
-  await accounts(store).updateMany({ paymentTransactionId: from }, { $set: { paymentTransactionId: to } });
 }
 
 /**

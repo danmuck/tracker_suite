@@ -378,3 +378,32 @@ test("golden A11-A14: list filters by type and hides archived by default", async
   assert.deepEqual(await names("?type=debt&includeArchived=true"), ["Loan"]);
   assert.deepEqual(await names("?type=bogus&includeArchived=true"), []);
 });
+
+test("deleting an account deletes exactly the transactions it read, so one written in between is not removed (bug 7)", async () => {
+  const doomed = await acct({ name: "Doomed", type: "bank", balance: 0 });
+  const row = { amount: 100, date: "2026-11-01T00:00:00.000Z", description: "t", type: "debit" as const, isRecurring: false, categoryTags: [], balanceApplied: true };
+  const read = await tx().insert({ ...row, accountId: doomed._id });
+  let late: string | undefined;
+  // Another request inserts a transaction for the account right after the delete reads its list
+  const racing = {
+    collection: ((name: Parameters<typeof t.store.collection>[0]) => {
+      const real = t.store.collection(name);
+      if (name !== "transactions") return real;
+      return new Proxy(real, {
+        get(target, prop) {
+          const value = Reflect.get(target, prop, target);
+          if (prop !== "find" || typeof value !== "function") return typeof value === "function" ? value.bind(target) : value;
+          return async (...args: unknown[]) => {
+            const found = await value.apply(target, args);
+            late ??= (await tx().insert({ ...row, amount: 200, accountId: doomed._id }))._id;
+            return found;
+          };
+        },
+      });
+    }) as typeof t.store.collection,
+  };
+  const res = await dispatch(financeRoutes, racing, "DELETE", `/api/accounts/${doomed._id}`, undefined, NOW);
+  assert.equal(res.status, 200);
+  assert.equal(await tx().findById(read._id), null);
+  assert.ok(late && (await tx().findById(late)));
+});

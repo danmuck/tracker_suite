@@ -8,8 +8,7 @@ import { amountOn } from "@/lib/finance/amount-schedule";
 import { toDateStr } from "@/lib/finance/dates";
 import { profileFromDollars, profileToDollars } from "@/lib/finance/finance-profile";
 import { financeProfileSchema } from "@/lib/finance/validators";
-import { assertId, loadProfile, saveTransaction, shapeTransaction, transactions } from "./docs";
-import { moveTransactionLinks } from "./links";
+import { accounts, assertId, loadProfile, saveTransaction, shapeTransaction, transactions } from "./docs";
 import { checkProfileLinks, LinkedTransactionMissingError, saveProfileAndApply } from "./profile";
 
 /** A LinkedTransactionMissingError becomes the 409 with its message; anything else is the route's 500. */
@@ -43,9 +42,10 @@ const mergeSchema = z.object({ keepId: z.string().min(1), mergeId: z.string().mi
 /**
  * POST — fold a second Rent transaction into the linked one as dated rent changes, then delete it.
  * The merged one's amounts become rent steps (its start, then its own later schedule entries; a
- * date the kept steps already have keeps the kept amount), and every reference to it moves to the
- * kept one (bug 13). The profile's links are checked before the first write, so a 409 or a 500
- * there changes nothing.
+ * date the kept steps already have keeps the kept amount), stored in date order; a Rent link to it
+ * moves to the kept one (bug 13). A transaction in another role (the Datasheet's Salary, a
+ * payment plan's transfer) is refused on either side: deleting it would orphan that role, and the
+ * kept one gets the rent schedule written over its own. Every check runs before the first write.
  */
 export const mergeRent: Handler = linkErrors(async ({ store, body, now }) => {
   const parsed = mergeSchema.safeParse(body);
@@ -64,6 +64,11 @@ export const mergeRent: Handler = linkErrors(async ({ store, body, now }) => {
   }
 
   const profile = await loadProfile(store);
+  // A role the rent cannot take over (merged side) or would overwrite (kept side)
+  for (const id of [mergeId, keepId]) {
+    if (profile.salaryTransactionId === id) return fail(400, "That transaction is linked as Salary");
+    if (await accounts(store).exists({ paymentTransactionId: id })) return fail(400, "That transaction is a loan payment");
+  }
   const mergeDate = toDateStr(merge.recurrenceRule.startDate);
   const rentSteps = [...profile.rentSteps];
   // Keep the existing amount as the first step if the profile has none yet
@@ -81,20 +86,15 @@ export const mergeRent: Handler = linkErrors(async ({ store, body, now }) => {
   for (const step of mergedSteps) {
     if (!rentSteps.some((s) => s.effectiveDate === step.effectiveDate)) rentSteps.push(step);
   }
-  const next = {
-    ...profile,
-    salaryTransactionId: profile.salaryTransactionId === mergeId ? keepId : profile.salaryTransactionId,
-    rentTransactionId: keepId,
-    rentSteps,
-  };
+  rentSteps.sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate));
+  // The Rent link moves to the kept one whether it was the merged one, the kept one or unset
+  const next = { ...profile, rentTransactionId: keepId, rentSteps };
   await checkProfileLinks(store, next);
 
   if (keep.recurrenceRule) {
     // M2: what keep.save() persists after assigning recurrenceRule.endDate
     await saveTransaction(store, keepRaw, { "recurrenceRule.endDate": merge.recurrenceRule.endDate ?? null });
   }
-  // References move before the delete, so none is ever left pointing at nothing
-  await moveTransactionLinks(store, mergeId, keepId);
   await tx.deleteById(mergeId); // M3
 
   const updated = await saveProfileAndApply(store, next, now);

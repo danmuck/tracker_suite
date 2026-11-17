@@ -685,14 +685,35 @@ export function buildScenario(today: string): Step[] {
     del("X37", "/api/accounts/{doomed}", 200),
     get("X38", "/api/accounts/{doomedLoan}", 200),
     get("X39", plan("{doomedLoan}"), 200),
-    // Bug 13: merge-rent keeps the merged transaction's own schedule and moves the plan's link to the kept rent
+    // Bug 13: merge-rent refuses a loan-payment transfer (X43, before any write: X44 keeps the plan's
+    // link, X45 the rent unchanged); a merge moves the Datasheet's Rent link to the kept rent (X46–X49)
     send("X40", "POST", "/api/accounts", { name: "Parity Merge Loan", type: "debt", balance: 600 }, 201, { save: { name: "mergeLoan", from: "_id" } }),
     send("X41", "POST", plan("{mergeLoan}"), { fromAccountId: "{checking}", dayOfMonth: 11, startDate: dom(3, 11), firstAmount: 60 }, 200, {
       save: { name: "mergePay", from: "data.payment.transactionId" },
     }),
     send("X42", "PUT", plan("{mergeLoan}"), { schedule: [{ effectiveDate: dom(3, 11), amount: 60 }, { effectiveDate: dom(5, 11), amount: 65 }] }, 200),
-    send("X43", "POST", "/api/finance-profile/merge-rent", { keepId: "{rent}", mergeId: "{mergePay}" }, 200),
+    send("X43", "POST", "/api/finance-profile/merge-rent", { keepId: "{rent}", mergeId: "{mergePay}" }, 400),
     get("X44", "/api/accounts/{mergeLoan}", 200),
     get("X45", "/api/transactions/{rent}", 200),
+    send(
+      "X46",
+      "POST",
+      "/api/transactions",
+      {
+        amount: 1777,
+        date: dom(4, 2),
+        description: "Parity Rent (new lease)",
+        accountId: "{checking}",
+        type: "debit",
+        isRecurring: true,
+        recurrenceRule: { frequency: "monthly", startDate: dom(4, 2), dayOfMonth: 2 },
+        categoryTags: ["bills"],
+      },
+      201,
+      { save: { name: "rent4", from: "_id" } },
+    ),
+    send("X47", "PUT", "/api/finance-profile", { ...PROFILE, salaryTransactionId: null, rentTransactionId: "{rent4}", rentSteps: [] }, 200),
+    send("X48", "POST", "/api/finance-profile/merge-rent", { keepId: "{rent}", mergeId: "{rent4}" }, 200),
+    get("X49", "/api/transactions/{rent}", 200),
   ];
 }

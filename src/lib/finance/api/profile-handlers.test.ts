@@ -152,8 +152,6 @@ test("merge-rent with saved rent steps appends the merged start only when its da
 test("merge-rent checks the profile's links before writing anything (bug 13)", async () => {
   const keep = await recurring({ amount: 1500, date: "2026-09-01", description: "Rent", recurrenceRule: { frequency: "monthly", startDate: "2026-09-01", endDate: "2028-03-01", dayOfMonth: 1 } });
   const merge = await recurring({ amount: 1555, date: "2027-01-03", description: "Rent (sublet)", recurrenceRule: { frequency: "monthly", startDate: "2027-01-03", dayOfMonth: 3 } });
-  const loan = await acct({ name: "Loan", type: "debt", balance: 500 });
-  await accounts(t.store).updateById(loan._id, { $set: { paymentTransactionId: merge._id } });
   // A Salary link to a transaction deleted before bug 7 was fixed (no request can leave one now)
   await profiles(t.store).updateOne({}, { $set: { salaryTransactionId: "a".repeat(24) } }, { upsert: true });
   const before = [await tx().find(), await accounts(t.store).find(), await profiles(t.store).find()];
@@ -164,10 +162,12 @@ test("merge-rent checks the profile's links before writing anything (bug 13)", a
   assert.deepEqual([t.writes("transactions"), t.writes("accounts"), t.writes("financeProfile")], writes);
 });
 
-test("merge-rent keeps the merged schedule and moves every reference to the merged id onto the kept one (bug 13)", async () => {
+test("merge-rent keeps the merged schedule in date order and moves a Rent link to the merged id onto the kept one (bug 13)", async () => {
   const keep = await recurring({ amount: 1500, date: "2026-09-01", description: "Rent", recurrenceRule: { frequency: "monthly", startDate: "2026-09-01", dayOfMonth: 1 } });
-  await t.call("PUT", "/api/finance-profile", { ...PROFILE, rentTransactionId: keep._id, rentSteps: [{ effectiveDate: "2026-09-01", monthly: 1450 }, { effectiveDate: "2027-06-01", monthly: 1525 }] });
   const merge = await recurring({ amount: 1650, date: "2027-01-01", description: "Rent 2", recurrenceRule: { frequency: "monthly", startDate: "2027-01-01", dayOfMonth: 1 } });
+  // The Datasheet's Rent link is the merged one; its steps are saved out of date order
+  // (written to the store: a profile save would move the merged rule's start to the first step)
+  await profiles(t.store).updateOne({}, { $set: { rentTransactionId: merge._id, rentSteps: [{ effectiveDate: "2027-06-01T00:00:00.000Z", monthly: 152500 }, { effectiveDate: "2026-09-01T00:00:00.000Z", monthly: 145000 }] } }, { upsert: true });
   // The merged one's own schedule: an entry before its start (its start amount), one on a date the
   // kept steps already have (the kept one wins), and two new ones
   await tx().updateById(merge._id, { $set: { amountSchedule: [
@@ -176,26 +176,43 @@ test("merge-rent keeps the merged schedule and moves every reference to the merg
     { effectiveDate: "2028-01-01T00:00:00.000Z", amount: 180000 },
     { effectiveDate: "2027-03-01T00:00:00.000Z", amount: 168000 },
   ] } });
-  const loan = await acct({ name: "Loan", type: "debt", balance: 500 });
   const other = await acct({ name: "Other", type: "debt", balance: 500 });
-  await accounts(t.store).updateById(loan._id, { $set: { paymentTransactionId: merge._id } });
   await accounts(t.store).updateById(other._id, { $set: { paymentTransactionId: "c".repeat(24) } });
-  await profiles(t.store).updateOne({}, { $set: { salaryTransactionId: merge._id } });
 
   const res = await saved("POST", "/api/finance-profile/merge-rent", { keepId: keep._id, mergeId: merge._id });
   assert.equal(res.status, 200);
-  assert.deepEqual(res.body.data.rentSteps, [
+  const steps = [
     { effectiveDate: "2026-09-01", monthly: 1450 },
-    { effectiveDate: "2027-06-01", monthly: 1525 },
     { effectiveDate: "2027-01-01", monthly: 1600 },
     { effectiveDate: "2027-03-01", monthly: 1680 },
+    { effectiveDate: "2027-06-01", monthly: 1525 },
     { effectiveDate: "2028-01-01", monthly: 1800 },
-  ]);
-  assert.deepEqual([res.body.data.rentTransactionId, res.body.data.salaryTransactionId], [keep._id, keep._id]);
+  ];
+  assert.deepEqual(res.body.data.rentSteps, steps);
+  assert.deepEqual((await t.call("GET", "/api/finance-profile")).body, { data: res.body.data });
+  assert.deepEqual([res.body.data.rentTransactionId, res.body.data.salaryTransactionId], [keep._id, null]);
   assert.equal(await tx().findById(merge._id), null);
-  assert.deepEqual([(await accounts(t.store).findById(loan._id))!.paymentTransactionId, (await accounts(t.store).findById(other._id))!.paymentTransactionId], [keep._id, "c".repeat(24)]);
-  // The rent schedule is written last, so the kept transaction carries the merged entries
+  assert.equal((await accounts(t.store).findById(other._id))!.paymentTransactionId, "c".repeat(24));
   assert.deepEqual((await tx().findById(keep._id))!.amountSchedule!.map((s) => [s.effectiveDate.slice(0, 10), s.amount]), [["2026-09-01", 145000], ["2027-01-01", 160000], ["2027-03-01", 168000], ["2027-06-01", 152500], ["2028-01-01", 180000]]);
+});
+
+test("merge-rent refuses a Salary-linked or loan-payment transaction on either side, before any write", async () => {
+  const salary = await recurring({ amount: 2000, type: "credit", date: "2026-10-02", description: "Salary", recurrenceRule: { frequency: "biweekly", startDate: "2026-10-02" } });
+  const rent = await recurring({ amount: 1500, date: "2026-09-01", description: "Rent", recurrenceRule: { frequency: "monthly", startDate: "2026-09-01", dayOfMonth: 1 } });
+  await t.call("PUT", "/api/finance-profile", { ...PROFILE, salaryTransactionId: salary._id, rentTransactionId: rent._id });
+  const loan = await acct({ name: "Loan", type: "debt", balance: 500 });
+  const plan = await t.call("POST", `/api/accounts/${loan._id}/payment-plan`, { fromAccountId: bank._id, dayOfMonth: 15, startDate: "2026-12-15", firstAmount: 50 });
+  const pay = (plan.body as { data: PaymentPlanDTO }).data.payment!.transactionId;
+  const snapshot = async () => [await tx().find(), await accounts(t.store).find(), await profiles(t.store).find()];
+  const before = await snapshot();
+  const writes = [t.writes("transactions"), t.writes("accounts"), t.writes("financeProfile")];
+  const SALARY = { status: 400, body: { error: "That transaction is linked as Salary" } };
+  const PAYMENT = { status: 400, body: { error: "That transaction is a loan payment" } };
+  for (const [keepId, mergeId, expected] of [[rent._id, salary._id, SALARY], [rent._id, pay, PAYMENT], [salary._id, rent._id, SALARY], [pay, rent._id, PAYMENT]] as const) {
+    assert.deepEqual(await t.call("POST", "/api/finance-profile/merge-rent", { keepId, mergeId }), expected);
+  }
+  assert.deepEqual(await snapshot(), before);
+  assert.deepEqual([t.writes("transactions"), t.writes("accounts"), t.writes("financeProfile")], writes);
 });
 
 test("current behavior: merge-rent accepts any two recurring transactions and a rule-less keep is not extended", async () => {

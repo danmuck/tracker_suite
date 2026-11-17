@@ -28,6 +28,7 @@ import {
   type StoredRule,
   type TransactionDoc,
 } from "./docs";
+import { clearTransactionLinks } from "./links";
 
 const RAP_YEARS_AHEAD = 10;
 const PAYOFF_YEARS_AHEAD = 50;
@@ -361,6 +362,11 @@ export async function updatePaymentPlan(
  */
 export async function unlinkPaymentPlan(store: Store, accountId: string): Promise<void> {
   const { account } = await loadAccount(store, accountId);
-  if (account.paymentTransactionId) await transactions(store).deleteById(account.paymentTransactionId); // PP14
-  await accounts(store).updateById(account._id, { $unset: { paymentTransactionId: 1 } }); // PP15
+  if (account.paymentTransactionId) {
+    await transactions(store).deleteById(account.paymentTransactionId); // PP14
+    // Every link to the deleted transfer goes, this plan's own included (PP15, bug 7)
+    await clearTransactionLinks(store, [account.paymentTransactionId]);
+  } else {
+    await accounts(store).updateById(account._id, { $unset: { paymentTransactionId: 1 } }); // PP15
+  }
 }

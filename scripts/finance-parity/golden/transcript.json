@@ -1,10 +1,10 @@
 {
   "meta": {
-    "capturedAt": "2026-11-17T23:44:16.936Z",
+    "capturedAt": "2026-11-17T23:49:55.268Z",
     "localDate": "2026-11-17",
     "utcDate": "2026-11-17",
     "timeZone": "America/New_York",
-    "commit": "d07822d687e978ccc6c6866c1389c3c0fb8a7ad6"
+    "commit": "92c4b62ea9a97fb1fd79b6812798690caa98a64e"
   },
   "steps": [
     {
@@ -20294,6 +20294,145 @@
     {
       "id": "X43",
       "request": "POST /api/finance-profile/merge-rent",
+      "status": 400,
+      "body": {
+        "error": "That transaction is a loan payment"
+      }
+    },
+    {
+      "id": "X44",
+      "request": "GET /api/accounts/{mergeLoan}",
+      "status": 200,
+      "body": {
+        "_id": "<mergeLoan>",
+        "balance": 60000,
+        "currency": "USD",
+        "isArchived": false,
+        "isCash": false,
+        "name": "Parity Merge Loan",
+        "paymentTransactionId": "<mergePay>",
+        "type": "debt",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "X45",
+      "request": "GET /api/transactions/{rent}",
+      "status": 200,
+      "body": {
+        "_id": "<rent>",
+        "accountId": "<checking>",
+        "amount": 145000,
+        "amountSchedule": [
+          {
+            "amount": 145000,
+            "effectiveDate": "2026-09-01T00:00:00.000Z"
+          },
+          {
+            "amount": 155500,
+            "effectiveDate": "2027-01-03T00:00:00.000Z"
+          }
+        ],
+        "balanceApplied": false,
+        "categoryTags": [
+          "bills"
+        ],
+        "date": "2026-09-01T00:00:00.000Z",
+        "description": "Parity Rent",
+        "isRecurring": true,
+        "recurrenceRule": {
+          "dayOfMonth": 1,
+          "daysOfMonth": [],
+          "endDate": null,
+          "frequency": "monthly",
+          "interval": 1,
+          "startDate": "2026-09-01T00:00:00.000Z"
+        },
+        "type": "debit",
+        "updatedAt": "<same>"
+      }
+    },
+    {
+      "id": "X46",
+      "request": "POST /api/transactions",
+      "status": 201,
+      "body": {
+        "_id": "<rent4>",
+        "accountId": "<checking>",
+        "amount": 177700,
+        "balanceApplied": false,
+        "categoryTags": [
+          "bills"
+        ],
+        "date": "2027-03-02T00:00:00.000Z",
+        "description": "Parity Rent (new lease)",
+        "isRecurring": true,
+        "recurrenceRule": {
+          "dayOfMonth": 2,
+          "daysOfMonth": [],
+          "endDate": null,
+          "frequency": "monthly",
+          "interval": 1,
+          "startDate": "2027-03-02T00:00:00.000Z"
+        },
+        "type": "debit",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X47",
+      "request": "PUT /api/finance-profile",
+      "status": 200,
+      "body": {
+        "data": {
+          "filingStatus": "single",
+          "healthSteps": [
+            {
+              "effectiveDate": "2025-09-01",
+              "perPaycheck": 85
+            }
+          ],
+          "hoursPerWeek": 40,
+          "nycResident": true,
+          "raiseRate": 0.03,
+          "rentSteps": [],
+          "rentTransactionId": "<rent4>",
+          "retirementSteps": [
+            {
+              "effectiveDate": "2025-09-01",
+              "percent": 0.06
+            }
+          ],
+          "salarySteps": [
+            {
+              "annualGross": 85000,
+              "effectiveDate": "2025-09-01"
+            },
+            {
+              "annualGross": 92000,
+              "effectiveDate": "2027-02-01"
+            }
+          ],
+          "salaryTransactionId": null,
+          "whatIfSalaries": [
+            {
+              "annualGross": 120000,
+              "label": "Stretch"
+            },
+            {
+              "annualGross": 70000
+            }
+          ]
+        },
+        "updated": {
+          "rent": false,
+          "salary": false
+        }
+      }
+    },
+    {
+      "id": "X48",
+      "request": "POST /api/finance-profile/merge-rent",
       "status": 200,
       "body": {
         "data": {
@@ -20313,16 +20452,8 @@
               "monthly": 1450
             },
             {
-              "effectiveDate": "2027-01-03",
-              "monthly": 1555
-            },
-            {
-              "effectiveDate": "2027-02-11",
-              "monthly": 60
-            },
-            {
-              "effectiveDate": "2027-04-11",
-              "monthly": 65
+              "effectiveDate": "2027-03-02",
+              "monthly": 1777
             }
           ],
           "rentTransactionId": "<rent>",
@@ -20360,23 +20491,7 @@
       }
     },
     {
-      "id": "X44",
-      "request": "GET /api/accounts/{mergeLoan}",
-      "status": 200,
-      "body": {
-        "_id": "<mergeLoan>",
-        "balance": 60000,
-        "currency": "USD",
-        "isArchived": false,
-        "isCash": false,
-        "name": "Parity Merge Loan",
-        "paymentTransactionId": "<rent>",
-        "type": "debt",
-        "updatedAt": "<changed>"
-      }
-    },
-    {
-      "id": "X45",
+      "id": "X49",
       "request": "GET /api/transactions/{rent}",
       "status": 200,
       "body": {
@@ -20389,16 +20504,8 @@
             "effectiveDate": "2026-09-01T00:00:00.000Z"
           },
           {
-            "amount": 155500,
-            "effectiveDate": "2027-01-03T00:00:00.000Z"
-          },
-          {
-            "amount": 6000,
-            "effectiveDate": "2027-02-11T00:00:00.000Z"
-          },
-          {
-            "amount": 6500,
-            "effectiveDate": "2027-04-11T00:00:00.000Z"
+            "amount": 177700,
+            "effectiveDate": "2027-03-02T00:00:00.000Z"
           }
         ],
         "balanceApplied": false,
