@@ -32,9 +32,20 @@ function valueEquals(actual: unknown, expected: unknown): boolean {
   return normalize(actual) === want;
 }
 
+// An expanded-year ISO string (+YYYYYY / -YYYYYY) does not sort like the date it names.
+const EXTENDED_YEAR = /^[+-]\d{6}-\d{2}-\d{2}T/;
+
+function assertOrderableDate(value: unknown): void {
+  if (typeof value === "string" && EXTENDED_YEAR.test(value)) {
+    throw new Error(`Unsupported date outside years 0000-9999: ${value}`);
+  }
+}
+
 function compare(actual: unknown, expected: unknown, test: (diff: number) => boolean): boolean {
   const a = normalize(actual);
   const b = normalize(expected);
+  assertOrderableDate(a);
+  assertOrderableDate(b);
   if (typeof a === "number" && typeof b === "number") return test(a - b);
   if (typeof a === "string" && typeof b === "string") return test(a < b ? -1 : a > b ? 1 : 0);
   return false;

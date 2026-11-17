@@ -41,8 +41,6 @@ interface ProjectionParams {
   accountId?: string;
 }
 
-type SandboxProfileTx = Parameters<typeof applySandboxProfile>[0][number];
-
 /** Milliseconds of a stored `updatedAt`, `0` when absent (today: `x.updatedAt?.getTime() ?? 0`). */
 const ms = (value: string | undefined): number => (value ? asDate(value).getTime() : 0);
 
@@ -81,13 +79,9 @@ async function project(store: Store, now: Date, params: ProjectionParams, sandbo
         salaryTransactionId: realProfile.salaryTransactionId,
         rentTransactionId: realProfile.rentTransactionId,
       };
-      // Type-only bridge: projection-sandbox.ts declares a Date-only rule startDate; at runtime it
-      // copies the documents it is given (ISO strings here), which the engine reads (asDate/toDateStr)
-      all = applySandboxProfile(all as unknown as SandboxProfileTx[], whatIf, localDateStr(now)) as unknown as EngineTransaction[];
+      all = applySandboxProfile(all, whatIf, localDateStr(now));
     }
-    // Type-only bridge: toEngineTransaction declares its amountSchedule as unknown[] (it is the
-    // original transaction's AmountStep[] or undefined)
-    txs = applySandbox(all, sandbox) as EngineTransaction[];
+    txs = applySandbox(all, sandbox);
   } else {
     // A window starting in the future is projected forward from today, so the
     // engine also needs the transactions between today and the window start

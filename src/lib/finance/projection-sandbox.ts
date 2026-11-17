@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { financeProfileSchema, transactionSchema, type TransactionInput } from "./validators";
 import { buildRentSchedule, buildSalarySchedule } from "./datasheet";
-import { amountOn } from "./amount-schedule";
+import { amountOn, type AmountStep } from "./amount-schedule";
 import { getPeriodsPerYear } from "./tax-calculator";
 import type { FinanceProfileData, ScheduleEntry } from "@/types/finance/datasheet";
 
@@ -27,7 +27,7 @@ export interface SandboxBaseTx {
   _id: { toString(): string };
   amount: number;
   balanceApplied?: boolean;
-  amountSchedule?: unknown[];
+  amountSchedule?: AmountStep[];
 }
 
 /** Turn form-style input (dollars, ISO date strings) into the shape the engine reads */
@@ -75,7 +75,7 @@ export function applySandbox<T extends SandboxBaseTx>(transactions: T[], sandbox
 }
 
 interface ProfileTx extends SandboxBaseTx {
-  recurrenceRule?: { frequency: string; startDate?: Date } | null;
+  recurrenceRule?: { frequency: string; startDate?: Date | string; endDate?: Date | string | null } | null;
   toObject?: () => object;
 }
 

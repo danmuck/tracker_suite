@@ -155,3 +155,15 @@ test("$in and $or need arrays and say so", () => {
   assert.throws(() => matches(doc, { $or: { name: "Rent" } }), { message: "$or needs an array" });
   assert.throws(() => matches(doc, { $or: 1 }), { message: "$or needs an array" });
 });
+
+test("comparisons refuse extended-year ISO dates instead of ordering them wrongly", () => {
+  const extended = { message: /^Unsupported date outside years 0000-9999: [+-]\d{6}-/ };
+  assert.throws(() => matches(doc, { date: { $lte: new Date(Date.UTC(10000, 0, 1)) } }), extended);
+  assert.throws(() => matches(doc, { date: { $gte: new Date(Date.UTC(-1, 0, 1)) } }), extended);
+  assert.throws(() => matches({ date: "+010000-01-01T00:00:00.000Z" }, { date: { $gt: "2026-11-01T00:00:00.000Z" } }), extended);
+  assert.throws(() => matches({ date: "-000001-01-01T00:00:00.000Z" }, { date: { $lt: "2026-11-01T00:00:00.000Z" } }), extended);
+  // Ordinary ISO strings and other strings starting with + or - still compare
+  assert.equal(matches(doc, { date: { $gt: "2026-10-31T00:00:00.000Z", $lt: new Date(Date.UTC(9999, 11, 31)) } }), true);
+  assert.equal(matches({ code: "+1-555" }, { code: { $gte: "+1", $lt: "-" } }), true);
+  assert.equal(matches({ code: "-12345-01-01T" }, { code: { $gt: "+" } }), true);
+});
