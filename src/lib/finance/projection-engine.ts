@@ -530,9 +530,11 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
   // accounts on its own. Card payments stay out: card purchases are already expenses.
   const loanIds = new Set(accounts.filter((a) => a.type === "debt").map((a) => a._id.toString()));
   let loanPayments = 0;
-  for (const t of filteredProjected) {
-    if (dropped.has(t)) continue;
-    if (t.type === "transfer" && t.toAccountId && loanIds.has(t.toAccountId)) loanPayments += t.amount;
+  // Read from the timeline, which already leaves out payments dropped after a payoff
+  for (const day of timeline) {
+    for (const t of day.transactions) {
+      if (t.type === "transfer" && t.toAccountId && loanIds.has(t.toAccountId)) loanPayments += t.amount;
+    }
   }
   const loanInterest = visibleSynthetic
     .filter((t) => t.categoryTags.includes("interest") && loanIds.has(t.accountId))

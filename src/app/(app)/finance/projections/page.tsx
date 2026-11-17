@@ -65,7 +65,7 @@ import {
 } from "@/components/finance/projection-insights";
 import { useProjections } from "@/hooks/finance/use-projections";
 import { useAccounts } from "@/hooks/finance/use-accounts";
-import { centsToDollars } from "@/lib/finance/formatters";
+import { centsToDollars, formatCurrency } from "@/lib/finance/formatters";
 import type { Granularity } from "@/types/finance/projection";
 
 const CHART_COLORS = [
