@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { runSeeds } from "@/lib/finance/seed";
+import Account from "@/models/finance/Account";
 
 interface MongooseCache {
   conn: typeof mongoose | null;
@@ -16,6 +16,14 @@ const cached: MongooseCache = global.mongoose ?? { conn: null, promise: null, se
 
 if (!global.mongoose) {
   global.mongoose = cached;
+}
+
+export async function runSeeds() {
+  await Account.findOneAndUpdate(
+    { isCash: true },
+    { $setOnInsert: { name: "Cash", type: "bank", isCash: true, balance: 0, currency: "USD" } },
+    { upsert: true, setDefaultsOnInsert: true }
+  );
 }
 
 export async function connectDB() {
