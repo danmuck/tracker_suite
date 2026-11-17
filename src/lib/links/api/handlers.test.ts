@@ -57,3 +57,8 @@ test("validation failures are 400; unknown and malformed ids are 404", async () 
     assert.deepEqual(await call("DELETE", `/api/links/${id}`), { status: 404, body: { error: "Link not found" } });
   }
 });
+
+test("links: a malformed groupId filter returns an empty list", async () => {
+  const res = await call("GET", "/api/links?groupId=not-an-id");
+  assert.deepEqual(res, { status: 200, body: [] });
+});

@@ -42,3 +42,12 @@ test("sortDocs sorts by several keys and selectFields keeps _id", () => {
   assert.deepEqual(sortDocs(rows, { order: 1, createdAt: -1 }).map((r) => r._id), ["2", "3", "1"]);
   assert.deepEqual(selectFields(rows[0], ["order"]), { _id: "1", order: 1 });
 });
+
+test("dotted paths fail loudly in filters and updates", () => {
+  assert.throws(() => matches(doc, { "exercises.name": "x" }), /Dotted paths are not supported: exercises\.name/);
+  assert.throws(() => matches(doc, { $or: [{ name: "Rent" }, { "a.b": 1 }] }), /Dotted paths are not supported: a\.b/);
+  assert.throws(() => applyUpdate(doc, { $set: { "a.b": 1 } }), /Dotted paths are not supported: a\.b/);
+  assert.throws(() => applyUpdate(doc, { $unset: { "a.b": "" } }), /Dotted paths are not supported: a\.b/);
+  assert.throws(() => applyUpdate(doc, { $inc: { "a.b": 1 } }), /Dotted paths are not supported: a\.b/);
+  assert.throws(() => applyUpdate(doc, { $setOnInsert: { "a.b": 1 } }, true), /Dotted paths are not supported: a\.b/);
+});

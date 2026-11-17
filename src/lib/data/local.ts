@@ -1,7 +1,7 @@
 // Browser-side request path: runs the shared route handlers against browser storage.
 
 import { allRoutes } from "./all-routes";
-import { BrowserStore } from "./browser-store";
+import { BrowserStore, createMemoryStorage, type StorageLike } from "./browser-store";
 import { dispatch } from "./dispatch";
 import { COLLECTIONS, type CollectionName } from "./store";
 
@@ -9,9 +9,18 @@ const PREFIX = "ts:data:";
 
 let store: BrowserStore | null = null;
 
+// Reading window.localStorage throws when site data is blocked; fall back to memory for this page.
+export function getBrowserStorage(): StorageLike {
+  try {
+    return window.localStorage;
+  } catch {
+    return createMemoryStorage();
+  }
+}
+
 export function getBrowserStore(): BrowserStore {
   if (store) return store;
-  const created = new BrowserStore(window.localStorage);
+  const created = new BrowserStore(getBrowserStorage());
   // Another tab wrote to a collection: drop this tab's cached copy of it.
   window.addEventListener("storage", (event) => {
     if (!event.key?.startsWith(PREFIX)) return;

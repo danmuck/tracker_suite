@@ -1,22 +1,20 @@
 // Test-only helpers shared by the data layer tests.
 
-import type { StorageLike } from "./browser-store";
+import { createMemoryStorage, type StorageLike } from "./browser-store";
 
 export function memoryStorage(): StorageLike & { failWrites: boolean } {
-  const map = new Map<string, string>();
+  const base = createMemoryStorage();
   return {
     failWrites: false,
-    getItem: (key) => map.get(key) ?? null,
+    getItem: (key) => base.getItem(key),
     setItem(key, value) {
       if (this.failWrites) throw new Error("QuotaExceededError");
-      map.set(key, value);
+      base.setItem(key, value);
     },
-    removeItem: (key) => {
-      map.delete(key);
-    },
-    key: (index) => [...map.keys()][index] ?? null,
+    removeItem: (key) => base.removeItem(key),
+    key: (index) => base.key(index),
     get length() {
-      return map.size;
+      return base.length;
     },
   };
 }

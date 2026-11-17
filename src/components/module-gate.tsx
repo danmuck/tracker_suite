@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { Database } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { ensureDemoSeed } from "@/lib/demo";
-import { getBrowserStore } from "@/lib/data/local";
+import { getBrowserStorage, getBrowserStore } from "@/lib/data/local";
 import { IS_DEMO, useResolvedDataSource } from "@/lib/data/mode";
 import { modules } from "@/lib/modules";
 
@@ -18,10 +18,13 @@ export function ModuleGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!IS_DEMO) return;
-    demoSeed ??= ensureDemoSeed(getBrowserStore(), window.localStorage);
-    void demoSeed.then((seeded) => {
-      if (seeded) window.location.reload();
-    });
+    const store = getBrowserStore();
+    demoSeed ??= ensureDemoSeed(store, getBrowserStorage());
+    demoSeed
+      .then((seeded) => {
+        if (seeded) window.location.reload();
+      })
+      .catch((error) => console.error(error));
   }, []);
 
   if (source === null) return null;

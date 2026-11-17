@@ -57,3 +57,12 @@ test("demoApiGuard refuses every API path in the demo and nothing else", () => {
     assert.equal(demoApiGuard(path, true), null);
   }
 });
+
+test("matchRoute prefers static segments over params regardless of registration order", async () => {
+  const mixed: RouteDef[] = [
+    { method: "GET", path: "/api/x/:id", handler: async () => ok("param") },
+    { method: "GET", path: "/api/x/special", handler: async () => ok("static") },
+  ];
+  assert.equal((await dispatch(mixed, store, "GET", "/api/x/special")).body, "static");
+  assert.equal((await dispatch(mixed, store, "GET", "/api/x/abc")).body, "param");
+});

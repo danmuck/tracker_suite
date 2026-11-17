@@ -19,6 +19,9 @@ if (!global.mongoose) {
 }
 
 export async function connectDB() {
+  if (process.env.NEXT_PUBLIC_DEMO === "1") {
+    throw new Error("The demo does not use a server database");
+  }
   if (cached.conn) return cached.conn;
 
   const MONGODB_URI = process.env.MONGODB_URI;

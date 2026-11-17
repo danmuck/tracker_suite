@@ -16,6 +16,24 @@ export interface StorageLike {
 
 export const DATA_VERSION = 1;
 
+/** Map-backed storage for when browser storage is unavailable; data lasts for the page session only. */
+export function createMemoryStorage(): StorageLike {
+  const map = new Map<string, string>();
+  return {
+    getItem: (key) => map.get(key) ?? null,
+    setItem(key, value) {
+      map.set(key, value);
+    },
+    removeItem: (key) => {
+      map.delete(key);
+    },
+    key: (index) => [...map.keys()][index] ?? null,
+    get length() {
+      return map.size;
+    },
+  };
+}
+
 const PREFIX = "ts:data:";
 const VERSION_KEY = `${PREFIX}version`;
 
@@ -40,6 +58,11 @@ function isOperatorObject(value: unknown): boolean {
     !(value instanceof Date) &&
     Object.keys(value).some((k) => k.startsWith("$"))
   );
+}
+
+// _id and createdAt never change after insert, whatever an update asks for.
+function applyKeepingImmutable(doc: Doc, update: Update, now: string): Doc {
+  return clone({ ...applyUpdate(doc, update), _id: doc._id, createdAt: doc.createdAt, updatedAt: now });
 }
 
 function equalityFields(filter: Filter): Doc {
@@ -133,7 +156,9 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
     let result = this.docs().filter((d) => matches(d, filter));
     if (options.sort) result = sortDocs(result, options.sort);
     const skip = options.skip ?? 0;
-    result = options.limit === undefined ? result.slice(skip) : result.slice(skip, skip + options.limit);
+    const limit = options.limit;
+    // As in MongoDB, 0 (and anything not positive) means no limit.
+    result = limit === undefined || limit <= 0 ? result.slice(skip) : result.slice(skip, skip + limit);
     return result;
   }
 
@@ -218,7 +243,7 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
       result = this.build(applyUpdate(equalityFields(filter), update, true), now);
       next = [...current, result];
     } else {
-      result = clone({ ...applyUpdate(current[index], update), updatedAt: now });
+      result = applyKeepingImmutable(current[index], update, now);
       next = current.map((d, i) => (i === index ? result : d));
     }
     this.checkUnique(next);
@@ -232,7 +257,7 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
     const next = this.docs().map((d) => {
       if (!matches(d, filter)) return d;
       changed++;
-      return clone({ ...applyUpdate(d, update), updatedAt: now });
+      return applyKeepingImmutable(d, update, now);
     });
     if (changed === 0) return 0;
     this.checkUnique(next);
@@ -244,7 +269,10 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
     const now = new Date().toISOString();
     let next = this.docs();
     for (const { filter, update } of ops) {
-      next = next.map((d) => (matches(d, filter) ? clone({ ...applyUpdate(d, update), updatedAt: now }) : d));
+      // First match only, as bulkWrite updateOne does in the Mongo store.
+      const index = next.findIndex((d) => matches(d, filter));
+      if (index === -1) continue;
+      next = next.map((d, i) => (i === index ? applyKeepingImmutable(d, update, now) : d));
     }
     this.checkUnique(next);
     this.store.write(this.name, next);

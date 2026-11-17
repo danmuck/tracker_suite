@@ -34,7 +34,7 @@ export interface Collection<T extends BaseDoc> {
   insertMany(docs: Omit<T, keyof BaseDoc>[]): Promise<T[]>;
   updateById(id: string, update: Update): Promise<T | null>; // returns the updated doc
   updateOne(filter: Filter, update: Update, options?: { upsert?: boolean }): Promise<T | null>;
-  updateMany(filter: Filter, update: Update): Promise<number>; // count changed
+  updateMany(filter: Filter, update: Update): Promise<number>; // count matched
   batchUpdate(ops: { filter: Filter; update: Update }[]): Promise<void>;
   deleteById(id: string): Promise<T | null>; // returns the deleted doc
   deleteMany(filter: Filter): Promise<number>;

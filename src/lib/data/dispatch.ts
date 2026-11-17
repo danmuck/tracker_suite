@@ -28,12 +28,20 @@ export function matchRoute(
   method: string,
   pathname: string,
 ): { route: RouteDef; params: Record<string, string> } | null {
+  // Like Next, prefer static segments: the fewest :params wins, ties go to the first registered.
+  let best: { route: RouteDef; params: Record<string, string> } | null = null;
+  let bestDynamic = Infinity;
   for (const route of routes) {
     if (route.method !== method) continue;
     const params = matchPath(route.path, pathname);
-    if (params) return { route, params };
+    if (!params) continue;
+    const dynamic = route.path.split("/").filter((s) => s.startsWith(":")).length;
+    if (dynamic < bestDynamic) {
+      best = { route, params };
+      bestDynamic = dynamic;
+    }
   }
-  return null;
+  return best;
 }
 
 export async function dispatch(

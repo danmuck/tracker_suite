@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BrowserStore, DATA_VERSION } from "./browser-store";
+import { BrowserStore, createMemoryStorage, DATA_VERSION } from "./browser-store";
 import { ConflictError, type BaseDoc } from "./store";
 import { memoryStorage } from "./test-helpers";
 
@@ -92,4 +92,39 @@ test("clear keeps the version key so data added afterwards survives a reload", a
   await store.collection<Group>("linkGroups").insert({ name: "B", slug: "b", order: 0 });
   const reloaded = new BrowserStore(storage).collection<Group>("linkGroups");
   assert.deepEqual((await reloaded.find()).map((g) => g.name), ["B"]);
+});
+
+test("batchUpdate updates only the first match per op, as bulkWrite updateOne does", async () => {
+  const groups = new BrowserStore(memoryStorage()).collection<Group>("linkGroups");
+  await groups.insert({ name: "A", slug: "a", order: 1 });
+  await groups.insert({ name: "B", slug: "b", order: 1 });
+  await groups.batchUpdate([{ filter: { order: 1 }, update: { $set: { order: 9 } } }]);
+  assert.deepEqual((await groups.find({}, { sort: { name: 1 } })).map((g) => g.order), [9, 1]);
+});
+
+test("limit 0 means no limit, as in MongoDB", async () => {
+  const groups = new BrowserStore(memoryStorage()).collection<Group>("linkGroups");
+  await groups.insert({ name: "A", slug: "a", order: 1 });
+  await groups.insert({ name: "B", slug: "b", order: 2 });
+  assert.equal((await groups.find({}, { limit: 0 })).length, 2);
+  assert.equal((await groups.find({}, { limit: -1 })).length, 2);
+  assert.ok(await groups.findOne({}, { limit: 0 }));
+});
+
+test("updates cannot overwrite _id or createdAt", async () => {
+  const groups = new BrowserStore(memoryStorage()).collection<Group>("linkGroups");
+  const a = await groups.insert({ name: "A", slug: "a", order: 1 });
+  const viaId = await groups.updateById(a._id, { $set: { _id: "x", createdAt: "y", name: "A2" } });
+  assert.deepEqual([viaId?._id, viaId?.createdAt, viaId?.name], [a._id, a.createdAt, "A2"]);
+  await groups.updateMany({}, { $set: { _id: "x" }, $unset: { createdAt: "" } });
+  await groups.batchUpdate([{ filter: {}, update: { $set: { createdAt: "z" } } }]);
+  await groups.updateOne({ slug: "a" }, { $set: { _id: "q" } });
+  const after = await groups.findById(a._id);
+  assert.deepEqual([after?._id, after?.createdAt], [a._id, a.createdAt]);
+});
+
+test("a BrowserStore works over the in-memory storage fallback", async () => {
+  const groups = new BrowserStore(createMemoryStorage()).collection<Group>("linkGroups");
+  const a = await groups.insert({ name: "A", slug: "a", order: 1 });
+  assert.equal((await groups.findById(a._id))?.name, "A");
 });

@@ -78,10 +78,27 @@ function matchesOperators(actual: unknown, ops: Record<string, unknown>): boolea
   return true;
 }
 
+function assertFlat(key: string): void {
+  if (key.includes(".")) throw new Error(`Dotted paths are not supported: ${key}`);
+}
+
+// Checked up front so a dotted key fails even when an earlier condition already decided the match.
+function assertFilterFlat(filter: Filter): void {
+  for (const [key, condition] of Object.entries(filter)) {
+    if (key === "$or") for (const sub of condition as Filter[]) assertFilterFlat(sub);
+    else if (!key.startsWith("$")) assertFlat(key);
+  }
+}
+
 export function matches(doc: Doc, filter: Filter): boolean {
+  assertFilterFlat(filter);
+  return matchesFlat(doc, filter);
+}
+
+function matchesFlat(doc: Doc, filter: Filter): boolean {
   for (const [key, condition] of Object.entries(filter)) {
     if (key === "$or") {
-      if (!(condition as Filter[]).some((sub) => matches(doc, sub))) return false;
+      if (!(condition as Filter[]).some((sub) => matchesFlat(doc, sub))) return false;
     } else if (key.startsWith("$")) {
       throw new Error(`Unsupported filter operator: ${key}`);
     } else if (isOperatorObject(condition)) {
@@ -94,6 +111,9 @@ export function matches(doc: Doc, filter: Filter): boolean {
 }
 
 export function applyUpdate<T extends Doc>(doc: T, update: Update, inserting = false): T {
+  for (const part of [update.$setOnInsert, update.$set, update.$inc, update.$unset]) {
+    for (const key of Object.keys(part ?? {})) assertFlat(key);
+  }
   const next: Doc = { ...doc };
   if (inserting && update.$setOnInsert) Object.assign(next, update.$setOnInsert);
   if (update.$set) Object.assign(next, update.$set);

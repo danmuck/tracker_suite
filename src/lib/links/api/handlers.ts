@@ -91,6 +91,7 @@ export const deleteGroup: Handler = async ({ store, params }) => {
 
 export const listLinks: Handler = async ({ store, query }) => {
   const groupId = query.get("groupId");
+  if (groupId && !isId(groupId)) return ok([]);
   const found = await links(store).find(groupId ? { groupId } : {}, { sort: BY_ORDER });
   return ok(found);
 };
