@@ -52,16 +52,11 @@ async function writeSchedule(
 }
 
 /**
- * Validate links, save the profile, and write net-pay / rent schedules onto the linked
- * recurring transactions, then refresh automatic RAP schedules. Throws LinkedTransactionMissingError.
+ * The profile's Salary and Rent links: a malformed id throws (the route's 500), a missing
+ * transaction throws LinkedTransactionMissingError (the 409). Reads only.
  */
-export async function saveProfileAndApply(
-  store: Store,
-  p: FinanceProfileData,
-  now: Date,
-): Promise<{ salary: boolean; rent: boolean }> {
+export async function checkProfileLinks(store: Store, p: FinanceProfileData): Promise<void> {
   const tx = transactions(store);
-  // Check links before saving anything so a bad link leaves no partial write (AP5, AP6)
   if (p.salaryTransactionId) {
     assertId(p.salaryTransactionId);
     if (!(await tx.exists({ _id: p.salaryTransactionId }))) throw new LinkedTransactionMissingError("Salary");
@@ -70,6 +65,19 @@ export async function saveProfileAndApply(
     assertId(p.rentTransactionId);
     if (!(await tx.exists({ _id: p.rentTransactionId }))) throw new LinkedTransactionMissingError("Rent");
   }
+}
+
+/**
+ * Validate links, save the profile, and write net-pay / rent schedules onto the linked
+ * recurring transactions, then refresh automatic RAP schedules. Throws LinkedTransactionMissingError.
+ */
+export async function saveProfileAndApply(
+  store: Store,
+  p: FinanceProfileData,
+  now: Date,
+): Promise<{ salary: boolean; rent: boolean }> {
+  // Check links before saving anything so a bad link leaves no partial write (AP5, AP6)
+  await checkProfileLinks(store, p);
 
   const previous = await loadProfile(store); // AP1
   await profiles(store).updateOne({}, { $set: profileToDoc(p) }, { upsert: true }); // AP7

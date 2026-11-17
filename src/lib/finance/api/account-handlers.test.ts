@@ -96,6 +96,44 @@ test("archive hides from the default list; delete removes the account and transa
   assert.deepEqual(await balances(), { B: 0 });
 });
 
+test("deleting an account clears every link to it and to the transactions deleted with it (bug 7)", async () => {
+  const doomed = await acct({ name: "Doomed", type: "bank", balance: 100 });
+  const bank = await acct({ name: "Bank", type: "bank", balance: 100 });
+  const loan = await acct({ name: "Loan", type: "debt", balance: 500, isLoan: true, linkedAccountId: doomed._id });
+  const card = await acct({ name: "Card", type: "credit_card", balance: 300 });
+  const otherLoan = await acct({ name: "Other Loan", type: "debt", balance: 500, isLoan: true, linkedAccountId: bank._id });
+  const plan = (id: string, fromAccountId: string) => t.call("POST", `/api/accounts/${id}/payment-plan`, { fromAccountId, dayOfMonth: 15, startDate: "2026-12-15", firstAmount: 25 });
+  const loanPay = ((await plan(loan._id, doomed._id)).body as { data: { payment: { transactionId: string } } }).data.payment.transactionId;
+  const cardPay = ((await plan(card._id, bank._id)).body as { data: { payment: { transactionId: string } } }).data.payment.transactionId;
+  const row = { amount: 100, date: "2026-11-01T00:00:00.000Z", description: "t", isRecurring: false, categoryTags: [], balanceApplied: true };
+  const salary = await tx().insert({ ...row, type: "transfer", accountId: bank._id, toAccountId: doomed._id });
+  // Stored before bug 2 was fixed: a debit on Bank still naming Doomed as its destination
+  const stale = await tx().insert({ ...row, type: "debit", accountId: bank._id, toAccountId: doomed._id });
+  const rent = await tx().insert({ ...row, type: "debit", accountId: bank._id, isRecurring: true, recurrenceRule: { frequency: "monthly", interval: 1, startDate: "2026-12-01T00:00:00.000Z", endDate: null, daysOfMonth: [] } });
+  await t.call("PUT", "/api/finance-profile", { filingStatus: "single", hoursPerWeek: 40, nycResident: false, raiseRate: 0.03, salarySteps: [{ effectiveDate: "2025-01-01", annualGross: 80000 }], retirementSteps: [], healthSteps: [], rentSteps: [], whatIfSalaries: [], salaryTransactionId: salary._id, rentTransactionId: rent._id });
+
+  assert.equal((await t.call("DELETE", `/api/accounts/${doomed._id}`)).status, 200);
+
+  const after = async (id: string) => (await accounts(t.store).findById(id))!;
+  // The loan survives without its link to Doomed or its payment plan transfer (deleted with Doomed)
+  const survivor = await after(loan._id);
+  assert.deepEqual(["linkedAccountId" in survivor, "paymentTransactionId" in survivor, survivor.isLoan], [false, false, true]);
+  assert.equal(await tx().findById(loanPay), null);
+  // Links to anything else are untouched
+  assert.deepEqual([(await after(card._id)).paymentTransactionId, (await after(otherLoan._id)).linkedAccountId], [cardPay, bank._id]);
+  // The Datasheet's Salary link pointed at a transfer deleted with Doomed; Rent is kept
+  const profile = ((await t.call("GET", "/api/finance-profile")).body as { data: { salaryTransactionId: string | null; rentTransactionId: string | null } }).data;
+  assert.deepEqual([profile.salaryTransactionId, profile.rentTransactionId], [null, rent._id]);
+  // The stale debit stays (it is Bank's) without the dangling destination
+  const kept = (await tx().findById(stale._id))!;
+  assert.deepEqual([kept.type, kept.accountId, "toAccountId" in kept], ["debit", bank._id, false]);
+  // The deleted account is not written back
+  assert.equal(await accounts(t.store).findById(doomed._id), null);
+  // The next Datasheet save no longer answers 409
+  const save = await t.call("PUT", "/api/finance-profile", { filingStatus: "single", hoursPerWeek: 40, nycResident: false, raiseRate: 0.03, salarySteps: [{ effectiveDate: "2025-01-01", annualGross: 80000 }], retirementSteps: [], healthSteps: [], rentSteps: [], whatIfSalaries: [], ...profile });
+  assert.equal(save.status, 200);
+});
+
 test("validation is 400 with flatten details; unknown and malformed ids are 404; an unparseable body is 400", async () => {
   const bad = await t.call("POST", "/api/accounts", { name: "", type: "bank", balance: 1 });
   assert.equal(bad.status, 400);

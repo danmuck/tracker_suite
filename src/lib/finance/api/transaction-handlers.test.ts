@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { BaseDoc } from "@/lib/data/store";
-import { accounts, transactions, type AccountDoc, type TransactionDoc } from "./docs";
+import { accounts, profiles, transactions, type AccountDoc, type TransactionDoc } from "./docs";
 import { setup, withTimeZone } from "./test-helpers";
 
 let t = setup();
@@ -179,13 +179,41 @@ test("a recurring semi-monthly rule needs daysOfMonth: 400 on create and update,
   assert.equal((await t.call("POST", "/api/transactions", body({ recurrenceRule: { frequency: "semi_monthly", startDate: "2026-11-01" } }))).status, 201);
 });
 
-test("update keeps fields the body leaves out; current behavior: a transfer changed to a debit keeps toAccountId", async () => {
+test("update keeps fields the body leaves out; a transfer changed to a debit drops toAccountId (bug 2)", async () => {
   const move = await post({ type: "transfer", toAccountId: card._id, amount: 50, notes: "keep" });
   const res = await t.call("PUT", `/api/transactions/${move._id}`, body({ amount: 5 }));
   const updated = res.body as TransactionDoc;
-  assert.deepEqual([res.status, updated.type, updated.toAccountId, updated.notes, updated.amount], [200, "debit", card._id, "keep", 500]);
+  assert.deepEqual([res.status, updated.type, "toAccountId" in updated, updated.notes, updated.amount], [200, "debit", false, "keep", 500]);
   assert.deepEqual(await balances(), { Bank: 99500, Card: 20000, Loan: 30000 });
   assert.deepEqual(await t.call("GET", `/api/transactions/${move._id}`), { status: 200, body: updated });
+  // No longer listed under the card it used to pay
+  assert.deepEqual(((await t.call("GET", `/api/transactions?accountId=${card._id}`)).body as { data: TransactionDoc[] }).data, []);
+  // A credit edit carrying a toAccountId does not store it either (a malformed one is still the 500)
+  const credit = await t.call("PUT", `/api/transactions/${move._id}`, body({ type: "credit", toAccountId: card._id }));
+  assert.deepEqual([credit.status, "toAccountId" in (credit.body as TransactionDoc)], [200, false]);
+});
+
+test("turning recurrence off drops recurrenceRule and keeps a managed amountSchedule (bug 2)", async () => {
+  const rec = await post({ isRecurring: true, recurrenceRule: { frequency: "monthly", startDate: "2026-11-01", dayOfMonth: 1 } });
+  const schedule = [{ effectiveDate: "2026-12-01T00:00:00.000Z", amount: 2000 }];
+  await tx().updateById(rec._id, { $set: { amountSchedule: schedule } });
+  const res = await t.call("PUT", `/api/transactions/${rec._id}`, body({ isRecurring: false }));
+  const updated = res.body as TransactionDoc;
+  assert.deepEqual([res.status, updated.isRecurring, "recurrenceRule" in updated, updated.amountSchedule], [200, false, false, schedule]);
+  assert.deepEqual(await tx().findById(rec._id), updated);
+  // Recurring again with a new rule stores it; a non-recurring edit carrying a rule does not keep it
+  const again = (await t.call("PUT", `/api/transactions/${rec._id}`, body({ isRecurring: true, recurrenceRule: { frequency: "weekly", startDate: "2026-11-20", dayOfWeek: 5 } }))).body as TransactionDoc;
+  assert.equal(again.recurrenceRule?.frequency, "weekly");
+  const off = (await t.call("PUT", `/api/transactions/${rec._id}`, body({ isRecurring: false, recurrenceRule: { frequency: "weekly", startDate: "2026-11-20", dayOfWeek: 5 } }))).body as TransactionDoc;
+  assert.equal("recurrenceRule" in off, false);
+});
+
+test("list by account: a stored debit still holding a stale toAccountId is listed only under its own account (bug 2)", async () => {
+  const stale = await tx().insert({ amount: 700, date: "2026-10-01T00:00:00.000Z", description: "stale", accountId: bank._id, toAccountId: card._id, type: "debit", isRecurring: false, categoryTags: [], balanceApplied: true });
+  const ids = async (id: string) => ((await t.call("GET", `/api/transactions?accountId=${id}`)).body as { data: TransactionDoc[]; pagination: { total: number } });
+  assert.deepEqual((await ids(card._id)).data, []);
+  assert.equal((await ids(card._id)).pagination.total, 0);
+  assert.deepEqual((await ids(bank._id)).data.map((x) => x._id), [stale._id]);
 });
 
 test("an edit refused for a missing account changes nothing", async () => {
@@ -234,8 +262,28 @@ test("a legacy transaction without balanceApplied is treated as applied", async 
 test("deleting a plan's payment transfer unlinks the plan", async () => {
   const pay = await post({ type: "transfer", toAccountId: card._id, amount: 20, isRecurring: true, recurrenceRule: { frequency: "monthly", startDate: "2026-12-15", dayOfMonth: 15 } });
   await accounts(t.store).updateById(card._id, { $set: { paymentTransactionId: pay._id } });
+  await accounts(t.store).updateById(loan._id, { $set: { paymentTransactionId: "c".repeat(24) } });
   await t.call("DELETE", `/api/transactions/${pay._id}`);
   assert.equal("paymentTransactionId" in (await accounts(t.store).findById(card._id))!, false);
+  assert.equal((await accounts(t.store).findById(loan._id))!.paymentTransactionId, "c".repeat(24));
+});
+
+test("deleting a transaction clears the Datasheet links to it and no other (bug 7)", async () => {
+  const rec = (over: object) => post({ isRecurring: true, recurrenceRule: { frequency: "monthly", startDate: "2026-12-01", dayOfMonth: 1 }, ...over });
+  const salary = await rec({ type: "credit", description: "Salary" });
+  const rent = await rec({ description: "Rent" });
+  await profiles(t.store).updateOne({}, { $set: { salaryTransactionId: salary._id, rentTransactionId: rent._id } }, { upsert: true });
+  await t.call("DELETE", `/api/transactions/${salary._id}`);
+  let stored = (await profiles(t.store).findOne({}))!;
+  assert.deepEqual([stored.salaryTransactionId, stored.rentTransactionId], [null, rent._id]);
+  await t.call("DELETE", `/api/transactions/${rent._id}`);
+  stored = (await profiles(t.store).findOne({}))!;
+  assert.deepEqual([stored.salaryTransactionId, stored.rentTransactionId], [null, null]);
+  // Deleting an unlinked transaction writes nothing to the profile
+  const other = await post();
+  const before = t.writes("financeProfile");
+  await t.call("DELETE", `/api/transactions/${other._id}`);
+  assert.equal(t.writes("financeProfile"), before);
 });
 
 test("errors: validation 400 with plain-JSON details, missing accounts 400, ids 404 or 500 as today", async () => {

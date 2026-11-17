@@ -4,11 +4,13 @@
 
 import { z } from "zod";
 import { fail, ok, type Handler } from "@/lib/data/api";
+import { amountOn } from "@/lib/finance/amount-schedule";
 import { toDateStr } from "@/lib/finance/dates";
 import { profileFromDollars, profileToDollars } from "@/lib/finance/finance-profile";
 import { financeProfileSchema } from "@/lib/finance/validators";
 import { assertId, loadProfile, saveTransaction, shapeTransaction, transactions } from "./docs";
-import { LinkedTransactionMissingError, saveProfileAndApply } from "./profile";
+import { moveTransactionLinks } from "./links";
+import { checkProfileLinks, LinkedTransactionMissingError, saveProfileAndApply } from "./profile";
 
 /** A LinkedTransactionMissingError becomes the 409 with its message; anything else is the route's 500. */
 const linkErrors =
@@ -39,9 +41,11 @@ export const saveProfile: Handler = linkErrors(async ({ store, body, now }) => {
 const mergeSchema = z.object({ keepId: z.string().min(1), mergeId: z.string().min(1) });
 
 /**
- * POST — fold a second Rent transaction into the linked one as a dated rent change, then delete it.
- * As today, the kept rule's endDate is written and the merged transaction deleted before the
- * profile is saved and applied, so a failure there leaves both writes in place.
+ * POST — fold a second Rent transaction into the linked one as dated rent changes, then delete it.
+ * The merged one's amounts become rent steps (its start, then its own later schedule entries; a
+ * date the kept steps already have keeps the kept amount), and every reference to it moves to the
+ * kept one (bug 13). The profile's links are checked before the first write, so a 409 or a 500
+ * there changes nothing.
  */
 export const mergeRent: Handler = linkErrors(async ({ store, body, now }) => {
   const parsed = mergeSchema.safeParse(body);
@@ -66,16 +70,33 @@ export const mergeRent: Handler = linkErrors(async ({ store, body, now }) => {
   if (rentSteps.length === 0 && keep.recurrenceRule) {
     rentSteps.push({ effectiveDate: toDateStr(keep.recurrenceRule.startDate), monthly: keep.amount });
   }
-  if (!rentSteps.some((s) => s.effectiveDate === mergeDate)) {
-    rentSteps.push({ effectiveDate: mergeDate, monthly: merge.amount });
+  // What the merged transaction charged on its start date, then its later schedule entries by date
+  const mergedSteps = [
+    { effectiveDate: mergeDate, monthly: amountOn(merge.amount, merge.amountSchedule, mergeDate) },
+    ...(merge.amountSchedule ?? [])
+      .map((e) => ({ effectiveDate: toDateStr(e.effectiveDate), monthly: e.amount }))
+      .filter((e) => e.effectiveDate > mergeDate)
+      .sort((a, b) => a.effectiveDate.localeCompare(b.effectiveDate)),
+  ];
+  for (const step of mergedSteps) {
+    if (!rentSteps.some((s) => s.effectiveDate === step.effectiveDate)) rentSteps.push(step);
   }
+  const next = {
+    ...profile,
+    salaryTransactionId: profile.salaryTransactionId === mergeId ? keepId : profile.salaryTransactionId,
+    rentTransactionId: keepId,
+    rentSteps,
+  };
+  await checkProfileLinks(store, next);
 
   if (keep.recurrenceRule) {
     // M2: what keep.save() persists after assigning recurrenceRule.endDate
     await saveTransaction(store, keepRaw, { "recurrenceRule.endDate": merge.recurrenceRule.endDate ?? null });
   }
+  // References move before the delete, so none is ever left pointing at nothing
+  await moveTransactionLinks(store, mergeId, keepId);
   await tx.deleteById(mergeId); // M3
 
-  const updated = await saveProfileAndApply(store, { ...profile, rentTransactionId: keepId, rentSteps }, now);
+  const updated = await saveProfileAndApply(store, next, now);
   return ok({ data: profileToDollars(await loadProfile(store)), updated });
 });

@@ -50,7 +50,7 @@ test("compareTranscripts: every step is compared exactly; an allowed step's gold
 test("scenario: unique step ids, relative dates, distinct amounts and dates among created transactions", () => {
   const steps = buildScenario("2026-11-17");
   assert.equal(new Set(steps.map((s) => s.id)).size, steps.length);
-  assert.equal(steps.length, 204);
+  assert.equal(steps.length, 219);
   const posts = steps.filter((s) => s.method === "POST" && s.path === "/api/transactions" && s.expect === 201);
   const created = posts.map((s) => s.body as { amount: number; date: string });
   assert.equal(new Set(created.map((b) => b.amount)).size, created.length);

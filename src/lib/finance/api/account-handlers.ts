@@ -7,6 +7,7 @@ import { planFieldsToDb } from "@/lib/finance/account-plan-fields";
 import { firstFutureInstant, todayStoredDate } from "@/lib/finance/dates";
 import { accountArchiveSchema, accountSchema } from "@/lib/finance/validators";
 import { accounts, assertId, isDebtType, requiredText, shapeAccount, shapeTransaction, transactions, type AccountDoc } from "./docs";
+import { clearAccountLinks, clearTransactionLinks } from "./links";
 import { postDuePayments } from "./post-payments";
 
 const ACCOUNT = "Account";
@@ -193,7 +194,10 @@ export const archiveAccount: Handler = async ({ store, params, body }) => {
   return ok(updated ? shapeAccount(updated) : null);
 };
 
-/** DELETE /api/accounts/:accountId — the account and every transaction on either side of it. */
+/**
+ * DELETE /api/accounts/:accountId — the account and every transaction on either side of it, then
+ * every link to them on the documents that survive (bug 7).
+ */
 export const deleteAccount: Handler = async ({ store, params }) => {
   if (!isId(params.accountId)) return notFound(ACCOUNT);
   const accountId = params.accountId;
@@ -202,8 +206,17 @@ export const deleteAccount: Handler = async ({ store, params }) => {
   if (!raw) return notFound(ACCOUNT);
   if (shapeAccount(raw).isCash) return fail(403, "The Cash account cannot be deleted");
 
-  await transactions(store).deleteMany({ $or: [{ accountId }, { toAccountId: accountId }] }); // A19
+  const txs = transactions(store);
+  // Only a transfer is on the destination side: a debit or credit with a stale toAccountId (bug 2)
+  // belongs to its own account and stays
+  const owned = { $or: [{ accountId }, { toAccountId: accountId, type: "transfer" }] };
+  const deletedIds = (await txs.find(owned)).map((t) => t._id);
+  await txs.deleteMany(owned); // A19
   await acc.deleteById(accountId); // A20
+
+  // Links are cleared after the deletes, so the deleted account is never written
+  await clearTransactionLinks(store, deletedIds);
+  await clearAccountLinks(store, accountId);
 
   return ok({ message: "Account and associated transactions deleted" });
 };

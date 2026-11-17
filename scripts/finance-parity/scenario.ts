@@ -355,6 +355,7 @@ export function buildScenario(today: string): Step[] {
     ),
     send("T38", "PUT", "/api/transactions/{tSub}", { ...t03, date: d(7) }, 200),
     send("T39", "PUT", "/api/transactions/{tSub}", t03, 200),
+    // Bug 2: the transfer turned debit drops its toAccountId, so T40b no longer lists it under savings
     send(
       "T40",
       "PUT",
@@ -362,6 +363,7 @@ export function buildScenario(today: string): Step[] {
       { amount: 500, date: d(-16), description: "Parity to savings", accountId: "{checking}", type: "debit", categoryTags: ["transfer"] },
       200,
     ),
+    get("T40b", "/api/transactions?accountId={savings}&sort=date&order=asc", 200),
     send(
       "T41",
       "PUT",
@@ -572,7 +574,9 @@ export function buildScenario(today: string): Step[] {
     send("X12", "POST", "/api/finance-profile/merge-rent", { keepId: "abc", mergeId: "{rent}" }, 500),
     // Malformed link id reaches Transaction.exists (apply-profile.ts:89): the route's 500
     send("X13", "PUT", "/api/finance-profile", { ...PROFILE, salaryTransactionId: "abc", rentSteps: [] }, 500),
-    // merge-rent 409: the profile's Salary link points at a deleted transaction (apply-profile.ts:89-91)
+    // Bug 7: deleting salary2 (X16) clears the profile's Salary link, so the merge at X18, which once
+    // answered 409 for that dangling link after writing, now succeeds. Bug 13 checks the links before
+    // any write (handler test); no request can leave a dangling link any more.
     send(
       "X14",
       "POST",
@@ -609,8 +613,7 @@ export function buildScenario(today: string): Step[] {
       201,
       { save: { name: "rent3", from: "_id" } },
     ),
-    // Writes the keep's endDate and deletes the merged transaction before the link check throws
-    send("X18", "POST", "/api/finance-profile/merge-rent", { keepId: "{rent}", mergeId: "{rent3}" }, 409),
+    send("X18", "POST", "/api/finance-profile/merge-rent", { keepId: "{rent}", mergeId: "{rent3}" }, 200),
     get("X19", "/api/transactions/{rent}", 200),
     get("X20", "/api/transactions?limit=100&sort=date&order=asc", 200),
     get("X21", "/api/finance-profile", 200),
@@ -651,5 +654,44 @@ export function buildScenario(today: string): Step[] {
     send("X29", "POST", "/api/transactions", { amount: 18.6, date: d(4), description: "Parity order card payment", accountId: "{orderCard}", type: "credit", categoryTags: ["credit"] }, 201),
     send("X30", "POST", "/api/transactions", { amount: 41.3, date: d(4), description: "Parity order card charge", accountId: "{orderCard}", type: "debit", categoryTags: ["spending"] }, 201),
     get("X31", `/api/projections?startDate=${d(0)}&endDate=${d(5)}&accountId={orderCard}`, 200),
+
+    // ── Stale and dangling data (bugs 2, 7, 13). Last: they change the rent and add accounts. ──
+    // Bug 2: turning recurrence off drops the rule
+    send(
+      "X32",
+      "POST",
+      "/api/transactions",
+      {
+        amount: 19.99,
+        date: dom(1, 20),
+        description: "Parity streaming",
+        accountId: "{checking}",
+        type: "debit",
+        isRecurring: true,
+        recurrenceRule: { frequency: "monthly", startDate: dom(1, 20), dayOfMonth: 20 },
+        categoryTags: ["bills"],
+      },
+      201,
+      { save: { name: "flip", from: "_id" } },
+    ),
+    send("X33", "PUT", "/api/transactions/{flip}", { amount: 19.99, date: dom(1, 20), description: "Parity streaming", accountId: "{checking}", type: "debit", isRecurring: false, categoryTags: ["bills"] }, 200),
+    // Bug 7: deleting an account clears links to it (linkedAccountId) and to the plan transfer deleted with it
+    send("X34", "POST", "/api/accounts", { name: "Parity Doomed", type: "bank", balance: 100 }, 201, { save: { name: "doomed", from: "_id" } }),
+    send("X35", "POST", "/api/accounts", { name: "Parity Doomed Loan", type: "debt", balance: 900, isLoan: true, linkedAccountId: "{doomed}" }, 201, { save: { name: "doomedLoan", from: "_id" } }),
+    send("X36", "POST", plan("{doomedLoan}"), { fromAccountId: "{doomed}", dayOfMonth: 9, startDate: dom(2, 9), firstAmount: 75 }, 200, {
+      save: { name: "doomedPay", from: "data.payment.transactionId" },
+    }),
+    del("X37", "/api/accounts/{doomed}", 200),
+    get("X38", "/api/accounts/{doomedLoan}", 200),
+    get("X39", plan("{doomedLoan}"), 200),
+    // Bug 13: merge-rent keeps the merged transaction's own schedule and moves the plan's link to the kept rent
+    send("X40", "POST", "/api/accounts", { name: "Parity Merge Loan", type: "debt", balance: 600 }, 201, { save: { name: "mergeLoan", from: "_id" } }),
+    send("X41", "POST", plan("{mergeLoan}"), { fromAccountId: "{checking}", dayOfMonth: 11, startDate: dom(3, 11), firstAmount: 60 }, 200, {
+      save: { name: "mergePay", from: "data.payment.transactionId" },
+    }),
+    send("X42", "PUT", plan("{mergeLoan}"), { schedule: [{ effectiveDate: dom(3, 11), amount: 60 }, { effectiveDate: dom(5, 11), amount: 65 }] }, 200),
+    send("X43", "POST", "/api/finance-profile/merge-rent", { keepId: "{rent}", mergeId: "{mergePay}" }, 200),
+    get("X44", "/api/accounts/{mergeLoan}", 200),
+    get("X45", "/api/transactions/{rent}", 200),
   ];
 }

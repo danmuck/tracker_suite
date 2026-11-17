@@ -1,7 +1,8 @@
 // Transaction routes (R11–R15) as store-backed handlers, shared by the server and browser data modes.
 // Same signs and caps as src/app/api/transactions/route.ts and [transactionId]/route.ts. A PUT
-// resolves and checks the new state before its first write (a refused edit changes nothing); it
-// still keeps a stale toAccountId (bug 2).
+// resolves and checks the new state before its first write (a refused edit changes nothing), and
+// drops the fields the new state does not use: toAccountId off a transfer, recurrenceRule off a
+// recurring transaction (bug 2).
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import { fail, isId, notFound, ok, type ApiResult, type Handler } from "@/lib/data/api";
@@ -20,6 +21,7 @@ import {
   type AccountDoc,
   type TransactionDoc,
 } from "./docs";
+import { clearTransactionLinks } from "./links";
 
 const TRANSACTION = "Transaction";
 
@@ -149,7 +151,8 @@ export const listTransactions: Handler = async ({ store, query }) => {
 
   if (accountId) {
     assertId(accountId);
-    filter.$or = [{ accountId }, { toAccountId: accountId }];
+    // Only a transfer has a destination: a debit or credit stored with a stale toAccountId is not listed there
+    filter.$or = [{ accountId }, { toAccountId: accountId, type: "transfer" }];
   }
 
   if (startDate || endDate) {
@@ -360,15 +363,30 @@ export const updateTransaction: Handler = async ({ store, params, body, now }) =
     newEffect = [{ accountId: validated.accountId, delta }];
   }
 
+  // Fields the new state does not use are removed, not kept from the old one (bug 2). A managed
+  // amountSchedule stays: the Datasheet or payment plan that wrote it still owns it.
+  const unset: Record<string, 1> = {};
+  if (validated.type !== "transfer") {
+    delete fields.toAccountId;
+    unset.toAccountId = 1;
+  }
+  if (!validated.isRecurring) {
+    delete fields.recurrenceRule;
+    unset.recurrenceRule = 1;
+  }
+
   // Writes: the reversal, the new effect (T16 / T18), then the document (T19)
   await applyChanges(acc, reversal);
   await applyChanges(acc, newEffect);
   fields.amount = validated.type === "transfer" ? finalNewAmount : newAmountInCents;
-  const updated = await txs.updateById(transactionId, { $set: fields });
+  const updated = await txs.updateById(transactionId, {
+    $set: fields,
+    ...(Object.keys(unset).length ? { $unset: unset } : {}),
+  });
   return ok(updated);
 };
 
-/** DELETE /api/transactions/:transactionId — reverse if applied, delete, unlink any payment plan. */
+/** DELETE /api/transactions/:transactionId — reverse if applied, delete, then clear every link to it. */
 export const deleteTransaction: Handler = async ({ store, params }) => {
   if (!isId(params.transactionId)) return notFound(TRANSACTION);
   const transactionId = params.transactionId;
@@ -382,8 +400,8 @@ export const deleteTransaction: Handler = async ({ store, params }) => {
   if (transaction.balanceApplied) await applyChanges(acc, await reversalOf(acc, transaction));
 
   await txs.deleteById(transactionId); // T26
-  // A deleted payment-plan transfer leaves no plan behind (T27)
-  await acc.updateMany({ paymentTransactionId: transactionId }, { $unset: { paymentTransactionId: 1 } });
+  // A deleted payment-plan transfer leaves no plan behind (T27); the Datasheet loses its link (bug 7)
+  await clearTransactionLinks(store, [transactionId]);
 
   return ok({ message: "Transaction deleted successfully" });
 };

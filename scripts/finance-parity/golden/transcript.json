@@ -1,10 +1,10 @@
 {
   "meta": {
-    "capturedAt": "2026-11-17T23:20:12.797Z",
+    "capturedAt": "2026-11-17T23:31:14.667Z",
     "localDate": "2026-11-17",
     "utcDate": "2026-11-17",
     "timeZone": "America/New_York",
-    "commit": "d4021d2f27edc9e805eb3e6a27f17738495735d0"
+    "commit": "43a87d18c81aa5fe998fb379848ce9138a2b2d70"
   },
   "steps": [
     {
@@ -2964,9 +2964,60 @@
         "date": "2026-11-01T00:00:00.000Z",
         "description": "Parity to savings",
         "isRecurring": false,
-        "toAccountId": "<savings>",
         "type": "debit",
         "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "T40b",
+      "request": "GET /api/transactions?accountId={savings}&sort=date&order=asc",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "_id": "<id:13>",
+            "accountId": "<checking>",
+            "amount": 8000,
+            "balanceApplied": false,
+            "categoryTags": [
+              "transfer"
+            ],
+            "date": "2026-08-20T00:00:00.000Z",
+            "description": "Parity auto-save",
+            "isRecurring": true,
+            "recurrenceRule": {
+              "daysOfMonth": [],
+              "endDate": null,
+              "frequency": "weekly",
+              "interval": 2,
+              "startDate": "2026-08-20T00:00:00.000Z"
+            },
+            "toAccountId": "<savings>",
+            "type": "transfer",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<id:12>",
+            "accountId": "<checking>",
+            "amount": 5000,
+            "balanceApplied": false,
+            "categoryTags": [
+              "transfer"
+            ],
+            "date": "2026-11-23T00:00:00.000Z",
+            "description": "Parity future transfer",
+            "isRecurring": false,
+            "toAccountId": "<savings>",
+            "type": "transfer",
+            "updatedAt": "<same>"
+          }
+        ],
+        "pagination": {
+          "limit": 20,
+          "page": 1,
+          "total": 2,
+          "totalPages": 1
+        }
       }
     },
     {
@@ -3377,7 +3428,6 @@
             "date": "2026-11-01T00:00:00.000Z",
             "description": "Parity to savings",
             "isRecurring": false,
-            "toAccountId": "<savings>",
             "type": "debit",
             "updatedAt": "<same>"
           },
@@ -4899,7 +4949,6 @@
                     "credit": 38000
                   },
                   "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
                   "type": "debit"
                 },
                 {
@@ -5626,7 +5675,6 @@
                     "credit": 38000
                   },
                   "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
                   "type": "debit"
                 },
                 {
@@ -8452,7 +8500,6 @@
                     "credit": 0
                   },
                   "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
                   "type": "debit"
                 },
                 {
@@ -10495,7 +10542,6 @@
                     "credit": 38000
                   },
                   "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
                   "type": "debit"
                 },
                 {
@@ -11777,7 +11823,6 @@
                     "credit": 38000
                   },
                   "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
                   "type": "debit"
                 },
                 {
@@ -14336,7 +14381,6 @@
                     "credit": 38000
                   },
                   "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
                   "type": "debit"
                 },
                 {
@@ -15578,7 +15622,6 @@
                     "credit": 0
                   },
                   "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
                   "type": "debit"
                 },
                 {
@@ -16525,7 +16568,6 @@
                     "credit": 38000
                   },
                   "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
                   "type": "debit"
                 },
                 {
@@ -17312,7 +17354,6 @@
                     "credit": 38000
                   },
                   "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
                   "type": "debit"
                 },
                 {
@@ -18352,6 +18393,20 @@
             "updatedAt": "<same>"
           },
           {
+            "_id": "<tSav>",
+            "accountId": "<checking>",
+            "amount": 50000,
+            "balanceApplied": true,
+            "categoryTags": [
+              "transfer"
+            ],
+            "date": "2026-11-01T00:00:00.000Z",
+            "description": "Parity to savings",
+            "isRecurring": false,
+            "type": "debit",
+            "updatedAt": "<same>"
+          },
+          {
             "_id": "<tPayoff>",
             "accountId": "<checking>",
             "amount": 43500,
@@ -18438,7 +18493,7 @@
         "pagination": {
           "limit": 100,
           "page": 1,
-          "total": 10,
+          "total": 11,
           "totalPages": 1
         }
       }
@@ -18798,9 +18853,61 @@
     {
       "id": "X18",
       "request": "POST /api/finance-profile/merge-rent",
-      "status": 409,
+      "status": 200,
       "body": {
-        "error": "Linked Salary transaction not found — pick one"
+        "data": {
+          "filingStatus": "single",
+          "healthSteps": [
+            {
+              "effectiveDate": "2025-09-01",
+              "perPaycheck": 85
+            }
+          ],
+          "hoursPerWeek": 40,
+          "nycResident": true,
+          "raiseRate": 0.03,
+          "rentSteps": [
+            {
+              "effectiveDate": "2026-09-01",
+              "monthly": 1450
+            },
+            {
+              "effectiveDate": "2027-01-03",
+              "monthly": 1555
+            }
+          ],
+          "rentTransactionId": "<rent>",
+          "retirementSteps": [
+            {
+              "effectiveDate": "2025-09-01",
+              "percent": 0.06
+            }
+          ],
+          "salarySteps": [
+            {
+              "annualGross": 85000,
+              "effectiveDate": "2025-09-01"
+            },
+            {
+              "annualGross": 92000,
+              "effectiveDate": "2027-02-01"
+            }
+          ],
+          "salaryTransactionId": null,
+          "whatIfSalaries": [
+            {
+              "annualGross": 120000,
+              "label": "Stretch"
+            },
+            {
+              "annualGross": 70000
+            }
+          ]
+        },
+        "updated": {
+          "rent": true,
+          "salary": false
+        }
       }
     },
     {
@@ -18811,6 +18918,16 @@
         "_id": "<rent>",
         "accountId": "<checking>",
         "amount": 145000,
+        "amountSchedule": [
+          {
+            "amount": 145000,
+            "effectiveDate": "2026-09-01T00:00:00.000Z"
+          },
+          {
+            "amount": 155500,
+            "effectiveDate": "2027-01-03T00:00:00.000Z"
+          }
+        ],
         "balanceApplied": false,
         "categoryTags": [
           "bills"
@@ -18840,6 +18957,16 @@
             "_id": "<rent>",
             "accountId": "<checking>",
             "amount": 145000,
+            "amountSchedule": [
+              {
+                "amount": 145000,
+                "effectiveDate": "2026-09-01T00:00:00.000Z"
+              },
+              {
+                "amount": 155500,
+                "effectiveDate": "2027-01-03T00:00:00.000Z"
+              }
+            ],
             "balanceApplied": false,
             "categoryTags": [
               "bills"
@@ -18919,6 +19046,20 @@
             "description": "Parity refund",
             "isRecurring": false,
             "type": "credit",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<tSav>",
+            "accountId": "<checking>",
+            "amount": 50000,
+            "balanceApplied": true,
+            "categoryTags": [
+              "transfer"
+            ],
+            "date": "2026-11-01T00:00:00.000Z",
+            "description": "Parity to savings",
+            "isRecurring": false,
+            "type": "debit",
             "updatedAt": "<same>"
           },
           {
@@ -19008,7 +19149,7 @@
         "pagination": {
           "limit": 100,
           "page": 1,
-          "total": 10,
+          "total": 11,
           "totalPages": 1
         }
       }
@@ -19029,7 +19170,16 @@
           "hoursPerWeek": 40,
           "nycResident": true,
           "raiseRate": 0.03,
-          "rentSteps": [],
+          "rentSteps": [
+            {
+              "effectiveDate": "2026-09-01",
+              "monthly": 1450
+            },
+            {
+              "effectiveDate": "2027-01-03",
+              "monthly": 1555
+            }
+          ],
           "rentTransactionId": "<rent>",
           "retirementSteps": [
             {
@@ -19047,7 +19197,7 @@
               "effectiveDate": "2027-02-01"
             }
           ],
-          "salaryTransactionId": "<salary2>",
+          "salaryTransactionId": null,
           "whatIfSalaries": [
             {
               "annualGross": 120000,
@@ -19303,7 +19453,7 @@
             }
           ]
         },
-        "dataVersion": "14|<changed>|<changed>|<car>:800000:<same>,<card>:0:<changed>,<cash>:2500:<same>,<checking>:1376500:<same>,<loan>:1880000:<changed>,<order>:0:<new>"
+        "dataVersion": "15|<changed>|<changed>|<car>:800000:<same>,<card>:0:<changed>,<cash>:2500:<same>,<checking>:1376500:<same>,<loan>:1880000:<changed>,<order>:0:<new>"
       }
     },
     {
@@ -19893,7 +20043,381 @@
             }
           ]
         },
-        "dataVersion": "16|<changed>|<same>|<car>:800000:<same>,<card>:0:<same>,<cash>:2500:<same>,<checking>:1376500:<same>,<loan>:1880000:<same>,<order>:0:<same>,<orderCard>:0:<new>"
+        "dataVersion": "17|<changed>|<same>|<car>:800000:<same>,<card>:0:<same>,<cash>:2500:<same>,<checking>:1376500:<same>,<loan>:1880000:<same>,<order>:0:<same>,<orderCard>:0:<new>"
+      }
+    },
+    {
+      "id": "X32",
+      "request": "POST /api/transactions",
+      "status": 201,
+      "body": {
+        "_id": "<flip>",
+        "accountId": "<checking>",
+        "amount": 1999,
+        "balanceApplied": false,
+        "categoryTags": [
+          "bills"
+        ],
+        "date": "2026-12-20T00:00:00.000Z",
+        "description": "Parity streaming",
+        "isRecurring": true,
+        "recurrenceRule": {
+          "dayOfMonth": 20,
+          "daysOfMonth": [],
+          "endDate": null,
+          "frequency": "monthly",
+          "interval": 1,
+          "startDate": "2026-12-20T00:00:00.000Z"
+        },
+        "type": "debit",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X33",
+      "request": "PUT /api/transactions/{flip}",
+      "status": 200,
+      "body": {
+        "_id": "<flip>",
+        "accountId": "<checking>",
+        "amount": 1999,
+        "balanceApplied": false,
+        "categoryTags": [
+          "bills"
+        ],
+        "date": "2026-12-20T00:00:00.000Z",
+        "description": "Parity streaming",
+        "isRecurring": false,
+        "type": "debit",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "X34",
+      "request": "POST /api/accounts",
+      "status": 201,
+      "body": {
+        "_id": "<doomed>",
+        "balance": 10000,
+        "currency": "USD",
+        "isArchived": false,
+        "isCash": false,
+        "name": "Parity Doomed",
+        "type": "bank",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X35",
+      "request": "POST /api/accounts",
+      "status": 201,
+      "body": {
+        "_id": "<doomedLoan>",
+        "balance": 90000,
+        "currency": "USD",
+        "isArchived": false,
+        "isCash": false,
+        "isLoan": true,
+        "linkedAccountId": "<doomed>",
+        "name": "Parity Doomed Loan",
+        "type": "debt",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X36",
+      "request": "POST /api/accounts/{doomedLoan}/payment-plan",
+      "status": 200,
+      "body": {
+        "data": {
+          "accountId": "<doomedLoan>",
+          "apr": null,
+          "blendedApr": null,
+          "minimumPayment": null,
+          "nextRap": null,
+          "payment": {
+            "cadence": "monthly on the 9th",
+            "dayOfMonth": 9,
+            "frequency": "monthly",
+            "fromAccountId": "<doomed>",
+            "fromAccountName": "Parity Doomed",
+            "transactionId": "<doomedPay>"
+          },
+          "payoff": {
+            "months": 12,
+            "payoffDate": "2027-12-09",
+            "totalInterest": 0
+          },
+          "rap": null,
+          "schedule": [
+            {
+              "amount": 75,
+              "effectiveDate": "2027-01-09"
+            }
+          ],
+          "subLoans": []
+        }
+      }
+    },
+    {
+      "id": "X37",
+      "request": "DELETE /api/accounts/{doomed}",
+      "status": 200,
+      "body": {
+        "message": "Account and associated transactions deleted"
+      }
+    },
+    {
+      "id": "X38",
+      "request": "GET /api/accounts/{doomedLoan}",
+      "status": 200,
+      "body": {
+        "_id": "<doomedLoan>",
+        "balance": 90000,
+        "currency": "USD",
+        "isArchived": false,
+        "isCash": false,
+        "isLoan": true,
+        "name": "Parity Doomed Loan",
+        "type": "debt",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "X39",
+      "request": "GET /api/accounts/{doomedLoan}/payment-plan",
+      "status": 200,
+      "body": {
+        "data": {
+          "accountId": "<doomedLoan>",
+          "apr": null,
+          "blendedApr": null,
+          "minimumPayment": null,
+          "nextRap": null,
+          "payment": null,
+          "payoff": null,
+          "rap": null,
+          "schedule": [],
+          "subLoans": []
+        }
+      }
+    },
+    {
+      "id": "X40",
+      "request": "POST /api/accounts",
+      "status": 201,
+      "body": {
+        "_id": "<mergeLoan>",
+        "balance": 60000,
+        "currency": "USD",
+        "isArchived": false,
+        "isCash": false,
+        "name": "Parity Merge Loan",
+        "type": "debt",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X41",
+      "request": "POST /api/accounts/{mergeLoan}/payment-plan",
+      "status": 200,
+      "body": {
+        "data": {
+          "accountId": "<mergeLoan>",
+          "apr": null,
+          "blendedApr": null,
+          "minimumPayment": null,
+          "nextRap": null,
+          "payment": {
+            "cadence": "monthly on the 11th",
+            "dayOfMonth": 11,
+            "frequency": "monthly",
+            "fromAccountId": "<checking>",
+            "fromAccountName": "Parity Checking",
+            "transactionId": "<mergePay>"
+          },
+          "payoff": {
+            "months": 10,
+            "payoffDate": "2027-11-11",
+            "totalInterest": 0
+          },
+          "rap": null,
+          "schedule": [
+            {
+              "amount": 60,
+              "effectiveDate": "2027-02-11"
+            }
+          ],
+          "subLoans": []
+        }
+      }
+    },
+    {
+      "id": "X42",
+      "request": "PUT /api/accounts/{mergeLoan}/payment-plan",
+      "status": 200,
+      "body": {
+        "data": {
+          "accountId": "<mergeLoan>",
+          "apr": null,
+          "blendedApr": null,
+          "minimumPayment": null,
+          "nextRap": null,
+          "payment": {
+            "cadence": "monthly on the 11th",
+            "dayOfMonth": 11,
+            "frequency": "monthly",
+            "fromAccountId": "<checking>",
+            "fromAccountName": "Parity Checking",
+            "transactionId": "<mergePay>"
+          },
+          "payoff": {
+            "months": 10,
+            "payoffDate": "2027-11-11",
+            "totalInterest": 0
+          },
+          "rap": null,
+          "schedule": [
+            {
+              "amount": 60,
+              "effectiveDate": "2027-02-11"
+            },
+            {
+              "amount": 65,
+              "effectiveDate": "2027-04-11"
+            }
+          ],
+          "subLoans": []
+        }
+      }
+    },
+    {
+      "id": "X43",
+      "request": "POST /api/finance-profile/merge-rent",
+      "status": 200,
+      "body": {
+        "data": {
+          "filingStatus": "single",
+          "healthSteps": [
+            {
+              "effectiveDate": "2025-09-01",
+              "perPaycheck": 85
+            }
+          ],
+          "hoursPerWeek": 40,
+          "nycResident": true,
+          "raiseRate": 0.03,
+          "rentSteps": [
+            {
+              "effectiveDate": "2026-09-01",
+              "monthly": 1450
+            },
+            {
+              "effectiveDate": "2027-01-03",
+              "monthly": 1555
+            },
+            {
+              "effectiveDate": "2027-02-11",
+              "monthly": 60
+            },
+            {
+              "effectiveDate": "2027-04-11",
+              "monthly": 65
+            }
+          ],
+          "rentTransactionId": "<rent>",
+          "retirementSteps": [
+            {
+              "effectiveDate": "2025-09-01",
+              "percent": 0.06
+            }
+          ],
+          "salarySteps": [
+            {
+              "annualGross": 85000,
+              "effectiveDate": "2025-09-01"
+            },
+            {
+              "annualGross": 92000,
+              "effectiveDate": "2027-02-01"
+            }
+          ],
+          "salaryTransactionId": null,
+          "whatIfSalaries": [
+            {
+              "annualGross": 120000,
+              "label": "Stretch"
+            },
+            {
+              "annualGross": 70000
+            }
+          ]
+        },
+        "updated": {
+          "rent": true,
+          "salary": false
+        }
+      }
+    },
+    {
+      "id": "X44",
+      "request": "GET /api/accounts/{mergeLoan}",
+      "status": 200,
+      "body": {
+        "_id": "<mergeLoan>",
+        "balance": 60000,
+        "currency": "USD",
+        "isArchived": false,
+        "isCash": false,
+        "name": "Parity Merge Loan",
+        "paymentTransactionId": "<rent>",
+        "type": "debt",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "X45",
+      "request": "GET /api/transactions/{rent}",
+      "status": 200,
+      "body": {
+        "_id": "<rent>",
+        "accountId": "<checking>",
+        "amount": 145000,
+        "amountSchedule": [
+          {
+            "amount": 145000,
+            "effectiveDate": "2026-09-01T00:00:00.000Z"
+          },
+          {
+            "amount": 155500,
+            "effectiveDate": "2027-01-03T00:00:00.000Z"
+          },
+          {
+            "amount": 6000,
+            "effectiveDate": "2027-02-11T00:00:00.000Z"
+          },
+          {
+            "amount": 6500,
+            "effectiveDate": "2027-04-11T00:00:00.000Z"
+          }
+        ],
+        "balanceApplied": false,
+        "categoryTags": [
+          "bills"
+        ],
+        "date": "2026-09-01T00:00:00.000Z",
+        "description": "Parity Rent",
+        "isRecurring": true,
+        "recurrenceRule": {
+          "dayOfMonth": 1,
+          "daysOfMonth": [],
+          "endDate": null,
+          "frequency": "monthly",
+          "interval": 1,
+          "startDate": "2026-09-01T00:00:00.000Z"
+        },
+        "type": "debit",
+        "updatedAt": "<changed>"
       }
     }
   ],
