@@ -25,9 +25,61 @@ export function normalizeDate(d: Date | string): Date {
   return fromDateStr(toDateStr(d));
 }
 
+/** The `Date` itself when given one, else `new Date(value)` (stored dates may be ISO strings). */
+export function asDate(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+/**
+ * ISO string of a date that is about to be stored: what Mongoose's date cast
+ * (`mongoose/lib/cast/date.js`) stores. A `Date` is used as is; a string whose
+ * `Number()` is a number >= 275761 or < -271820 is read as milliseconds; any
+ * other string goes through `new Date(value)`. An invalid date throws a plain
+ * `Error` (never a `RangeError`, which the projections and summary handlers
+ * turn into a 400; today these inputs are a Mongoose cast error, a 500).
+ * Mongoose casts `""` to `null`, and every Finance field that can receive `""`
+ * is then refused as required (500), so throwing gives the same result;
+ * `buildRule` handles the one optional date (`endDate`) before calling this.
+ */
+export function toIso(value: Date | string): string {
+  let date: Date;
+  if (value instanceof Date) {
+    date = value;
+  } else {
+    const n = Number(value);
+    date = !isNaN(n) && (n >= 275761 || n < -271820) ? new Date(n) : new Date(value);
+  }
+  if (isNaN(date.getTime())) throw new Error("Invalid date: " + value);
+  return date.toISOString();
+}
+
+/**
+ * ISO string of a date that goes into a query filter (query-string bounds),
+ * where today's code builds `new Date(value)` itself. Unlike `toIso` it does
+ * not read numeric strings as milliseconds.
+ */
+export function filterDate(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) throw new Error("Invalid date: " + value);
+  return d.toISOString();
+}
+
+/** The calendar day (local time) of `now`, as yyyy-MM-dd. */
+export function localDateStr(now: Date): string {
+  return format(now, "yyyy-MM-dd");
+}
+
 /** The user's current calendar day (local time), as yyyy-MM-dd. */
 export function localTodayStr(): string {
-  return format(new Date(), "yyyy-MM-dd");
+  return localDateStr(new Date());
+}
+
+/** Local midnight at the start of the day after `now`; `now` is not modified. */
+export function startOfTomorrow(now: Date): Date {
+  const d = new Date(now);
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + 1);
+  return d;
 }
 
 export interface DateRangeStr {

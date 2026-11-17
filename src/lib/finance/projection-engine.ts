@@ -1,8 +1,9 @@
 import { addDays } from "date-fns";
 import { expandRecurrence } from "./recurrence";
-import { amountOn } from "./amount-schedule";
+import { amountOn, type AmountStep } from "./amount-schedule";
 import { blendedApr, monthlyInterest, rapMonthEnd } from "./interest";
 import {
+  asDate,
   toDateStr as toUTCDateStr,
   fromDateStr,
   localTodayStr,
@@ -11,15 +12,51 @@ import {
   type DateRangeStr,
 } from "./dates";
 import type { ProjectedTransaction, ProjectionDay, ProjectionResult, ProjectionAlert, Granularity } from "@/types/finance/projection";
-import type { IAccount } from "@/models/finance/Account";
-import type { ITransaction } from "@/models/finance/Transaction";
 
 /** ~100 years; guards against runaway day loops from extreme date params */
 const MAX_PROJECTION_DAYS = 36_600;
 
+type Id = { toString(): string };
+
+/** The account properties the engine reads (satisfied by plain documents and Mongoose documents). */
+export interface EngineAccount {
+  _id: Id;
+  type: "bank" | "credit_card" | "debt";
+  balance: number;
+  creditLimit?: number;
+  isArchived?: boolean;
+  apr?: number;
+  subLoans?: { name: string; balance: number; apr: number }[];
+  rap?: { enabled: boolean };
+}
+
+/** The transaction properties the engine reads; dates may be `Date` or ISO strings. */
+export interface EngineTransaction {
+  _id: Id;
+  amount: number;
+  date: Date | string;
+  description: string;
+  accountId: Id;
+  toAccountId?: Id;
+  type: "credit" | "debit" | "transfer";
+  isRecurring: boolean;
+  recurrenceRule?: {
+    frequency: "daily" | "weekly" | "biweekly" | "monthly" | "semi_monthly" | "annually" | "custom";
+    interval?: number;
+    startDate: Date | string;
+    endDate?: Date | string | null;
+    dayOfWeek?: number;
+    dayOfMonth?: number;
+    daysOfMonth?: number[];
+  };
+  amountSchedule?: AmountStep[];
+  categoryTags: string[];
+  balanceApplied: boolean;
+}
+
 interface ProjectionInput {
-  accounts: IAccount[];
-  transactions: ITransaction[];
+  accounts: EngineAccount[];
+  transactions: EngineTransaction[];
   startDate: Date;
   endDate: Date;
   granularity?: Granularity;
@@ -106,8 +143,8 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
       {
         frequency: rule.frequency,
         interval: rule.interval,
-        startDate: rule.startDate.toISOString(),
-        endDate: rule.endDate?.toISOString() || null,
+        startDate: asDate(rule.startDate).toISOString(),
+        endDate: rule.endDate ? asDate(rule.endDate).toISOString() : null,
         dayOfWeek: rule.dayOfWeek,
         dayOfMonth: rule.dayOfMonth,
         daysOfMonth: rule.daysOfMonth,
