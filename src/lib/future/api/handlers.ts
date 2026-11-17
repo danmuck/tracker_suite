@@ -6,15 +6,13 @@ import type { BaseDoc, Collection, Store } from "@/lib/data/store";
 import {
   LISTING_OPTIONAL_FIELDS,
   LISTING_STATUSES,
-  SETTINGS_KEY,
+  SETTINGS_RECORD_KEY,
   listingSchema,
   listingStatusSchema,
   settingsSchema,
   tourSchema,
 } from "@/lib/future/validators";
 import type { FutureSettings, Listing, Tour } from "@/types/future/apartments";
-
-export { SETTINGS_KEY };
 
 type SettingsDoc = FutureSettings & BaseDoc & { key: string };
 
@@ -114,16 +112,16 @@ export const deleteTour: Handler = async ({ store, params }) => {
 };
 
 export const getSettings: Handler = async ({ store }) =>
-  ok(settingsBody(await settings(store).findOne({ key: SETTINGS_KEY })));
+  ok(settingsBody(await settings(store).findOne({ key: SETTINGS_RECORD_KEY })));
 
 /** Full replace: a field left out of the body is cleared */
 export const saveSettings: Handler = async ({ store, body }) => {
   const parsed = settingsSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
   await settings(store).updateOne(
-    { key: SETTINGS_KEY },
+    { key: SETTINGS_RECORD_KEY },
     setAndUnset(parsed.data, SETTINGS_OPTIONAL_FIELDS),
     { upsert: true },
   );
-  return ok(settingsBody(await settings(store).findOne({ key: SETTINGS_KEY })));
+  return ok(settingsBody(await settings(store).findOne({ key: SETTINGS_RECORD_KEY })));
 };

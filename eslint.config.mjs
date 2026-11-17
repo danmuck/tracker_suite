@@ -19,6 +19,9 @@ const modulePattern = (id) => ({
   message: `The ${id} module may not import from another module. Cross-module code belongs in the dashboard.`,
 });
 
+// Modules whose data runs through the store adapter, so all of their src/lib code can reach the browser.
+const CONVERTED_MODULES = ["links", "future"];
+
 // Code that can run in the browser (browser data mode, the demo) must not pull in server-only code.
 const BROWSER_REACHABLE = [
   "src/lib/data/**",
@@ -26,6 +29,8 @@ const BROWSER_REACHABLE = [
   "src/lib/demo/**",
   "src/hooks/**",
   "src/components/**",
+  "src/app/(app)/**",
+  ...CONVERTED_MODULES.map((id) => `src/lib/${id}/**`),
 ];
 // The server-only modules and their tests (which import them directly) are exempt.
 const SERVER_ONLY_DATA = [
@@ -39,8 +44,9 @@ const browserPatterns = [
     message: "Browser-reachable code may not import server-only code.",
   },
   {
-    // Any path ending in /mongo-store or /serve, absolute alias or relative (./mongo-store, ../data/serve).
-    regex: "/(mongo-store|serve)$",
+    // mongo-store and serve in the data folder: ./serve, ../serve, ../data/mongo-store, @/lib/data/serve,
+    // with or without .ts/.js. A module that merely ends in "serve" does not match.
+    regex: "^(\\.\\.?/|.*/data/)(mongo-store|serve)(\\.(ts|js))?$",
     message: "Browser-reachable code may not import server-only code.",
   },
   { regex: "^@/models/", message: "Browser-reachable code may not import Mongoose models." },
@@ -66,7 +72,12 @@ const moduleBoundaries = MODULE_IDS.map((id) => ({
 // Flat config does not merge rule options: a later block's no-restricted-imports replaces an
 // earlier one. Files under both a module and a browser-reachable folder get both lists here, last.
 const moduleBrowserBoundaries = MODULE_IDS.map((id) => ({
-  files: [`src/{hooks,components}/${id}/**`, `src/lib/${id}/api/**`],
+  files: [
+    `src/{hooks,components}/${id}/**`,
+    `src/lib/${id}/api/**`,
+    `src/app/(app)/${id}/**`,
+    ...(CONVERTED_MODULES.includes(id) ? [`src/lib/${id}/**`] : []),
+  ],
   rules: restrict([modulePattern(id), ...browserPatterns]),
 }));
 

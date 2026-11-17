@@ -8,7 +8,7 @@ import Tour from "@/models/future/Tour";
 import FutureSettings from "@/models/future/FutureSettings";
 import { isId } from "./api";
 import type { Filter, Update } from "./query";
-import { assertIdUnchanged, ConflictError } from "./store";
+import { assertIdUnchanged, assertUpsertFilter, ConflictError } from "./store";
 import type { BaseDoc, Collection, CollectionName, FindOptions, Store } from "./store";
 
 type Doc = Record<string, unknown>;
@@ -128,6 +128,7 @@ class MongoCollection<T extends BaseDoc> implements Collection<T> {
 
   async updateOne(filter: Filter, update: Update, options?: { upsert?: boolean }): Promise<T | null> {
     assertIdUnchanged(update);
+    if (options?.upsert) assertUpsertFilter(filter);
     const doc = await this.guard(() =>
       this.model
         .findOneAndUpdate(filter, update, {

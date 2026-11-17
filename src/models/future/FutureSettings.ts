@@ -1,7 +1,5 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { SETTINGS_KEY } from "@/lib/future/validators";
-
-export { SETTINGS_KEY };
+import { SETTINGS_RECORD_KEY } from "@/lib/future/validators";
 
 export interface IFutureSettings extends Document {
   key: string;
@@ -12,7 +10,7 @@ export interface IFutureSettings extends Document {
 
 const FutureSettingsSchema = new Schema<IFutureSettings>(
   {
-    key: { type: String, required: true, unique: true, default: SETTINGS_KEY },
+    key: { type: String, required: true, unique: true, default: SETTINGS_RECORD_KEY },
     annualSalary: { type: Number, min: 1 },
     commuteDestination: { type: String, trim: true },
   },

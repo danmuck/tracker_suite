@@ -29,3 +29,14 @@ test("duplicateKeyField reads keyPattern, else a bulkWrite error's errmsg, else 
   assert.equal(duplicateKeyField({ writeErrors: [{ errmsg: "something else" }] }), "unknown");
   assert.equal(duplicateKeyField({}), "unknown");
 });
+
+test("upserts with _id in $setOnInsert or an invalid filter _id reject before reaching Mongoose", async () => {
+  const groups = mongoStore.collection("linkGroups");
+  await assert.rejects(
+    groups.updateOne({ slug: "s" }, { $setOnInsert: { _id: "a".repeat(24) } }, { upsert: true }),
+    { message: "_id cannot be changed" },
+  );
+  await assert.rejects(groups.updateOne({ _id: "xyz" }, { $set: { name: "x" } }, { upsert: true }), {
+    message: "Invalid _id",
+  });
+});

@@ -84,7 +84,7 @@ export const tourSchema = z.object({
 });
 
 /** The fixed key of the one settings document */
-export const SETTINGS_KEY = "default";
+export const SETTINGS_RECORD_KEY = "default";
 
 export const settingsSchema = z.object({
   /** Gross annual salary in cents */

@@ -3,7 +3,8 @@
 
 import { applyUpdate, matches, selectFields, sortDocs } from "./query";
 import type { Filter, Update } from "./query";
-import { assertIdUnchanged, COLLECTIONS, ConflictError } from "./store";
+import { isId } from "./api";
+import { assertIdUnchanged, assertUpsertFilter, COLLECTIONS, ConflictError } from "./store";
 import type { BaseDoc, Collection, CollectionName, FindOptions, Store } from "./store";
 
 export interface StorageLike {
@@ -59,8 +60,6 @@ function isOperatorObject(value: unknown): boolean {
     Object.keys(value).some((k) => k.startsWith("$"))
   );
 }
-
-const OBJECT_ID = /^[0-9a-f]{24}$/;
 
 function isPlainObject(value: unknown): value is Doc {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -173,12 +172,14 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
   }
 
   // Checks only the inserted or changed docs against the rest, so an old duplicate
-  // already in storage does not block writes to unrelated docs.
-  private checkUnique(all: Doc[], changed: Doc[]): void {
+  // already in storage does not block writes to unrelated docs, nor to the duplicate itself
+  // as long as the write leaves the unique field alone (`before` is the doc as it was).
+  private checkUnique(all: Doc[], changed: { doc: Doc; before?: Doc }[]): void {
     for (const field of COLLECTIONS[this.name].unique as readonly string[]) {
-      for (const doc of changed) {
+      for (const { doc, before } of changed) {
         const value = doc[field];
         if (value === undefined) continue;
+        if (before && before[field] === value) continue;
         if (all.some((other) => other !== doc && other[field] === value)) {
           throw new ConflictError(this.name, field);
         }
@@ -231,7 +232,7 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
     const now = new Date().toISOString();
     const created = docs.map((d) => this.build(d as Doc, now));
     const next = [...this.docs(), ...created];
-    this.checkUnique(next, created);
+    this.checkUnique(next, created.map((doc) => ({ doc })));
     this.store.write(this.name, next);
     return created.map((d) => this.out(d));
   }
@@ -242,22 +243,25 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
 
   async updateOne(filter: Filter, update: Update, options?: { upsert?: boolean }): Promise<T | null> {
     assertIdUnchanged(update);
+    if (options?.upsert) assertUpsertFilter(filter);
     const now = new Date().toISOString();
     const current = this.docs();
     const index = current.findIndex((d) => matches(d, filter));
     let next: Doc[];
     let result: Doc;
+    let before: Doc | undefined;
     if (index === -1) {
       if (!options?.upsert) return null;
       // As in MongoDB, an upsert keeps an ObjectId-shaped _id from the filter.
-      const id = typeof filter._id === "string" && OBJECT_ID.test(filter._id) ? filter._id : undefined;
+      const id = typeof filter._id === "string" && isId(filter._id) ? filter._id : undefined;
       result = this.build(applyUpdate(equalityFields(filter), update, true), now, id);
       next = [...current, result];
     } else {
-      result = applyKeepingImmutable(current[index], update, now);
+      before = current[index];
+      result = applyKeepingImmutable(before, update, now);
       next = current.map((d, i) => (i === index ? result : d));
     }
-    this.checkUnique(next, [result]);
+    this.checkUnique(next, [{ doc: result, before }]);
     this.store.write(this.name, next);
     return this.out(result);
   }
@@ -265,11 +269,11 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
   async updateMany(filter: Filter, update: Update): Promise<number> {
     assertIdUnchanged(update);
     const now = new Date().toISOString();
-    const changed: Doc[] = [];
+    const changed: { doc: Doc; before: Doc }[] = [];
     const next = this.docs().map((d) => {
       if (!matches(d, filter)) return d;
       const updated = applyKeepingImmutable(d, update, now);
-      changed.push(updated);
+      changed.push({ doc: updated, before: d });
       return updated;
     });
     if (changed.length === 0) return 0;
@@ -281,7 +285,8 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
   async batchUpdate(ops: { filter: Filter; update: Update }[]): Promise<void> {
     for (const { update } of ops) assertIdUnchanged(update);
     const now = new Date().toISOString();
-    let next = this.docs();
+    const original = this.docs();
+    let next = original;
     const changedIndexes = new Set<number>();
     for (const { filter, update } of ops) {
       // First match only, as bulkWrite updateOne does in the Mongo store.
@@ -290,7 +295,10 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
       next = next.map((d, i) => (i === index ? applyKeepingImmutable(d, update, now) : d));
       changedIndexes.add(index);
     }
-    this.checkUnique(next, [...changedIndexes].map((i) => next[i]));
+    this.checkUnique(
+      next,
+      [...changedIndexes].map((i) => ({ doc: next[i], before: original[i] })),
+    );
     this.store.write(this.name, next);
   }
 

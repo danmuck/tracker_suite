@@ -163,12 +163,52 @@ test("reading a collection keeps only plain-object elements", async () => {
   assert.deepEqual((await groups.find()).map((g) => g._id), ["x"]);
 });
 
-test("upsert with a 24-hex _id filter inserts with that _id", async () => {
+test("upsert with a 24-hex _id filter inserts with that _id, and an invalid one is rejected", async () => {
   const groups = new BrowserStore(memoryStorage()).collection<Group>("linkGroups");
   const id = "0123456789abcdef01234567";
   const created = await groups.updateOne({ _id: id }, { $set: { name: "U", slug: "u", order: 0 } }, { upsert: true });
   assert.equal(created?._id, id);
   assert.equal((await groups.findById(id))?.name, "U");
-  const other = await groups.updateOne({ _id: "not-an-object-id" }, { $set: { name: "V", slug: "v", order: 0 } }, { upsert: true });
-  assert.match(other?._id ?? "", /^[0-9a-f]{24}$/);
+  await assert.rejects(
+    groups.updateOne({ _id: "not-an-object-id" }, { $set: { name: "V", slug: "v", order: 0 } }, { upsert: true }),
+    { message: "Invalid _id" },
+  );
+});
+
+test("updating a doc that already shares a unique value works while the value is left alone", async () => {
+  const storage = memoryStorage();
+  const store = new BrowserStore(storage); // writes the version key; seeding earlier would be wiped as stale data
+  storage.setItem(
+    "ts:data:linkGroups",
+    JSON.stringify([
+      { _id: "a".repeat(24), name: "A", slug: "dup", order: 0 },
+      { _id: "b".repeat(24), name: "B", slug: "dup", order: 1 },
+      { _id: "c".repeat(24), name: "C", slug: "third", order: 2 },
+    ]),
+  );
+  const groups = store.collection<Group>("linkGroups");
+  assert.equal((await groups.updateById("a".repeat(24), { $set: { name: "A renamed" } }))?.name, "A renamed");
+  assert.equal((await groups.updateById("a".repeat(24), { $set: { slug: "dup" } }))?.slug, "dup");
+  await assert.rejects(groups.updateById("a".repeat(24), { $set: { slug: "third" } }), ConflictError);
+});
+
+test("upserts reject _id in $setOnInsert and an invalid _id in the filter, before touching storage", async () => {
+  const storage = memoryStorage();
+  const groups = new BrowserStore(storage).collection<Group>("linkGroups");
+  const id = "a".repeat(24);
+  await assert.rejects(
+    groups.updateOne({ slug: "s" }, { $setOnInsert: { _id: id, name: "S", order: 0 } }, { upsert: true }),
+    { message: "_id cannot be changed" },
+  );
+  storage.failWrites = true; // a write would throw a different error, so these prove nothing was attempted
+  for (const bad of ["xyz", "A".repeat(24), 5]) {
+    await assert.rejects(
+      groups.updateOne({ _id: bad as string }, { $setOnInsert: { name: "S", slug: "s", order: 0 } }, { upsert: true }),
+      { message: "Invalid _id" },
+    );
+  }
+  storage.failWrites = false;
+  const created = await groups.updateOne({ _id: id }, { $setOnInsert: { name: "S", slug: "s", order: 0 } }, { upsert: true });
+  assert.equal(created?._id, id);
+  assert.equal(await groups.updateOne({ _id: "xyz" }, { $set: { name: "x" } }), null); // no upsert: unchanged behavior
 });

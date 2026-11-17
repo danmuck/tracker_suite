@@ -1,6 +1,7 @@
 // Storage-agnostic data interface shared by the browser and MongoDB implementations.
 // Pure: no framework, browser or server imports.
 
+import { isId } from "./api";
 import type { Filter, Sort, Update } from "./query";
 
 export interface BaseDoc {
@@ -61,7 +62,21 @@ export class ConflictError extends Error {
 
 // MongoDB refuses to change _id; both stores reject it up front with the same message.
 export function assertIdUnchanged(update: Update): void {
-  for (const part of [update.$set, update.$unset, update.$inc]) {
+  for (const part of [update.$set, update.$setOnInsert, update.$unset, update.$inc]) {
     if (part && Object.hasOwn(part, "_id")) throw new Error("_id cannot be changed");
   }
+}
+
+// An upsert that names an _id in its filter must name a valid one, in both stores.
+export function assertUpsertFilter(filter: Filter): void {
+  if (!Object.hasOwn(filter, "_id")) return;
+  const value = filter._id;
+  const isOperator =
+    value !== null &&
+    typeof value === "object" &&
+    !Array.isArray(value) &&
+    !(value instanceof Date) &&
+    Object.keys(value).some((k) => k.startsWith("$"));
+  if (isOperator) return;
+  if (typeof value !== "string" || !isId(value)) throw new Error("Invalid _id");
 }
