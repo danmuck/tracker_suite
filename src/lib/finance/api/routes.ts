@@ -11,7 +11,15 @@ import {
   listAccounts,
   updateAccount,
 } from "./account-handlers";
+import { createCategory, listCategories } from "./category-handlers";
 import { ensureCashAccount } from "./docs";
+import {
+  createTransaction,
+  deleteTransaction,
+  getTransaction,
+  listTransactions,
+  updateTransaction,
+} from "./transaction-handlers";
 
 /** Every Finance route ensures the Cash account first, as connectDB's seed does on the server. */
 const withCash =
@@ -25,7 +33,6 @@ const withCash =
  * A unique-index race stays a plain error (the route's 500 failure string, as today)
  * instead of dispatch's 409 for ConflictError.
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- used by the category routes, added in a later task
 const noConflict =
   (handler: Handler): Handler =>
   async (ctx) => {
@@ -44,4 +51,11 @@ export const financeRoutes: RouteDef[] = [
   { method: "PUT", path: "/api/accounts/:accountId", handler: withCash(updateAccount), failure: "Failed to update account" },
   { method: "PATCH", path: "/api/accounts/:accountId", handler: withCash(archiveAccount), failure: "Failed to update account" },
   { method: "DELETE", path: "/api/accounts/:accountId", handler: withCash(deleteAccount), failure: "Failed to delete account" },
+  { method: "GET", path: "/api/transactions", handler: withCash(listTransactions), failure: "Failed to fetch transactions" },
+  { method: "POST", path: "/api/transactions", handler: withCash(createTransaction), failure: "Failed to create transaction" },
+  { method: "GET", path: "/api/transactions/:transactionId", handler: withCash(getTransaction), failure: "Failed to fetch transaction" },
+  { method: "PUT", path: "/api/transactions/:transactionId", handler: withCash(updateTransaction), failure: "Failed to update transaction" },
+  { method: "DELETE", path: "/api/transactions/:transactionId", handler: withCash(deleteTransaction), failure: "Failed to delete transaction" },
+  { method: "GET", path: "/api/categories", handler: withCash(noConflict(listCategories)), failure: "Failed to fetch categories" },
+  { method: "POST", path: "/api/categories", handler: withCash(noConflict(createCategory)), failure: "Failed to create category" },
 ];
