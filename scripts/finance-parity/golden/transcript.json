@@ -1,10 +1,10 @@
 {
   "meta": {
-    "capturedAt": "2026-11-17T23:49:55.268Z",
+    "capturedAt": "2026-11-17T23:52:55.813Z",
     "localDate": "2026-11-17",
     "utcDate": "2026-11-17",
     "timeZone": "America/New_York",
-    "commit": "92c4b62ea9a97fb1fd79b6812798690caa98a64e"
+    "commit": "e175a8fef9f90b3c45ebaa8b1215975b4ec1fafe"
   },
   "steps": [
     {
@@ -4106,7 +4106,7 @@
         "date": "2026-08-15T00:00:00.000Z",
         "description": "Parity Card payment",
         "isRecurring": true,
-        "postedThrough": "2026-10-15T00:00:00.000Z",
+        "postedThrough": "2026-11-15T00:00:00.000Z",
         "recurrenceRule": {
           "dayOfMonth": 15,
           "daysOfMonth": [],

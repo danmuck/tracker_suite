@@ -402,8 +402,8 @@ export function buildScenario(today: string): Step[] {
     get("P03", plan(B), 404),
     get("P04", plan("abc"), 500, { allow: d1a(ACCOUNT_NOT_FOUND) }),
     send("P05", "POST", plan("{card}"), p05, 200, { save: { name: "cardPay", from: "data.payment.transactionId" } }),
-    // Catch-up payments post here: 45 + 45 + 10, capped at the 100 owed. November finds nothing
-    // owed, so postedThrough stops at the October payment (bug 10; P19 shows it)
+    // Catch-up payments post here: 45 + 45 + 10, capped at the 100 owed; November finds nothing
+    // owed, pays nothing and is done (postedThrough at P19)
     get("P06", "/api/accounts", 200),
     send("P07", "POST", plan("{card}"), p05, 409),
     send("P08", "POST", plan("{loan}"), { fromAccountId: "{card}", dayOfMonth: 5, startDate: d(10), firstAmount: 250 }, 400),

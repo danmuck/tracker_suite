@@ -46,19 +46,16 @@ export async function postDuePayments(store: Store, now: Date): Promise<void> {
     );
     if (due.length === 0) continue;
 
-    // Capped at what is owed. A period that finds nothing owed is not marked posted (bug 10):
-    // postedThrough stops at the last period before it, which stays due for a later request.
+    // Capped at what is owed. postedThrough means "processed through": a due date that finds
+    // nothing owed pays nothing and is done, so it never comes back as catch-up later.
+    const through = due[due.length - 1].date;
     let owed = debt.balance;
     let total = 0;
-    let through: string | null = null;
     for (const o of due) {
-      if (owed <= 0) break;
       const amount = Math.max(0, Math.min(o.amount, owed));
       owed -= amount;
       total += amount;
-      through = o.date;
     }
-    if (through === null) continue;
 
     // P3: claim the batch first; if another request already moved postedThrough, skip
     const claimed = await txs.updateOne(

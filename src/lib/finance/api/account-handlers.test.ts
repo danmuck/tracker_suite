@@ -207,15 +207,63 @@ test("due plan payments post once, capped at what is owed, and nothing moves onc
   t.setNow(new Date("2026-12-16T15:00:00.000Z"));
   await t.call("GET", `/api/accounts/${card._id}`);
   assert.deepEqual(await balances(), { Bank: 88000, Card: 0 });
-  // Nothing was owed on 15 Dec: that period is not marked posted (bug 10)
-  assert.equal((await tx().findById(pay._id))!.postedThrough, "2026-11-15T00:00:00.000Z");
-  // A new charge: the skipped December payment posts now (capped at 30), January waits again
-  await accounts(t.store).updateById(card._id, { $set: { balance: 3000 } });
-  t.setNow(new Date("2027-01-16T15:00:00.000Z"));
-  await t.call("GET", "/api/accounts");
-  await t.call("GET", "/api/accounts");
-  assert.deepEqual(await balances(), { Bank: 85000, Card: 0 });
+  // Nothing was owed on 15 Dec: that due date pays nothing and is done
   assert.equal((await tx().findById(pay._id))!.postedThrough, "2026-12-15T00:00:00.000Z");
+});
+
+// A plan with a $50 instalment on the 15th, from Bank to a card owing nothing; postedThrough unset.
+async function zeroOwedPlan() {
+  const bank = await acct({ name: "Bank", type: "bank", balance: 1000 });
+  const card = await acct({ name: "Card", type: "credit_card", balance: 0 });
+  const pay = await tx().insert({ amount: 5000, date: "2026-11-15T00:00:00.000Z", description: "p", accountId: bank._id, toAccountId: card._id, type: "transfer", isRecurring: true,
+    recurrenceRule: { frequency: "monthly", interval: 1, startDate: "2026-11-15T00:00:00.000Z", endDate: null, dayOfMonth: 15, daysOfMonth: [] }, categoryTags: [], balanceApplied: false });
+  await accounts(t.store).updateById(card._id, { $set: { paymentTransactionId: pay._id } });
+  const charge = (amount: number, date: string) =>
+    t.call("POST", "/api/transactions", { amount, date, description: "charge", accountId: card._id, type: "debit", categoryTags: ["spending"] });
+  return { pay, charge };
+}
+
+test("a charge after a due date that found nothing owed waits for the next due date, which pays min(owed, instalment)", async () => {
+  const { pay, charge } = await zeroOwedPlan();
+  await t.call("GET", "/api/accounts"); // 17 Nov: the 15 Nov due date found nothing owed
+  assert.equal((await tx().findById(pay._id))!.postedThrough, "2026-11-15T00:00:00.000Z");
+  t.setNow(new Date("2026-11-20T15:00:00.000Z"));
+  assert.equal((await charge(30, "2026-11-20")).status, 201);
+  await t.call("GET", "/api/accounts");
+  await t.call("GET", "/api/accounts");
+  assert.deepEqual(await balances(), { Bank: 100000, Card: 3000 });
+  t.setNow(new Date("2026-12-16T15:00:00.000Z"));
+  await t.call("GET", "/api/accounts");
+  assert.deepEqual(await balances(), { Bank: 97000, Card: 0 });
+  assert.equal((await tx().findById(pay._id))!.postedThrough, "2026-12-15T00:00:00.000Z");
+});
+
+test("three due dates with nothing owed then a $200 charge: the next due date pays one instalment, not four", async () => {
+  const { pay, charge } = await zeroOwedPlan();
+  for (const now of ["2026-11-17", "2026-12-16", "2027-01-16"]) {
+    t.setNow(new Date(`${now}T15:00:00.000Z`));
+    await t.call("GET", "/api/accounts");
+  }
+  assert.equal((await tx().findById(pay._id))!.postedThrough, "2027-01-15T00:00:00.000Z");
+  t.setNow(new Date("2027-01-20T15:00:00.000Z"));
+  assert.equal((await charge(200, "2027-01-20")).status, 201);
+  await t.call("GET", "/api/accounts");
+  assert.deepEqual(await balances(), { Bank: 100000, Card: 20000 });
+  t.setNow(new Date("2027-02-16T15:00:00.000Z"));
+  await t.call("GET", "/api/accounts");
+  await t.call("GET", "/api/accounts");
+  assert.deepEqual(await balances(), { Bank: 95000, Card: 15000 });
+  assert.equal((await tx().findById(pay._id))!.postedThrough, "2027-02-15T00:00:00.000Z");
+});
+
+test("pending transactions are applied before due payments are posted, so a charge counts toward what is owed", async () => {
+  const { pay } = await zeroOwedPlan();
+  // Stored unapplied (e.g. created while it was still in the future), dated before today's due date
+  const card = (await accounts(t.store).findOne({ name: "Card" }))!;
+  await tx().insert({ amount: 3000, date: "2026-11-10T00:00:00.000Z", description: "charge", accountId: card._id, type: "debit", isRecurring: false, categoryTags: [], balanceApplied: false });
+  await t.call("GET", "/api/accounts");
+  assert.deepEqual(await balances(), { Bank: 97000, Card: 0 });
+  assert.equal((await tx().findById(pay._id))!.postedThrough, "2026-11-15T00:00:00.000Z");
 });
 
 test("a scheduled payment of 0 while something is owed still counts as posted (no stall)", async () => {

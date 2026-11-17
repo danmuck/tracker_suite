@@ -28,7 +28,7 @@ test("a tab whose cached accounts predate another tab's Cash finds that Cash ins
   assert.deepEqual(await cashIds(stored()), [cash]);
 });
 
-test("without the refresh the stale tab adds a second Cash over the first (what dispatchFresh prevents)", async () => {
+test("without the refresh the stale tab rewrites the whole collection, replacing the other tab's Cash with its own (what dispatchFresh prevents)", async () => {
   const { a, b } = twoTabs();
   await cashIds(b);
   await dispatchFresh(a, "GET", "/api/accounts");

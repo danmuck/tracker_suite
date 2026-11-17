@@ -39,10 +39,8 @@ async function applyBalance(store: Store, tx: TransactionDoc): Promise<void> {
   await acc.updateById(tx.accountId, { $inc: { balance: balanceChange } }); // A6
 }
 
-/** GET /api/accounts — post due payments, apply pending transactions, then list. */
+/** GET /api/accounts — apply pending transactions, post due payments, then list. */
 export const listAccounts: Handler = async ({ store, query, now }) => {
-  await postDuePayments(store, now);
-
   const type = query.get("type");
   const includeArchived = query.get("includeArchived") === "true";
   const filter: Record<string, unknown> = {};
@@ -76,6 +74,9 @@ export const listAccounts: Handler = async ({ store, query, now }) => {
       throw error;
     }
   }
+
+  // Then post due plan payments: a charge dated today or earlier counts toward what is owed
+  await postDuePayments(store, now);
 
   const list = await acc.find(filter, { sort: { createdAt: -1 } }); // A8
   return ok(list.map(shapeAccount));
