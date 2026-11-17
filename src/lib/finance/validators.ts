@@ -41,6 +41,14 @@ export const transactionSchema = z.object({
   categoryTags: z.array(z.string()).default([]),
   notes: z.string().max(500).optional(),
 }).superRefine((data, ctx) => {
+  // Without days a semi-monthly rule never occurs (rules already stored that way still read as before)
+  if (data.isRecurring && data.recurrenceRule?.frequency === "semi_monthly" && !data.recurrenceRule.daysOfMonth?.length) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Semi-monthly rules need at least one day of the month",
+      path: ["recurrenceRule", "daysOfMonth"],
+    });
+  }
   if (data.type === "transfer") {
     if (!data.toAccountId) {
       ctx.addIssue({

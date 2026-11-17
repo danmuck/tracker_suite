@@ -101,10 +101,47 @@ test("list: paging, filters, and the response shape", async () => {
   assert.deepEqual((await get("?search=coffee")).data.map((x) => x.amount), [300]);
   assert.deepEqual((await get("?isRecurring=true")).data, []);
   assert.deepEqual(await t.call("GET", "/api/transactions?accountId=abc"), { status: 500, body: { error: "Failed to fetch transactions" } });
-  assert.deepEqual(await t.call("GET", "/api/transactions?page=0"), { status: 500, body: { error: "Failed to fetch transactions" } });
+  assert.deepEqual(await t.call("GET", "/api/transactions?page=0"), { status: 400, body: { error: "Invalid page" } });
   for (const bad of ["1767225600000", "garbage"]) {
     assert.deepEqual(await t.call("GET", `/api/transactions?startDate=${bad}`), { status: 500, body: { error: "Failed to fetch transactions" } });
   }
+});
+
+test("list: page, limit, sort and order are validated; absent or empty ones keep their defaults", async () => {
+  await post();
+  const status = async (qs: string) => (await t.call("GET", `/api/transactions${qs}`)).status;
+  for (const [qs, error] of [
+    ["?page=0", "Invalid page"], ["?page=-1", "Invalid page"], ["?page=1.5", "Invalid page"], ["?page=abc", "Invalid page"], ["?page=2x", "Invalid page"],
+    ["?limit=0", "Invalid limit"], ["?limit=501", "Invalid limit"], ["?limit=NaN", "Invalid limit"], ["?limit=1e2", "Invalid limit"],
+    ["?sort=categoryTags", "Invalid sort"], ["?sort=__proto__", "Invalid sort"], ["?sort=description", "Invalid sort"],
+    ["?order=up", "Invalid order"], ["?order=ASC", "Invalid order"],
+  ]) {
+    assert.deepEqual(await t.call("GET", `/api/transactions${qs}`), { status: 400, body: { error } }, qs);
+  }
+  for (const qs of ["?page=1&limit=1", "?limit=500", "?sort=date&order=asc", "?sort=amount&order=desc", "?sort=createdAt&order=asc", "?page=&limit=&sort=&order="]) {
+    assert.equal(await status(qs), 200, qs);
+  }
+  const res = (await t.call("GET", "/api/transactions?page=&limit=")).body as { pagination: object };
+  assert.deepEqual(res.pagination, { page: 1, limit: 20, total: 1, totalPages: 1 });
+});
+
+test("a recurring semi-monthly rule needs daysOfMonth: 400 on create and update, nothing written", async () => {
+  const semi = (rule: object = {}) => body({ isRecurring: true, recurrenceRule: { frequency: "semi_monthly", startDate: "2026-11-01", ...rule } });
+  const before = [t.writes("accounts"), t.writes("transactions")];
+  for (const sent of [semi(), semi({ daysOfMonth: [] })]) {
+    const res = await t.call("POST", "/api/transactions", sent);
+    assert.equal(res.status, 400);
+    assert.equal((res.body as { error: string }).error, "Validation failed");
+    assert.match((res.body as { details: { message: string } }).details.message, /Semi-monthly rules need at least one day of the month/);
+  }
+  assert.deepEqual([t.writes("accounts"), t.writes("transactions")], before);
+  const made = await post();
+  const stored = await tx().findById(made._id);
+  assert.equal((await t.call("PUT", `/api/transactions/${made._id}`, semi())).status, 400);
+  assert.deepEqual(await tx().findById(made._id), stored);
+  assert.equal((await t.call("POST", "/api/transactions", semi({ daysOfMonth: [1, 15] }))).status, 201);
+  // Not recurring: the rule is not checked, as before
+  assert.equal((await t.call("POST", "/api/transactions", body({ recurrenceRule: { frequency: "semi_monthly", startDate: "2026-11-01" } }))).status, 201);
 });
 
 test("update keeps fields the body leaves out; current behavior: a transfer changed to a debit keeps toAccountId", async () => {

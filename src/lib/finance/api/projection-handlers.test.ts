@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { ProjectionResult } from "@/types/finance/projection";
 import type { SummaryResult } from "@/types/finance/summary";
-import type { AccountDoc, TransactionDoc } from "./docs";
+import { transactions, type AccountDoc, type TransactionDoc } from "./docs";
 import { setup } from "./test-helpers";
 
 let t = setup();
@@ -103,13 +103,51 @@ test("summary: periods, days or months, totals and category breakdown", async ()
   assert.deepEqual(await t.call("GET", "/api/summary?accountId=abc"), { status: 500, body: { error: "Failed to generate summary" } });
 });
 
-test("current behavior: the summary account filter misses transfers into the account", async () => {
-  await post({ amount: 50, type: "transfer", toAccountId: savings._id });
-  const days = (await summary(`?view=monthly&date=2026-11-17&accountId=${savings._id}`)).data.days!;
-  assert.equal(days.flatMap((d) => d.transactions).length, 0);
+test("the summary account filter includes transfers into the account (money in) and out of it", async () => {
+  await post({ amount: 50, type: "transfer", toAccountId: savings._id, description: "in" });
+  await post({ amount: 20, type: "transfer", date: "2026-11-12", accountId: savings._id, toAccountId: bank._id, description: "out" });
+  await post({ amount: 9, description: "other" });
+  const data = (await summary(`?view=monthly&date=2026-11-17&accountId=${savings._id}`)).data;
+  const tx = data.days!.flatMap((d) => d.transactions.map((x) => [d.date, x.description]));
+  assert.deepEqual(tx, [["2026-11-10", "in"], ["2026-11-12", "out"]]);
+  const balance = (date: string) => data.days!.find((d) => d.date === date)!.balances[savings._id];
+  assert.deepEqual([balance("2026-11-09"), balance("2026-11-10"), balance("2026-11-12"), balance("2026-11-30")], [0, 5000, 3000, 3000]);
 });
 
-test("current behavior: an unknown view uses the year's bounds with daily entries", async () => {
-  const odd = (await summary("?view=bogus&date=2026-11-17")).data;
-  assert.deepEqual([odd.view, odd.period.start, odd.period.end, odd.days!.length], ["bogus", "2026-01-01", "2026-12-31", 365]);
+test("an unknown summary view is 400 and writes nothing", async () => {
+  const before = [t.writes("accounts"), t.writes("transactions")];
+  assert.deepEqual(await t.call("GET", "/api/summary?view=bogus&date=2026-11-17"), { status: 400, body: { error: "Invalid view" } });
+  assert.deepEqual([t.writes("accounts"), t.writes("transactions")], before);
+});
+
+test("projections and the summary process a day's transactions credits, debits, transfers, then by creation", async () => {
+  // Created in the "wrong" order on a future day, from an empty account: caps depend on the order
+  const empty = await acct({ name: "Empty", type: "bank", balance: 0 });
+  // A pause between writes keeps their createdAt apart (the default store clock is real time)
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 3));
+  await post({ amount: 30, date: "2026-11-20", type: "transfer", accountId: empty._id, toAccountId: bank._id, description: "move" });
+  await tick();
+  await post({ amount: 20, date: "2026-11-20", accountId: empty._id, description: "spend" });
+  await tick();
+  await post({ amount: 100, date: "2026-11-20", type: "credit", accountId: empty._id, description: "pay" });
+  await tick();
+  await post({ amount: 5, date: "2026-11-20", accountId: empty._id, description: "spend later" });
+  const expected = [["pay", 10000, false], ["spend", 2000, false], ["spend later", 500, false], ["move", 3000, false]];
+  const r = await proj(`${NOV}&accountId=${empty._id}`);
+  assert.deepEqual(on(r, "2026-11-20"), expected);
+  assert.equal(r.data.summary.endBalances[empty._id], 4500);
+  const days = (await summary(`?view=monthly&date=2026-11-17&accountId=${empty._id}`)).data.days!;
+  assert.deepEqual(days.find((d) => d.date === "2026-11-20")!.transactions.map((x) => [x.description, x.amount, x.isProjected]), expected);
+});
+
+test("a stored semi-monthly rule without days still reads and projects (no occurrences)", async () => {
+  const stored = await transactions(t.store).insert({
+    amount: 2000, date: "2026-11-01T00:00:00.000Z", description: "old semi", accountId: bank._id, type: "debit", isRecurring: true,
+    recurrenceRule: { frequency: "semi_monthly", interval: 1, startDate: "2026-11-01T00:00:00.000Z", endDate: null, daysOfMonth: [] },
+    categoryTags: [], balanceApplied: false,
+  } as never);
+  assert.equal((await t.call("GET", `/api/transactions/${stored._id}`)).status, 200);
+  const r = await proj(NOV);
+  assert.equal(r.data.timeline.flatMap((d) => d.transactions).length, 0);
+  assert.equal((await t.call("GET", "/api/summary?view=monthly&date=2026-11-17")).status, 200);
 });

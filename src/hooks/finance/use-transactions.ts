@@ -27,20 +27,6 @@ export function useTransactions(filters: TransactionFilters = {}) {
   };
 }
 
-export function useTransaction(id: string) {
-  const { data, error, isLoading, mutate } = useSWR(
-    id ? `/api/transactions/${id}` : null,
-    fetcher,
-    FINANCE_SWR
-  );
-  return {
-    transaction: data?.data as Transaction | undefined,
-    isLoading,
-    isError: !!error,
-    mutate,
-  };
-}
-
 export async function createTransaction(data: TransactionFormData) {
   return send("/api/transactions", "POST", data);
 }

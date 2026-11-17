@@ -147,7 +147,8 @@ function stable(value: unknown): string {
 
 /**
  * Differences between two transcripts, empty when they match. A step with `allow` is checked
- * against its expected status in the golden and its allowed status (and error) in the actual run;
+ * against its expected status (or, in a golden re-recorded on the converted routes, its allowed
+ * status) in the golden and its allowed status (and error) in the actual run;
  * every other step must have the same status and body.
  */
 export function compareTranscripts(golden: Transcript, actual: Transcript, steps: Step[]): string[] {
@@ -165,7 +166,10 @@ export function compareTranscripts(golden: Transcript, actual: Transcript, steps
     if (a.request !== g.request) diffs.push(`${g.id}: request ${JSON.stringify(a.request)}, golden ${JSON.stringify(g.request)}`);
     const step = byId.get(g.id);
     if (step?.allow) {
-      if (g.status !== step.expect) diffs.push(`${g.id}: golden status ${g.status}, scenario expects ${step.expect}`);
+      // A golden recorded from the unconverted routes has `expect`; one re-recorded since has the allowed status
+      if (g.status !== step.expect && g.status !== step.allow.status) {
+        diffs.push(`${g.id}: golden status ${g.status}, scenario expects ${step.expect} (or ${step.allow.status} once re-recorded)`);
+      }
       const error = isPlainObject(a.body) ? a.body.error : undefined;
       const errorOk = step.allow.error === undefined || error === step.allow.error;
       if (a.status !== step.allow.status || !errorOk) {
@@ -187,24 +191,37 @@ export function compareTranscripts(golden: Transcript, actual: Transcript, steps
   return diffs;
 }
 
+/** A stored transaction as the N7 third check reads it (from a createdAt-ascending list). */
+export interface CreatedTx {
+  _id: string;
+  date: string;
+  type?: string;
+  createdAt?: string;
+}
+
 /**
  * N7, third check. For each day, two entries of the same kind (both recurring or both one-time)
  * with different source ids are reported when their creation order and their stored-date-descending
- * order disagree, or when their stored dates are equal (a tie): the engine keeps input order within a day, and the stores return input in
- * different orders. `created` is every stored transaction in creation order. One message per day.
+ * order disagree, or when their order would rest on `_id` alone: projections and the summary sort
+ * their input by stored day, credit/debit/transfer, then `createdAt`, then `_id`
+ * (`src/lib/finance/same-day-order.ts`), and `_id`s differ between the stores (ObjectIds vs random
+ * ids), so equal stored dates are a conflict only when the type and `createdAt` are equal too.
+ * `created` is every stored transaction in creation order. One message per day.
  *
  * A weekly or monthly timeline entry concatenates its days in date order, so two entries whose own
  * `date` differs are ordered by that date, not by input order, and are not compared.
  */
 export function dayOrderConflicts(
   days: { date: string; transactions: { sourceTransactionId?: string; isRecurring?: boolean; date?: string }[] }[],
-  created: { _id: string; date: string }[],
+  created: CreatedTx[],
 ): string[] {
   const position = new Map<string, number>();
   const dateOf = new Map<string, string>();
+  const byId = new Map<string, CreatedTx>();
   created.forEach((t, i) => {
     position.set(t._id, i);
     dateOf.set(t._id, t.date);
+    byId.set(t._id, t);
   });
 
   const messages: string[] = [];
@@ -222,8 +239,9 @@ export function dayOrderConflicts(
         const da = dateOf.get(a.sourceTransactionId)!, db = dateOf.get(b.sourceTransactionId)!;
         const describe = `${a.sourceTransactionId} (created #${pa + 1}, ${da}) / ${b.sourceTransactionId} (created #${pb + 1}, ${db})`;
         if (da === db) {
-          // Stored-date order cannot decide: MongoDB falls back to record order, the browser store to insertion order
-          pairs.push(`tie on stored date: ${describe}`);
+          // Same stored date: the type, then createdAt decide; only _id is left when both tie too
+          const ca = byId.get(a.sourceTransactionId)!, cb = byId.get(b.sourceTransactionId)!;
+          if (ca.type === cb.type && ca.createdAt === cb.createdAt) pairs.push(`tie on stored date, type and createdAt: ${describe}`);
           continue;
         }
         const creationFirstIsA = pa < pb;

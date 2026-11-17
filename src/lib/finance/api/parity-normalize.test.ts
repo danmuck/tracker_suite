@@ -39,6 +39,9 @@ test("compareTranscripts: equal passes; an allowed step compares status and erro
   const after = { meta, finalBalances: { Cash: 0 }, steps: [golden.steps[0], { id: "S2", request: "GET /a/abc", status: 404, body: { error: "Account not found" } }] };
   assert.deepEqual(compareTranscripts(golden, after, steps), []);
   assert.equal(compareTranscripts(golden, golden, steps).length, 1); // S2 did not change to the allowed result
+  assert.deepEqual(compareTranscripts(after, after, steps), []); // a golden re-recorded on the converted routes
+  const odd = { ...golden, steps: [golden.steps[0], { ...golden.steps[1], status: 400 }] };
+  assert.equal(compareTranscripts(odd, after, steps).length, 1); // a golden status that is neither
   assert.equal(compareTranscripts(golden, { ...after, finalBalances: { Cash: 1 } }, steps).length, 1);
   assert.equal(compareTranscripts(golden, { ...after, steps: [{ ...golden.steps[0], body: [2] }, after.steps[1]] }, steps).length, 1);
 });
@@ -46,10 +49,17 @@ test("compareTranscripts: equal passes; an allowed step compares status and erro
 test("scenario: unique step ids, relative dates, distinct amounts and dates among created transactions", () => {
   const steps = buildScenario("2026-11-17");
   assert.equal(new Set(steps.map((s) => s.id)).size, steps.length);
-  assert.equal(steps.length, 191);
-  const created = steps.filter((s) => s.method === "POST" && s.path === "/api/transactions" && s.expect === 201).map((s) => s.body as { amount: number; date: string });
+  assert.equal(steps.length, 199);
+  const posts = steps.filter((s) => s.method === "POST" && s.path === "/api/transactions" && s.expect === 201);
+  const created = posts.map((s) => s.body as { amount: number; date: string });
   assert.equal(new Set(created.map((b) => b.amount)).size, created.length);
-  assert.equal(new Set(created.map((b) => b.date)).size, created.length);
+  // X23–X25 share one day on purpose (same-day order); every other date is distinct
+  const sameDay = ["X23", "X24", "X25"];
+  const others = posts.filter((s) => !sameDay.includes(s.id)).map((s) => (s.body as { date: string }).date);
+  assert.equal(new Set(others).size, others.length);
+  const shared = posts.filter((s) => sameDay.includes(s.id)).map((s) => (s.body as { date: string; type: string }));
+  assert.deepEqual([new Set(shared.map((b) => b.date)).size, shared.map((b) => b.type)], [1, ["transfer", "debit", "credit"]]);
+  assert.equal(others.includes(shared[0].date), false);
   assert.equal((steps.find((s) => s.id === "T09")!.body as { date: string }).date, "2026-11-18");
   assert.equal((steps.find((s) => s.id === "T13")!.body as { date: string }).date, "2026-09-01");
   assert.equal(steps.filter((s) => s.allow?.rule === "D1a").length, 8);
@@ -79,11 +89,17 @@ test("order check: a day whose same-kind entries are in creation order but not s
   // A weekly or monthly bucket lists its days in date order: entries on different days are not compared
   const bucket = { date: "2026-12-01", transactions: [{ sourceTransactionId: "x", isRecurring: true, date: "2026-12-01" }, { sourceTransactionId: "y", isRecurring: true, date: "2026-12-02" }] };
   assert.deepEqual(dayOrderConflicts([bucket], created), []);
-  // Equal stored dates are a tie: neither order is guaranteed
-  const tied = [{ _id: "x", date: "2026-08-01T00:00:00.000Z" }, { _id: "y", date: "2026-08-01T00:00:00.000Z" }];
+  // Equal stored dates, types and createdAt leave only _id, which differs between the stores
+  const tied = [
+    { _id: "x", date: "2026-08-01T00:00:00.000Z", type: "debit", createdAt: "2026-11-17T15:00:00.000Z" },
+    { _id: "y", date: "2026-08-01T00:00:00.000Z", type: "debit", createdAt: "2026-11-17T15:00:00.000Z" },
+  ];
   const tieMessages = dayOrderConflicts([day(["x", "y"])], tied);
   assert.equal(tieMessages.length, 1);
-  assert.match(tieMessages[0], /tie on stored date/);
+  assert.match(tieMessages[0], /tie on stored date, type and createdAt/);
+  // A different type or createdAt decides the order (same-day-order.ts): not a conflict
+  assert.deepEqual(dayOrderConflicts([day(["x", "y"])], [tied[0], { ...tied[1], type: "credit" }]), []);
+  assert.deepEqual(dayOrderConflicts([day(["x", "y"])], [tied[0], { ...tied[1], createdAt: "2026-11-17T15:00:00.001Z" }]), []);
   // …but only between entries of the same kind
   const mixed = { date: "2026-12-01", transactions: [{ sourceTransactionId: "x", isRecurring: true }, { sourceTransactionId: "y", isRecurring: false }] };
   assert.deepEqual(dayOrderConflicts([mixed], tied), []);

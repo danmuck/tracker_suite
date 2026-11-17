@@ -20,6 +20,7 @@ import {
 import { profileFromDollars } from "@/lib/finance/finance-profile";
 import { buildProjection, type EngineTransaction } from "@/lib/finance/projection-engine";
 import { applySandbox, applySandboxProfile, sandboxSchema, type SandboxInput } from "@/lib/finance/projection-sandbox";
+import { sameDayOrder } from "@/lib/finance/same-day-order";
 import type { Granularity } from "@/types/finance/projection";
 import type { DaySummary, MonthSummary, SummaryResult, SummaryView } from "@/types/finance/summary";
 import {
@@ -69,7 +70,8 @@ async function project(store: Store, now: Date, params: ProjectionParams, sandbo
   if (sandbox) {
     // Sandbox edits can move a transaction into the range, so start from
     // everything and let the engine pick what falls inside the window
-    let all: EngineTransaction[] = (await transactions(store).find()).map(shapeTransaction); // PR2
+    // Sorted as fetched; sandbox edits keep their place and additions go last
+    let all: EngineTransaction[] = (await transactions(store).find()).map(shapeTransaction).sort(sameDayOrder); // PR2
     if (sandbox.profile) {
       // The what-if Datasheet re-prices Salary and Rent; which transactions
       // those are always comes from the real Datasheet
@@ -114,7 +116,7 @@ async function project(store: Store, now: Date, params: ProjectionParams, sandbo
       : dateFilter;
 
     if (accountId) assertId(accountId);
-    txs = (await transactions(store).find(query)).map(shapeTransaction); // PR3
+    txs = (await transactions(store).find(query)).map(shapeTransaction).sort(sameDayOrder); // PR3
   }
 
   const result = buildProjection({
@@ -174,12 +176,17 @@ export const postProjection: Handler = ({ store, body, now }) =>
     return ok(await project(store, now, params, sandbox));
   }, true);
 
+const SUMMARY_VIEWS: readonly string[] = ["weekly", "monthly", "annual"] satisfies SummaryView[];
+
 /** GET — totals, category breakdown and days (or months) for a week, month or year. */
 export const getSummary: Handler = ({ store, query: params, now }) =>
   guarded(async () => {
+    const view = (params.get("view") || "monthly") as SummaryView;
+    // Checked before due payments are posted: a 400 writes nothing
+    if (!SUMMARY_VIEWS.includes(view)) return fail(400, "Invalid view");
+
     await postDuePayments(store, now);
 
-    const view = (params.get("view") || "monthly") as SummaryView;
     const dateParam = params.get("date");
     const accountId = params.get("accountId") || undefined;
     // Treat the param as a calendar date: "yyyy-MM-dd" is taken as-is, a full ISO string by its UTC day
@@ -202,7 +209,6 @@ export const getSummary: Handler = ({ store, query: params, now }) =>
         periodLabel = format(fromDateStr(dateStr), "MMMM yyyy");
         break;
       case "annual":
-      default:
         range = yearBounds(dateStr);
         periodLabel = dateStr.slice(0, 4);
         break;
@@ -210,35 +216,34 @@ export const getSummary: Handler = ({ store, query: params, now }) =>
 
     const accts = (await accounts(store).find()).map(shapeAccount); // SU1
 
-    const query: Record<string, unknown> = {};
-    if (accountId) query.accountId = accountId;
-
     // Stored dates are UTC midnight, so query with UTC-midnight bounds (inclusive)
     const startDate = filterDate(range.startStr);
     const endDate = filterDate(range.endStr);
 
+    const dateFilter = {
+      $or: [
+        {
+          isRecurring: { $ne: true },
+          date: { $gte: startDate, $lte: endDate },
+        },
+        {
+          isRecurring: true,
+          "recurrenceRule.startDate": { $lte: endDate },
+          $or: [
+            { "recurrenceRule.endDate": null },
+            { "recurrenceRule.endDate": { $exists: false } },
+            { "recurrenceRule.endDate": { $gte: startDate } },
+          ],
+        },
+      ],
+    };
+    // Include transfers where the account is source OR destination (as projections do)
+    const query = accountId
+      ? { $and: [{ $or: [{ accountId }, { toAccountId: accountId }] }, dateFilter] }
+      : dateFilter;
+
     if (accountId) assertId(accountId);
-    // SU2
-    const txs = (
-      await transactions(store).find({
-        ...query,
-        $or: [
-          {
-            isRecurring: { $ne: true },
-            date: { $gte: startDate, $lte: endDate },
-          },
-          {
-            isRecurring: true,
-            "recurrenceRule.startDate": { $lte: endDate },
-            $or: [
-              { "recurrenceRule.endDate": null },
-              { "recurrenceRule.endDate": { $exists: false } },
-              { "recurrenceRule.endDate": { $gte: startDate } },
-            ],
-          },
-        ],
-      })
-    ).map(shapeTransaction);
+    const txs = (await transactions(store).find(query)).map(shapeTransaction).sort(sameDayOrder); // SU2
 
     const granularity = view === "annual" ? "monthly" : "daily";
     const projection = buildProjection({

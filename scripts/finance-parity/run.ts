@@ -9,7 +9,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 import { buildScenario, type Step } from "./scenario";
-import { compareTranscripts, createNormalizer, dayOrderConflicts, daysOf, substitute, tieChecks, type Transcript, type TranscriptStep } from "./normalize";
+import { compareTranscripts, createNormalizer, dayOrderConflicts, daysOf, substitute, tieChecks, type CreatedTx, type Transcript, type TranscriptStep } from "./normalize";
 
 const DEFAULT_GOLDEN = "scripts/finance-parity/golden/transcript.json";
 
@@ -98,9 +98,11 @@ async function probeEmpty(base: string) {
 }
 
 async function createdTransactions(base: string) {
-  const res = await request(base, "GET", "/api/transactions?limit=1000&sort=createdAt&order=asc");
-  if (res.status !== 200 || !isRecord(res.body) || !Array.isArray(res.body.data)) fail(`Order-check read failed: ${res.status}`);
-  return (res.body.data as { _id: string; date: string }[]).map((t) => ({ _id: t._id, date: t.date }));
+  // 500 is the largest limit a list accepts; the scenario stores far fewer transactions
+  const res = await request(base, "GET", "/api/transactions?limit=500&sort=createdAt&order=asc");
+  if (res.status !== 200 || !isRecord(res.body) || !Array.isArray(res.body.data) || !isRecord(res.body.pagination)) fail(`Order-check read failed: ${res.status}`);
+  if (res.body.pagination.totalPages !== 1 && res.body.pagination.total !== 0) fail("Order-check read: more than 500 transactions");
+  return (res.body.data as CreatedTx[]).map((t) => ({ _id: t._id, date: t.date, type: t.type, createdAt: t.createdAt }));
 }
 
 async function runScenario(base: string, mode: "capture" | "check"): Promise<{ transcript: Transcript; steps: Step[] }> {
@@ -125,8 +127,10 @@ async function runScenario(base: string, mode: "capture" | "check"): Promise<{ t
 
     const res = await request(base, step.method, path, { body: payload });
 
-    if (mode === "capture" && step.expect !== null && res.status !== step.expect) {
-      fail(`${step.id} ${step.method} ${step.path}: expected ${step.expect}, got ${res.status}: ${JSON.stringify(res.body).slice(0, 1000)}`);
+    // The golden is re-recorded on the converted routes, where an `allow` step answers its allowed status
+    const wanted = step.allow ? step.allow.status : step.expect;
+    if (mode === "capture" && wanted !== null && res.status !== wanted) {
+      fail(`${step.id} ${step.method} ${step.path}: expected ${wanted}, got ${res.status}: ${JSON.stringify(res.body).slice(0, 1000)}`);
     }
 
     const ties = res.status === 200 ? tieChecks(step, path, res.body) : [];

@@ -23,6 +23,14 @@ import {
 
 const TRANSACTION = "Transaction";
 
+/** Largest `limit` a list request may ask for. */
+const MAX_LIMIT = 500;
+/**
+ * Scalar fields a list may sort by: the transactions table's server-side sorts (date, amount)
+ * and createdAt (creation order, read by the parity tooling).
+ */
+const SORT_FIELDS: readonly string[] = ["date", "amount", "createdAt"];
+
 
 /** `Account.findById` as a hydrated document: shaped, or null. */
 async function findAccount(acc: Collection<AccountDoc>, id: string): Promise<AccountDoc | null> {
@@ -103,10 +111,18 @@ export const listTransactions: Handler = async ({ store, query }) => {
   const category = query.get("category");
   const isRecurring = query.get("isRecurring");
   const search = query.get("search");
-  const page = parseInt(query.get("page") || "1", 10);
-  const limit = parseInt(query.get("limit") || "20", 10);
+  const pageParam = query.get("page") || "1";
+  const limitParam = query.get("limit") || "20";
   const sort = query.get("sort") || "date";
   const order = query.get("order") || "desc";
+
+  // Read-only, so the order of these checks does not matter
+  const page = /^\d+$/.test(pageParam) ? Number(pageParam) : NaN;
+  if (!(page >= 1) || !Number.isSafeInteger(page)) return fail(400, "Invalid page");
+  const limit = /^\d+$/.test(limitParam) ? Number(limitParam) : NaN;
+  if (!(limit >= 1 && limit <= MAX_LIMIT)) return fail(400, "Invalid limit");
+  if (!SORT_FIELDS.includes(sort)) return fail(400, "Invalid sort");
+  if (order !== "asc" && order !== "desc") return fail(400, "Invalid order");
 
   const filter: Record<string, unknown> = {};
 
@@ -128,7 +144,6 @@ export const listTransactions: Handler = async ({ store, query }) => {
   if (search) filter.description = { $regex: search, $options: "i" };
 
   const skip = (page - 1) * limit;
-  if (skip < 0) throw new Error("Invalid skip"); // MongoDB refuses a negative skip
   const sortOrder = order === "asc" ? 1 : -1;
 
   const txs = transactions(store);

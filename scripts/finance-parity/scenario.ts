@@ -301,7 +301,8 @@ export function buildScenario(today: string): Step[] {
         recurrenceRule: { frequency: "semi_monthly", startDate: dom(-3, 25) },
         categoryTags: ["other"],
       },
-      201,
+      // Bug 8: a recurring semi-monthly rule without daysOfMonth is refused
+      400,
     ),
     send(
       "T16",
@@ -337,6 +338,9 @@ export function buildScenario(today: string): Step[] {
     get("T31", `/api/transactions?startDate=${d(-19)}&endDate=${d(-14)}&sort=date&order=asc`, 200),
     get("T32", "/api/transactions?sort=amount&order=asc&limit=100", 200),
     get("T33", "/api/transactions?accountId=abc", 500),
+    // Bug 17: list parameters are validated
+    get("T33b", "/api/transactions?page=0", 400),
+    get("T33c", "/api/transactions?sort=categoryTags&limit=501", 400),
     get("T34", "/api/transactions/{tGroc}", 200),
     get("T35", `/api/transactions/${B}`, 404),
     get("T36", "/api/transactions/abc", 500, { allow: d1a(TX_NOT_FOUND) }),
@@ -520,7 +524,8 @@ export function buildScenario(today: string): Step[] {
     get("R14", `/api/summary?view=monthly&date=${T}`, 200),
     get("R15", `/api/summary?view=weekly&date=${T}`, 200),
     get("R16", `/api/summary?view=annual&date=${T}`, 200),
-    get("R17", `/api/summary?view=bogus&date=${T}`, 200),
+    // Bug 6: an unknown view is refused
+    get("R17", `/api/summary?view=bogus&date=${T}`, 400),
     get("R18", "/api/summary?view=monthly&date=garbage", 400),
     get("R19", `/api/summary?view=monthly&date=${T}&accountId={checking}`, 200),
     get("R20", `/api/summary?view=monthly&date=${T}&accountId={savings}`, 200),
@@ -605,5 +610,16 @@ export function buildScenario(today: string): Step[] {
     get("X19", "/api/transactions/{rent}", 200),
     get("X20", "/api/transactions?limit=100&sort=date&order=asc", 200),
     get("X21", "/api/finance-profile", 200),
+
+    // ── Same-day order (bug 18). Last, so no earlier step changes. A new empty account gets a
+    // transfer, a debit and a credit on one future day, created in the opposite of the order the
+    // engine applies them (credits, debits, transfers): in creation order the bank caps would cut
+    // the transfer and the debit to 0. ──
+    send("X22", "POST", "/api/accounts", { name: "Parity Order", type: "bank", balance: 0 }, 201, { save: { name: "order", from: "_id" } }),
+    send("X23", "POST", "/api/transactions", { amount: 31.5, date: d(3), description: "Parity order transfer", accountId: "{order}", toAccountId: "{checking}", type: "transfer", categoryTags: ["transfer"] }, 201),
+    send("X24", "POST", "/api/transactions", { amount: 22.75, date: d(3), description: "Parity order debit", accountId: "{order}", type: "debit", categoryTags: ["spending"] }, 201),
+    send("X25", "POST", "/api/transactions", { amount: 104.25, date: d(3), description: "Parity order credit", accountId: "{order}", type: "credit", categoryTags: ["salary"] }, 201),
+    get("X26", `/api/projections?startDate=${d(0)}&endDate=${d(5)}&accountId={order}`, 200),
+    get("X27", `/api/summary?view=monthly&date=${d(3)}&accountId={order}`, 200),
   ];
 }
