@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { useTheme } from "next-themes";
 import { Monitor, Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,8 +25,13 @@ const themeLabels: Record<Theme, string> = {
   dark: "Dark theme",
 };
 
+const noopSubscribe = () => () => {};
+
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
+  // The saved theme is only known in the browser. Until hydration is done, render the
+  // same "system" icon the server sent, so the two renders match.
+  const hydrated = useSyncExternalStore(noopSubscribe, () => true, () => false);
 
   function cycleTheme() {
     const current = (theme as Theme) ?? "system";
@@ -34,7 +40,7 @@ export function ThemeToggle() {
     setTheme(next);
   }
 
-  const current = (theme as Theme) ?? "system";
+  const current = hydrated ? ((theme as Theme) ?? "system") : "system";
 
   return (
     <Tooltip>
