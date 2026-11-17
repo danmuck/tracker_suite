@@ -79,37 +79,100 @@ function matchesOperators(actual: unknown, ops: Record<string, unknown>): boolea
   return true;
 }
 
-function assertFlat(key: string): void {
-  if (key.includes(".")) throw new Error(`Dotted paths are not supported: ${key}`);
+function isPlainObject(value: unknown): value is Doc {
+  return value !== null && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date);
 }
 
-// Checked up front so a dotted key fails even when an earlier condition already decided the match.
-function assertFilterFlat(filter: Filter): void {
-  for (const [key, condition] of Object.entries(filter)) {
-    if (key === "$or") for (const sub of orBranches(condition)) assertFilterFlat(sub);
-    else if (!key.startsWith("$")) assertFlat(key);
+function splitPath(key: string): string[] {
+  const segments = key.split(".");
+  if (segments.some((s) => s === "")) throw new Error(`Invalid path: ${key}`);
+  return segments;
+}
+
+// Reads a key, following dots through nested plain objects. A missing, null or
+// non-object intermediate reads as undefined; an array on the way throws.
+function getPath(doc: Doc, key: string): unknown {
+  if (!key.includes(".")) return doc[key];
+  const segments = splitPath(key);
+  let current: unknown = doc;
+  for (let i = 0; i < segments.length; i++) {
+    if (!isPlainObject(current)) return undefined;
+    const value = current[segments[i]];
+    if (i < segments.length - 1 && Array.isArray(value)) throw new Error(`Dotted path crosses an array: ${key}`);
+    current = value;
+  }
+  return current;
+}
+
+// Copies the objects along `key` (never mutating the originals) and returns the
+// object that holds the leaf. With create, missing intermediates become objects;
+// an existing non-object intermediate throws. Without create, a missing
+// intermediate returns null (nothing to do).
+function parentForWrite(root: Doc, key: string, create: boolean): { parent: Doc; leaf: string } | null {
+  const segments = splitPath(key);
+  let current = root;
+  for (let i = 0; i < segments.length - 1; i++) {
+    const value = current[segments[i]];
+    if (Array.isArray(value)) throw new Error(`Dotted path crosses an array: ${key}`);
+    if (value === undefined) {
+      if (!create) return null;
+      const made: Doc = {};
+      current[segments[i]] = made;
+      current = made;
+    } else if (isPlainObject(value)) {
+      const copy = { ...value };
+      current[segments[i]] = copy;
+      current = copy;
+    } else {
+      throw new Error(`${create ? "Cannot create" : "Cannot unset"} field in ${key}`);
+    }
+  }
+  return { parent: current, leaf: segments[segments.length - 1] };
+}
+
+function setPath(root: Doc, key: string, value: unknown): void {
+  if (!key.includes(".")) {
+    root[key] = value;
+    return;
+  }
+  const target = parentForWrite(root, key, true);
+  if (target) target.parent[target.leaf] = value;
+}
+
+function unsetPath(root: Doc, key: string): void {
+  if (!key.includes(".")) {
+    delete root[key];
+    return;
+  }
+  const target = parentForWrite(root, key, false);
+  if (target) delete target.parent[target.leaf];
+}
+
+// MongoDB rejects an update that touches both a path and one of its parents.
+function assertNoConflicts(keys: string[]): void {
+  for (const a of keys) {
+    for (const b of keys) {
+      if (b.startsWith(`${a}.`)) throw new Error(`Conflicting update paths: ${a} and ${b}`);
+    }
   }
 }
 
-function orBranches(condition: unknown): Filter[] {
-  if (!Array.isArray(condition)) throw new Error("$or needs an array");
+function branches(op: "$or" | "$and", condition: unknown): Filter[] {
+  if (!Array.isArray(condition)) throw new Error(`${op} needs an array`);
   return condition as Filter[];
 }
 
 export function matches(doc: Doc, filter: Filter): boolean {
-  assertFilterFlat(filter);
-  return matchesFlat(doc, filter);
-}
-
-function matchesFlat(doc: Doc, filter: Filter): boolean {
   for (const [key, condition] of Object.entries(filter)) {
     if (key === "$or") {
-      if (!orBranches(condition).some((sub) => matchesFlat(doc, sub))) return false;
+      if (!branches("$or", condition).some((sub) => matches(doc, sub))) return false;
+    } else if (key === "$and") {
+      if (!branches("$and", condition).every((sub) => matches(doc, sub))) return false;
     } else if (key.startsWith("$")) {
       throw new Error(`Unsupported filter operator: ${key}`);
     } else if (isOperatorObject(condition)) {
-      if (!matchesOperators(doc[key], condition)) return false;
-    } else if (!valueEquals(doc[key], condition)) {
+      if (!matchesOperators(getPath(doc, key), condition)) return false;
+    } else if (!valueEquals(getPath(doc, key), condition)) {
       return false;
     }
   }
@@ -117,19 +180,23 @@ function matchesFlat(doc: Doc, filter: Filter): boolean {
 }
 
 export function applyUpdate<T extends Doc>(doc: T, update: Update, inserting = false): T {
-  for (const part of [update.$setOnInsert, update.$set, update.$inc, update.$unset]) {
-    for (const key of Object.keys(part ?? {})) assertFlat(key);
-  }
+  const applied = [inserting ? update.$setOnInsert : undefined, update.$set, update.$inc, update.$unset];
+  assertNoConflicts(applied.flatMap((part) => Object.keys(part ?? {})));
   const next: Doc = { ...doc };
-  if (inserting && update.$setOnInsert) Object.assign(next, update.$setOnInsert);
-  if (update.$set) Object.assign(next, update.$set);
+  if (inserting && update.$setOnInsert) {
+    for (const [key, value] of Object.entries(update.$setOnInsert)) setPath(next, key, value);
+  }
+  if (update.$set) {
+    for (const [key, value] of Object.entries(update.$set)) setPath(next, key, value);
+  }
   if (update.$inc) {
     for (const [key, by] of Object.entries(update.$inc)) {
-      next[key] = (typeof next[key] === "number" ? (next[key] as number) : 0) + by;
+      const current = getPath(next, key);
+      setPath(next, key, (typeof current === "number" ? current : 0) + by);
     }
   }
   if (update.$unset) {
-    for (const key of Object.keys(update.$unset)) delete next[key];
+    for (const key of Object.keys(update.$unset)) unsetPath(next, key);
   }
   return next as T;
 }
@@ -138,8 +205,8 @@ export function sortDocs<T extends Doc>(docs: T[], sort: Sort): T[] {
   const keys = Object.entries(sort);
   return [...docs].sort((a, b) => {
     for (const [key, dir] of keys) {
-      const x = normalize(a[key]) as string | number | null | undefined;
-      const y = normalize(b[key]) as string | number | null | undefined;
+      const x = normalize(getPath(a, key)) as string | number | null | undefined;
+      const y = normalize(getPath(b, key)) as string | number | null | undefined;
       // null and missing are the same value, and sort first ascending, as in Mongo.
       const xMissing = x === undefined || x === null;
       const yMissing = y === undefined || y === null;
