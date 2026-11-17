@@ -187,35 +187,39 @@ export function compareTranscripts(golden: Transcript, actual: Transcript, steps
 /** A stored transaction as the N7 third check reads it (from a createdAt-ascending list). */
 export interface CreatedTx {
   _id: string;
-  date: string;
-  type?: string;
   createdAt?: string;
 }
 
+/** A day entry as the N7 third check reads it (projection timeline or summary days). */
+type DayEntry = { sourceTransactionId?: string; type?: string; date?: string };
+
 /**
- * N7, third check. For each day, two entries of the same kind (both recurring or both one-time)
- * with different source ids are reported when their creation order and their stored-date-descending
- * order disagree, or when their order would rest on `_id` alone: projections and the summary sort
- * their input by stored day, credit/debit/transfer, then `createdAt`, then `_id`
- * (`src/lib/finance/same-day-order.ts`), and `_id`s differ between the stores (ObjectIds vs random
- * ids), so equal stored dates are a conflict only when the type and `createdAt` are equal too.
- * `created` is every stored transaction in creation order. One message per day.
+ * Whether two entries may share a same-day rank (src/lib/finance/same-day-order.ts: income, debits,
+ * payments). Same type always may. A credit and a transfer may too: a credit on a card or debt
+ * account is a payment, ranked with transfers, and the response does not say which accounts are
+ * debt accounts, so this check assumes they might be (it errs towards reporting).
+ */
+function mayShareRank(a: DayEntry, b: DayEntry): boolean {
+  if (a.type === b.type) return true;
+  const pair = [a.type, b.type].sort().join("/");
+  return pair === "credit/transfer";
+}
+
+/**
+ * N7, third check. The engine orders each occurrence day's entries by rank, then the source
+ * transaction's `createdAt`, then its `_id`, whether one-time or recurring. `_id`s differ between
+ * the stores (ObjectIds vs random ids), so a day's order is store-specific exactly when two entries
+ * from different sources on the same occurrence day may share a rank and have equal `createdAt`
+ * (two missing ones included). Those pairs are reported, one message per day. `created` is every
+ * stored transaction (with its `createdAt`); entries whose source is not stored (what-if additions,
+ * interest lines) have no stored order and are not compared.
  *
  * A weekly or monthly timeline entry concatenates its days in date order, so two entries whose own
- * `date` differs are ordered by that date, not by input order, and are not compared.
+ * `date` differs are ordered by that date and are not compared.
  */
-export function dayOrderConflicts(
-  days: { date: string; transactions: { sourceTransactionId?: string; isRecurring?: boolean; date?: string }[] }[],
-  created: CreatedTx[],
-): string[] {
-  const position = new Map<string, number>();
-  const dateOf = new Map<string, string>();
+export function dayOrderConflicts(days: { date: string; transactions: DayEntry[] }[], created: CreatedTx[]): string[] {
   const byId = new Map<string, CreatedTx>();
-  created.forEach((t, i) => {
-    position.set(t._id, i);
-    dateOf.set(t._id, t.date);
-    byId.set(t._id, t);
-  });
+  for (const t of created) byId.set(t._id, t);
 
   const messages: string[] = [];
   for (const day of days) {
@@ -225,24 +229,15 @@ export function dayOrderConflicts(
       for (let j = i + 1; j < txs.length; j++) {
         const a = txs[i], b = txs[j];
         if (!a.sourceTransactionId || !b.sourceTransactionId || a.sourceTransactionId === b.sourceTransactionId) continue;
-        if (!!a.isRecurring !== !!b.isRecurring) continue;
         if (a.date !== undefined && b.date !== undefined && a.date !== b.date) continue; // different days of a bucket
-        const pa = position.get(a.sourceTransactionId), pb = position.get(b.sourceTransactionId);
-        if (pa === undefined || pb === undefined) continue;
-        const da = dateOf.get(a.sourceTransactionId)!, db = dateOf.get(b.sourceTransactionId)!;
-        const describe = `${a.sourceTransactionId} (created #${pa + 1}, ${da}) / ${b.sourceTransactionId} (created #${pb + 1}, ${db})`;
-        if (da === db) {
-          // Same stored date: the type, then createdAt decide; only _id is left when both tie too
-          const ca = byId.get(a.sourceTransactionId)!, cb = byId.get(b.sourceTransactionId)!;
-          if (ca.type === cb.type && ca.createdAt === cb.createdAt) pairs.push(`tie on stored date, type and createdAt: ${describe}`);
-          continue;
+        const ca = byId.get(a.sourceTransactionId), cb = byId.get(b.sourceTransactionId);
+        if (!ca || !cb) continue;
+        if (mayShareRank(a, b) && ca.createdAt === cb.createdAt) {
+          pairs.push(`${a.sourceTransactionId} (${a.type}) / ${b.sourceTransactionId} (${b.type}) tie on createdAt ${JSON.stringify(ca.createdAt)}`);
         }
-        const creationFirstIsA = pa < pb;
-        const dateDescFirstIsA = da > db;
-        if (creationFirstIsA !== dateDescFirstIsA) pairs.push(`order disagrees: ${describe}`);
       }
     }
-    if (pairs.length > 0) messages.push(`${day.date}: same-day order is not fixed by stored date: ${pairs.join("; ")}`);
+    if (pairs.length > 0) messages.push(`${day.date}: same-day order rests on _id: ${pairs.join("; ")}`);
   }
   return messages;
 }
@@ -270,7 +265,7 @@ export function tieChecks(step: Step, path: string, body: unknown): string[] {
   return problems;
 }
 
-export type Day = { date: string; transactions: { sourceTransactionId?: string; isRecurring?: boolean; date?: string }[] };
+export type Day = { date: string; transactions: DayEntry[] };
 
 export function daysOf(path: string, body: unknown): Day[] {
   const data = isPlainObject(body) && isPlainObject(body.data) ? body.data : undefined;

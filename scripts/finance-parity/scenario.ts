@@ -640,5 +640,13 @@ export function buildScenario(today: string): Step[] {
     ),
     get("X26", `/api/projections?startDate=${d(0)}&endDate=${d(5)}&accountId={order}`, 200),
     get("X27", `/api/summary?view=monthly&date=${d(3)}&accountId={order}`, 200),
+
+    // ── Same-day order on a card: a credit there is a payment, ranked with transfers after debits.
+    // A new card owing nothing gets a payment, then a charge, on one future day: the charge goes
+    // first, so the payment applies (credits first would drop it as "nothing left to pay"). ──
+    send("X28", "POST", "/api/accounts", { name: "Parity Order Card", type: "credit_card", balance: 0, creditLimit: 500 }, 201, { save: { name: "orderCard", from: "_id" } }),
+    send("X29", "POST", "/api/transactions", { amount: 18.6, date: d(4), description: "Parity order card payment", accountId: "{orderCard}", type: "credit", categoryTags: ["credit"] }, 201),
+    send("X30", "POST", "/api/transactions", { amount: 41.3, date: d(4), description: "Parity order card charge", accountId: "{orderCard}", type: "debit", categoryTags: ["spending"] }, 201),
+    get("X31", `/api/projections?startDate=${d(0)}&endDate=${d(5)}&accountId={orderCard}`, 200),
   ];
 }

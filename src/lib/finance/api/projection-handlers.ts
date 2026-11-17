@@ -108,9 +108,10 @@ async function project(store: Store, now: Date, params: ProjectionParams, sandbo
       ],
     };
 
-    // Include transfers where account is source OR destination
+    // Include transfers where account is source OR destination (only a transfer has a destination:
+    // a debit or credit still holding an old toAccountId belongs to its own account only)
     const query = accountId
-      ? { $and: [{ $or: [{ accountId }, { toAccountId: accountId }] }, dateFilter] }
+      ? { $and: [{ $or: [{ accountId }, { toAccountId: accountId, type: "transfer" }] }, dateFilter] }
       : dateFilter;
 
     if (accountId) assertId(accountId);
@@ -235,9 +236,10 @@ export const getSummary: Handler = ({ store, query: params, now }) =>
         },
       ],
     };
-    // Include transfers where the account is source OR destination (as projections do)
+    // Include transfers where the account is source OR destination (as projections do; a debit or
+    // credit still holding an old toAccountId belongs to its own account only)
     const query = accountId
-      ? { $and: [{ $or: [{ accountId }, { toAccountId: accountId }] }, dateFilter] }
+      ? { $and: [{ $or: [{ accountId }, { toAccountId: accountId, type: "transfer" }] }, dateFilter] }
       : dateFilter;
 
     if (accountId) assertId(accountId);

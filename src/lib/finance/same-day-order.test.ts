@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { sameDayOrder } from "./same-day-order";
+import { dayRank, sameDayOrder } from "./same-day-order";
 
 type Tx = Parameters<typeof sameDayOrder>[0];
 const tx = (id: string, over: Partial<Tx> = {}): Tx => ({
@@ -23,14 +23,30 @@ test("sameDayOrder: the calendar day comes first, by its UTC date (an instant la
   assert.deepEqual(ids([tx("d", { date: new Date("2026-11-10T00:00:00.000Z"), type: "transfer" }), tx("e", { type: "credit" })]), ["e", "d"]);
 });
 
-test("sameDayOrder: within a day credits, then debits, then transfers", () => {
+test("sameDayOrder: within a day income (bank credits), then debits, then transfers", () => {
   const list = [tx("t", { type: "transfer", createdAt: "2026-01-01T00:00:00.000Z" }), tx("d", { type: "debit", createdAt: "2026-01-02T00:00:00.000Z" }), tx("c", { type: "credit", createdAt: "2026-01-03T00:00:00.000Z" })];
   assert.deepEqual(ids(list), ["c", "d", "t"]);
 });
 
-test("sameDayOrder: same day and kind, older createdAt first; a missing createdAt (what-if) sorts last", () => {
+test("sameDayOrder: a credit on a debt account is a payment, ranked with transfers by createdAt", () => {
+  const charge = tx("charge", { type: "debit", onDebtAccount: true, createdAt: "2026-01-03T00:00:00.000Z" });
+  const payment = tx("payment", { type: "credit", onDebtAccount: true, createdAt: "2026-01-01T00:00:00.000Z" });
+  const transfer = tx("transfer", { type: "transfer", createdAt: "2026-01-02T00:00:00.000Z" });
+  const income = tx("income", { type: "credit", createdAt: "2026-01-04T00:00:00.000Z" });
+  assert.deepEqual(ids([payment, transfer, charge, income]), ["income", "charge", "payment", "transfer"]);
+  assert.deepEqual(ids([{ ...payment, createdAt: "2026-01-05T00:00:00.000Z" }, transfer, charge, income]), ["income", "charge", "transfer", "payment"]);
+  // A debit or transfer ranks the same whatever its account
+  assert.deepEqual(ids([tx("d1", { onDebtAccount: false, createdAt: "2026-01-02T00:00:00.000Z" }), tx("d2", { onDebtAccount: true, createdAt: "2026-01-01T00:00:00.000Z" })]), ["d2", "d1"]);
+  assert.deepEqual([dayRank({ type: "credit" }), dayRank({ type: "debit", onDebtAccount: true }), dayRank({ type: "transfer" }), dayRank({ type: "credit", onDebtAccount: true })], [0, 1, 2, 2]);
+});
+
+test("sameDayOrder: same day and rank, older createdAt first; a missing or unparseable createdAt sorts last", () => {
   const list = [tx("new", { createdAt: "2026-11-02T00:00:00.000Z" }), tx("old", { createdAt: "2026-11-01T00:00:00.000Z" }), tx("whatif", { createdAt: undefined })];
   assert.deepEqual(ids(list), ["old", "new", "whatif"]);
+  const bad = tx("bad", { createdAt: "not a date" });
+  assert.doesNotThrow(() => sameDayOrder(bad, list[0]));
+  assert.deepEqual(ids([bad, ...list]), ["old", "new", "bad", "whatif"]); // ties with a missing one: _id decides
+  assert.deepEqual(ids([tx("zz", { createdAt: undefined }), tx("aa", { createdAt: "garbage" })]), ["aa", "zz"]);
 });
 
 test("sameDayOrder: a createdAt tie falls to _id ascending; identical keys compare equal", () => {

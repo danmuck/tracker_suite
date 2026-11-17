@@ -102,7 +102,7 @@ async function createdTransactions(base: string) {
   const res = await request(base, "GET", "/api/transactions?limit=500&sort=createdAt&order=asc");
   if (res.status !== 200 || !isRecord(res.body) || !Array.isArray(res.body.data) || !isRecord(res.body.pagination)) fail(`Order-check read failed: ${res.status}`);
   if (res.body.pagination.totalPages !== 1 && res.body.pagination.total !== 0) fail("Order-check read: more than 500 transactions");
-  return (res.body.data as CreatedTx[]).map((t) => ({ _id: t._id, date: t.date, type: t.type, createdAt: t.createdAt }));
+  return (res.body.data as CreatedTx[]).map((t) => ({ _id: t._id, createdAt: t.createdAt }));
 }
 
 async function runScenario(base: string, mode: "capture" | "check"): Promise<{ transcript: Transcript; steps: Step[] }> {

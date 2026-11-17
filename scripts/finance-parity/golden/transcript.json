@@ -1,10 +1,10 @@
 {
   "meta": {
-    "capturedAt": "2026-11-17T23:04:28.214Z",
+    "capturedAt": "2026-11-17T23:14:00.351Z",
     "localDate": "2026-11-17",
     "utcDate": "2026-11-17",
     "timeZone": "America/New_York",
-    "commit": "ebf62ad9139d57c03a5070124bb900200c489199"
+    "commit": "f9a53533b12ed73f26e284dc0be7e9c3ddfbc291"
   },
   "steps": [
     {
@@ -9769,14 +9769,14 @@
               "amount": 1184050,
               "date": "2026-10-18"
             },
-            "netChange": -50000,
+            "netChange": 0,
             "payoffDates": {},
             "startBalances": {
               "<savings>": 1184050
             },
-            "totalExpenses": 50000,
+            "totalExpenses": 0,
             "totalIncome": 0,
-            "totalOut": 50000
+            "totalOut": 0
           },
           "timeline": [
             {
@@ -9902,26 +9902,7 @@
                 "<savings>": 1192050
               },
               "date": "2026-11-01",
-              "transactions": [
-                {
-                  "accountId": "<checking>",
-                  "amount": 50000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-01",
-                  "description": "Parity to savings",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 1192050,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
-                  "type": "debit"
-                }
-              ]
+              "transactions": []
             },
             {
               "balances": {
@@ -16488,13 +16469,7 @@
       "status": 200,
       "body": {
         "data": {
-          "categoryBreakdown": [
-            {
-              "amount": 50000,
-              "category": "transfer",
-              "percentage": 1
-            }
-          ],
+          "categoryBreakdown": [],
           "days": [
             {
               "balances": {
@@ -16502,27 +16477,8 @@
               },
               "date": "2026-11-01",
               "totalCredits": 0,
-              "totalDebits": 50000,
-              "transactions": [
-                {
-                  "accountId": "<checking>",
-                  "amount": 50000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-01",
-                  "description": "Parity to savings",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 1192050,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<tSav>",
-                  "toAccountId": "<savings>",
-                  "type": "debit"
-                }
-              ]
+              "totalDebits": 0,
+              "transactions": []
             },
             {
               "balances": {
@@ -16851,11 +16807,11 @@
             "start": "2026-11-01"
           },
           "totals": {
-            "expenses": 50000,
+            "expenses": 0,
             "income": 0,
             "loanPayments": 0,
-            "net": -50000,
-            "totalOut": 50000
+            "net": 0,
+            "totalOut": 0
           },
           "view": "monthly"
         }
@@ -20198,6 +20154,167 @@
           },
           "view": "monthly"
         }
+      }
+    },
+    {
+      "id": "X28",
+      "request": "POST /api/accounts",
+      "status": 201,
+      "body": {
+        "_id": "<orderCard>",
+        "balance": 0,
+        "creditLimit": 50000,
+        "currency": "USD",
+        "isArchived": false,
+        "isCash": false,
+        "name": "Parity Order Card",
+        "type": "credit_card",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X29",
+      "request": "POST /api/transactions",
+      "status": 201,
+      "body": {
+        "_id": "<id:22>",
+        "accountId": "<orderCard>",
+        "amount": 1860,
+        "balanceApplied": false,
+        "categoryTags": [
+          "credit"
+        ],
+        "date": "2026-11-21T00:00:00.000Z",
+        "description": "Parity order card payment",
+        "isRecurring": false,
+        "type": "credit",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X30",
+      "request": "POST /api/transactions",
+      "status": 201,
+      "body": {
+        "_id": "<id:23>",
+        "accountId": "<orderCard>",
+        "amount": 4130,
+        "balanceApplied": false,
+        "categoryTags": [
+          "spending"
+        ],
+        "date": "2026-11-21T00:00:00.000Z",
+        "description": "Parity order card charge",
+        "isRecurring": false,
+        "type": "debit",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X31",
+      "request": "GET /api/projections?startDate=2026-11-17&endDate=2026-11-22&accountId={orderCard}",
+      "status": 200,
+      "body": {
+        "data": {
+          "alerts": [],
+          "summary": {
+            "debtPayments": 1860,
+            "endBalances": {
+              "<orderCard>": 2270
+            },
+            "interestCharged": 0,
+            "loanPayments": 0,
+            "lowestCash": null,
+            "netChange": -2270,
+            "payoffDates": {},
+            "startBalances": {
+              "<orderCard>": 0
+            },
+            "totalExpenses": 4130,
+            "totalIncome": 1860,
+            "totalOut": 4130
+          },
+          "timeline": [
+            {
+              "balances": {
+                "<orderCard>": 0
+              },
+              "date": "2026-11-17",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<orderCard>": 0
+              },
+              "date": "2026-11-18",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<orderCard>": 0
+              },
+              "date": "2026-11-19",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<orderCard>": 0
+              },
+              "date": "2026-11-20",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<orderCard>": 2270
+              },
+              "date": "2026-11-21",
+              "transactions": [
+                {
+                  "accountId": "<orderCard>",
+                  "amount": 4130,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "spending"
+                  ],
+                  "date": "2026-11-21",
+                  "description": "Parity order card charge",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 0,
+                    "credit": 4130
+                  },
+                  "sourceTransactionId": "<id:23>",
+                  "type": "debit"
+                },
+                {
+                  "accountId": "<orderCard>",
+                  "amount": 1860,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "credit"
+                  ],
+                  "date": "2026-11-21",
+                  "description": "Parity order card payment",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 0,
+                    "credit": 2270
+                  },
+                  "sourceTransactionId": "<id:22>",
+                  "type": "credit"
+                }
+              ]
+            },
+            {
+              "balances": {
+                "<orderCard>": 2270
+              },
+              "date": "2026-11-22",
+              "transactions": []
+            }
+          ]
+        },
+        "dataVersion": "16|<changed>|<same>|<car>:800000:<same>,<card>:0:<same>,<cash>:2500:<same>,<checking>:1396500:<same>,<id:10>:5000:<same>,<loan>:1900000:<same>,<order>:0:<same>,<orderCard>:0:<new>"
       }
     }
   ],

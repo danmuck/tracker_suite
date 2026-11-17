@@ -113,16 +113,30 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
     ? accounts.filter((a) => a._id.toString() === filterAccountId)
     : accounts.filter((a) => !a.isArchived);
 
+  // Credit card and debt accounts: balances count what is owed (isDebtType); a credit there is a
+  // payment, so it caps at what is owed and is ordered with transfers within a day
+  const debtAccountIds = new Set(
+    accounts
+      .filter((a) => a.type === "credit_card" || a.type === "debt")
+      .map((a) => a._id.toString())
+  );
+
   // Separate recurring vs one-time
   const oneTimeTransactions = transactions.filter((t) => !t.isRecurring);
   const recurringTransactions = transactions.filter((t) => t.isRecurring && t.recurrenceRule);
 
   // Expand recurrences into projected transactions
   const allProjected: ProjectedTransaction[] = [];
-  // Each entry's same-day order key: its source transaction's kind, createdAt and _id
-  const orderKey = new WeakMap<ProjectedTransaction, OrderedTransaction>();
+  // Each entry's same-day order key: its source transaction's kind and account, createdAt and _id.
   // `date` is the day the entry falls on (an occurrence's day, not its rule's stored start)
-  const keyOf = (t: EngineTransaction, day: string): OrderedTransaction => ({ _id: t._id, date: day, type: t.type, createdAt: t.createdAt });
+  const orderKey = new WeakMap<ProjectedTransaction, OrderedTransaction>();
+  const keyOf = (t: EngineTransaction, day: string): OrderedTransaction => ({
+    _id: t._id,
+    date: day,
+    type: t.type,
+    createdAt: t.createdAt,
+    onDebtAccount: debtAccountIds.has(t.accountId.toString()),
+  });
 
   // Add one-time transactions
   for (const t of oneTimeTransactions) {
@@ -185,9 +199,10 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
     }
   }
 
-  // Filter by account if needed — include transfers where account is source OR destination
+  // Filter by account if needed — include transfers where account is source OR destination. Only a
+  // transfer has a destination: a debit or credit still holding an old toAccountId is not counted there
   const filteredProjected = filterAccountId
-    ? allProjected.filter((t) => t.accountId === filterAccountId || t.toAccountId === filterAccountId)
+    ? allProjected.filter((t) => t.accountId === filterAccountId || (t.type === "transfer" && t.toAccountId === filterAccountId))
     : allProjected;
 
   // Build day-by-day timeline
@@ -202,13 +217,6 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
     const id = a._id.toString();
     currentBalances[id] = carry?.balances[id] ?? a.balance;
   }
-
-  // Track which accounts are debt/credit-card so we can cap payoff payments
-  const debtAccountIds = new Set(
-    accounts
-      .filter((a) => a.type === "credit_card" || a.type === "debt")
-      .map((a) => a._id.toString())
-  );
 
   // Build credit limits map for credit card accounts
   const creditLimits: Record<string, number> = {};
@@ -305,9 +313,10 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
 
   for (const day of days) {
     const dateStr = toUTCDateStr(day);
-    // Income first: credits, then debits, then transfers, whether one-time or recurring, then by the
-    // source's createdAt and _id. This order drives caps, payoffs, alerts and the ledger below, and
-    // does not depend on the order the transactions arrived in.
+    // Income first: credits on bank accounts, then debits (card charges included), then payments
+    // (transfers and credits on card or debt accounts, together), whether one-time or recurring,
+    // then by the source's createdAt and _id (same-day-order.ts). This order drives caps, payoffs,
+    // alerts and the ledger below, and does not depend on the order the transactions arrived in.
     const dayTx = filteredProjected
       .filter((t) => t.date === dateStr)
       .sort((a, b) => sameDayOrder(orderKey.get(a)!, orderKey.get(b)!));

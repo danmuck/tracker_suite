@@ -114,6 +114,27 @@ test("the summary account filter includes transfers into the account (money in) 
   assert.deepEqual([balance("2026-11-09"), balance("2026-11-10"), balance("2026-11-12"), balance("2026-11-30")], [0, 5000, 3000, 3000]);
 });
 
+test("a stored debit or credit still holding an old toAccountId is not attributed to that account", async () => {
+  for (const [type, description] of [["debit", "stale debit"], ["credit", "stale credit"]]) {
+    await transactions(t.store).insert({
+      amount: 700, date: "2026-11-12T00:00:00.000Z", description, accountId: bank._id, toAccountId: savings._id, type,
+      isRecurring: false, categoryTags: [], balanceApplied: true,
+    } as never);
+  }
+  await post({ amount: 50, type: "transfer", toAccountId: savings._id, description: "real move" });
+  const names = (days: { transactions: { description: string }[] }[]) => days.flatMap((d) => d.transactions.map((x) => x.description));
+  const proj = (await t.call("GET", `/api/projections${NOV}&accountId=${savings._id}`)).body as { data: ProjectionResult };
+  assert.deepEqual(names(proj.data.timeline), ["real move"]);
+  const sum = (await summary(`?view=monthly&date=2026-11-17&accountId=${savings._id}`)).data;
+  assert.deepEqual([names(sum.days!), sum.totals.expenses, sum.totals.income, sum.categoryBreakdown], [["real move"], 0, 0, []]);
+  // The sandbox path fetches everything; the engine's own filter leaves them out too
+  const what = (await t.call("POST", "/api/projections", { startDate: "2026-11-01", endDate: "2026-11-30", accountId: savings._id, sandbox: {} })).body as { data: ProjectionResult };
+  assert.deepEqual(names(what.data.timeline), ["real move"]);
+  // Their own account still shows them
+  const own = (await t.call("GET", `/api/projections${NOV}&accountId=${bank._id}`)).body as { data: ProjectionResult };
+  assert.deepEqual(names(own.data.timeline).sort(), ["real move", "stale credit", "stale debit"]);
+});
+
 test("an unknown summary view is 400 and writes nothing", async () => {
   const before = [t.writes("accounts"), t.writes("transactions")];
   assert.deepEqual(await t.call("GET", "/api/summary?view=bogus&date=2026-11-17"), { status: 400, body: { error: "Invalid view" } });

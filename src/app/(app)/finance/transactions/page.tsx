@@ -61,8 +61,8 @@ import { useCategories } from "@/hooks/finance/use-categories";
 import { formatDate, formatCurrency } from "@/lib/finance/formatters";
 import type { Transaction, TransactionFormData } from "@/types/finance/transaction";
 import type { TransactionFilters } from "@/types/api";
+import { DEFAULT_LIMIT, LIMIT_OPTIONS, limitFromParam, pageFromParam } from "@/lib/finance/list-params";
 
-const LIMIT_OPTIONS = [10, 25, 50, 100];
 
 function TransactionsContent() {
   const router = useRouter();
@@ -82,8 +82,9 @@ function TransactionsContent() {
   const [recurringOnly, setRecurringOnly] = useState(
     searchParams.get("recurring") === "true"
   );
-  const [page, setPage] = useState(Number(searchParams.get("page") ?? "1"));
-  const [limit, setLimit] = useState(Number(searchParams.get("limit") ?? "25"));
+  // Clamped so a hand-edited URL never asks the API for an invalid page or page size
+  const [page, setPage] = useState(() => pageFromParam(searchParams.get("page")));
+  const [limit, setLimit] = useState(() => limitFromParam(searchParams.get("limit")));
   const [sorting, setSorting] = useState<SortingState>([
     { id: "date", desc: true },
   ]);
@@ -107,7 +108,7 @@ function TransactionsContent() {
     if (categoryFilter) p.set("category", categoryFilter);
     if (recurringOnly) p.set("recurring", "true");
     if (page !== 1) p.set("page", String(page));
-    if (limit !== 25) p.set("limit", String(limit));
+    if (limit !== DEFAULT_LIMIT) p.set("limit", String(limit));
     router.replace(`/finance/transactions?${p.toString()}`, { scroll: false });
   }, [debouncedSearch, accountFilter, typeFilter, categoryFilter, recurringOnly, page, limit, router]);
 

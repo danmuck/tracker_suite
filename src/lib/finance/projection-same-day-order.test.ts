@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildProjection, type EngineAccount, type EngineTransaction } from "./projection-engine";
 
-// Income first: each projected day's entries are processed credits, debits, transfers (one-time or
-// recurring alike), then by the source transaction's createdAt and _id, whatever the input order.
+// Each projected day's entries are processed: income (credits on bank accounts), debits (card charges
+// included), then payments (transfers and credits on card or debt accounts, ranked together), one-time
+// or recurring alike, then by the source transaction's createdAt and _id, whatever the input order.
 
 const bank: EngineAccount = { _id: "bank", type: "bank", balance: 0 };
 const savings: EngineAccount = { _id: "savings", type: "bank", balance: 0 };
@@ -46,22 +47,41 @@ test("one day: a credit from a newer recurring rule, then an old rule's debit, t
   assert.deepEqual(r.alerts, []);
 });
 
-test("the order decides which payment the debt payoff cap cuts: the credit goes first, then the older transfer", () => {
+test("the order decides which payment the debt payoff cap cuts: payments (credits on the loan and transfers) go by createdAt", () => {
   // The loan owes 50.00; three payments of 40.00 on one day
   const funded = { ...bank, balance: 100_000 };
   const newer = tx("transfer newer", { amount: 4_000, type: "transfer", toAccountId: "loan", createdAt: "2098-03-01T00:00:00.000Z" });
   const older = tx("transfer older", { amount: 4_000, type: "transfer", toAccountId: "loan", createdAt: "2098-02-01T00:00:00.000Z" });
   const credit = tx("credit on loan", { amount: 4_000, type: "credit", accountId: "loan", createdAt: "2098-04-01T00:00:00.000Z" });
-  const r = run([newer, older, credit], [funded, loan]);
-  // The credit pays 40.00, the older transfer is capped at the 10.00 left, the newer one is dropped
-  assert.deepEqual(day(r, "2099-01-10"), [["credit on loan", 4_000], ["transfer older", 1_000]]);
-  assert.deepEqual(r.alerts.map((a) => [a.reason, a.description, a.adjustedAmount]), [["debt_paid_off", "transfer older", 1_000]]);
+  const r = run([credit, newer, older], [funded, loan]);
+  // The older transfer pays 40.00, the newer one is capped at the 10.00 left, the credit is dropped
+  assert.deepEqual(day(r, "2099-01-10"), [["transfer older", 4_000], ["transfer newer", 1_000]]);
+  assert.deepEqual(r.alerts.map((a) => [a.reason, a.description, a.adjustedAmount]), [["debt_paid_off", "transfer newer", 1_000]]);
+  // The credit on the loan created first: it pays first, though it is a credit
+  const early = run([newer, older, { ...credit, createdAt: "2098-01-01T00:00:00.000Z" }], [funded, loan]);
+  assert.deepEqual(day(early, "2099-01-10"), [["credit on loan", 4_000], ["transfer older", 1_000]]);
   // Swap the transfers' createdAt: the other one is capped
   const swapped = run([{ ...newer, createdAt: older.createdAt }, { ...older, createdAt: newer.createdAt }, credit], [funded, loan]);
-  assert.deepEqual(day(swapped, "2099-01-10"), [["credit on loan", 4_000], ["transfer newer", 1_000]]);
+  assert.deepEqual(day(swapped, "2099-01-10"), [["transfer newer", 4_000], ["transfer older", 1_000]]);
   // Equal createdAt: _id decides
   const tied = run([{ ...newer, createdAt: older.createdAt }, older, credit], [funded, loan]);
-  assert.deepEqual(day(tied, "2099-01-10"), [["credit on loan", 4_000], ["transfer newer", 1_000]]);
+  assert.deepEqual(day(tied, "2099-01-10"), [["transfer newer", 4_000], ["transfer older", 1_000]]);
+});
+
+test("a same-day charge and payment on a card owing nothing: the charge first, so the payment applies", () => {
+  const card: EngineAccount = { _id: "card", type: "credit_card", balance: 0, creditLimit: 100_000 };
+  // The payment was entered first; income-first order would drop it ("nothing left to pay")
+  const payment = tx("payment", { amount: 3_000, type: "credit", accountId: "card", createdAt: "2098-01-01T00:00:00.000Z" });
+  const charge = tx("charge", { amount: 3_000, type: "debit", accountId: "card", createdAt: "2098-02-01T00:00:00.000Z" });
+  for (const list of [[payment, charge], [charge, payment]]) {
+    const r = run(list, [bank, card]);
+    assert.deepEqual(day(r, "2099-01-10"), [["charge", 3_000], ["payment", 3_000]]);
+    assert.equal(r.summary.endBalances.card, 0);
+    assert.deepEqual(r.alerts.map((a) => [a.reason, a.description]), [["debt_paid_off", "payment"]]);
+  }
+  // A bank credit the same day is still income, processed first
+  const income = tx("income", { amount: 500, type: "credit", createdAt: "2098-03-01T00:00:00.000Z" });
+  assert.deepEqual(day(run([payment, charge, income], [bank, card]), "2099-01-10"), [["income", 500], ["charge", 3_000], ["payment", 3_000]]);
 });
 
 test("shuffled input gives identical output (timeline, ledger, alerts, summary)", () => {

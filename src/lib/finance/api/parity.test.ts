@@ -126,7 +126,7 @@ test("the handlers reproduce the golden transcript on a browser store", async (t
     const body = step.rawBody !== undefined ? undefined : step.body !== undefined ? substitute(step.body, saved) : undefined;
     const needsOrder = path.startsWith("/api/projections") || path.startsWith("/api/summary");
     const created = needsOrder
-      ? (await transactions(store).find({}, { sort: { createdAt: 1 } })).map((d) => ({ _id: d._id, date: d.date, type: d.type, createdAt: d.createdAt }))
+      ? (await transactions(store).find({}, { sort: { createdAt: 1 } })).map((d) => ({ _id: d._id, createdAt: d.createdAt }))
       : [];
 
     const result = await dispatch(financeRoutes, store, step.method, path, body, now);
