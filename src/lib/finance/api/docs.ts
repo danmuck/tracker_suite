@@ -70,12 +70,12 @@ function isPlainObject(value: unknown): value is Doc {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
-// Schema defaults, as Mongoose applies them on hydration: only to a path whose value is
-// undefined (a stored null or false is kept). `null` defaults are listed in SHAPE_* only:
-// Mongoose fills them on read but never persists them on save().
 /** Credit cards and debt: balances count what is owed, so they move opposite to a bank account's. */
 export const isDebtType = (type: string | undefined): boolean => type === "credit_card" || type === "debt";
 
+// Schema defaults, as Mongoose applies them on hydration: only to a path whose value is
+// undefined (a stored null or false is kept). `null` defaults are listed in SHAPE_* only:
+// Mongoose fills them on read but never persists them on save().
 const ACCOUNT_DEFAULTS: Doc = { balance: 0, currency: "USD", isCash: false, isArchived: false };
 export const RAP_DEFAULTS = { enabled: false, autoSchedule: true, recertDate: "07-01", dependents: 0 };
 const TRANSACTION_DEFAULTS: Doc = { isRecurring: false, categoryTags: [], balanceApplied: true };
