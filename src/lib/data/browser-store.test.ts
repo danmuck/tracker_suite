@@ -100,3 +100,14 @@ test("a version change wipes stored data; invalidate re-reads; clear empties", a
   assert.equal(await groups.count(), 0);
   assert.equal(storage.getItem("ts:data:linkGroups"), null);
 });
+
+test("clear keeps the version key so data added afterwards survives a reload", async () => {
+  const storage = memoryStorage();
+  const store = new BrowserStore(storage);
+  await store.collection<Group>("linkGroups").insert({ name: "A", slug: "a", order: 0 });
+  store.clear();
+  assert.equal(storage.getItem("ts:data:version"), String(DATA_VERSION));
+  await store.collection<Group>("linkGroups").insert({ name: "B", slug: "b", order: 0 });
+  const reloaded = new BrowserStore(storage).collection<Group>("linkGroups");
+  assert.deepEqual((await reloaded.find()).map((g) => g.name), ["B"]);
+});

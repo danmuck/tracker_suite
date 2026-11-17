@@ -57,7 +57,7 @@ export class BrowserStore implements Store {
   constructor(storage: StorageLike) {
     this.storage = storage;
     if (storage.getItem(VERSION_KEY) !== String(DATA_VERSION)) {
-      this.removeDataKeys();
+      this.removeDataKeys(true);
       try {
         storage.setItem(VERSION_KEY, String(DATA_VERSION));
       } catch {
@@ -76,7 +76,7 @@ export class BrowserStore implements Store {
   }
 
   clear(): void {
-    this.removeDataKeys();
+    this.removeDataKeys(false);
     this.cache.clear();
   }
 
@@ -106,11 +106,11 @@ export class BrowserStore implements Store {
     this.cache.set(name, next);
   }
 
-  private removeDataKeys(): void {
+  private removeDataKeys(includeVersion: boolean): void {
     const keys: string[] = [];
     for (let i = 0; i < this.storage.length; i++) {
       const key = this.storage.key(i);
-      if (key && key.startsWith(PREFIX)) keys.push(key);
+      if (key && key.startsWith(PREFIX) && (includeVersion || key !== VERSION_KEY)) keys.push(key);
     }
     for (const key of keys) this.storage.removeItem(key);
   }
