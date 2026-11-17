@@ -100,6 +100,24 @@ test("dotted updates: cases beyond the brief throw instead of guessing", () => {
   assert.equal(matches({ a: new Date() }, { "a.b": null }), true);
 });
 
+test("filter shape is validated up front, whatever the document", () => {
+  const d = { a: 1 };
+  assert.throws(() => matches(d, { a: 9, $or: 1 as never }), /\$or needs an array/);
+  assert.throws(() => matches(d, { a: 9, $and: 1 as never }), /\$and needs an array/);
+  assert.throws(() => matches(d, { a: 9, $nor: [] }), /Unsupported filter operator: \$nor/);
+  assert.throws(() => matches(d, { $or: [{ a: 1 }, { $and: 1 as never }] }), /\$and needs an array/);
+  assert.throws(() => matches(d, { a: 9, b: { $elemMatch: {} } }), /Unsupported filter operator: \$elemMatch/);
+  assert.throws(() => matches(d, { a: 9, b: { $in: 1 } }), /\$in needs an array/);
+});
+
+test("duplicate update paths across operators conflict, and $setOnInsert is checked even when not inserting", () => {
+  assert.throws(() => applyUpdate({}, { $set: { a: 1 }, $inc: { a: 1 } }), /Conflicting update paths/);
+  assert.throws(() => applyUpdate({}, { $set: { "a.b": 1 }, $unset: { "a.b": 1 } }), /Conflicting update paths/);
+  assert.throws(() => applyUpdate({}, { $setOnInsert: { a: 1 }, $set: { a: 2 } }), /Conflicting update paths/);
+  assert.throws(() => applyUpdate({}, { $setOnInsert: { a: 1 }, $set: { "a.b": 2 } }, true), /Conflicting update paths/);
+  assert.deepEqual(applyUpdate({}, { $setOnInsert: { a: 1 }, $set: { b: 2 } }), { b: 2 });
+});
+
 test("sort follows dotted paths", () => {
   assert.deepEqual(sortDocs([{ r: { d: "b" } }, { r: { d: "a" } }, {}], { "r.d": 1 }), [{}, { r: { d: "a" } }, { r: { d: "b" } }]);
   assert.throws(() => sortDocs([{ r: [{ d: 1 }] }, { r: [] }], { "r.d": 1 }), /Dotted path crosses an array: r\.d/);

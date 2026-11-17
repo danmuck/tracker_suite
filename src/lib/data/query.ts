@@ -150,8 +150,11 @@ function unsetPath(root: Doc, key: string): void {
 
 // MongoDB rejects an update that touches both a path and one of its parents.
 function assertNoConflicts(keys: string[]): void {
-  for (const a of keys) {
-    for (const b of keys) {
+  for (let i = 0; i < keys.length; i++) {
+    for (let j = 0; j < keys.length; j++) {
+      const a = keys[i];
+      const b = keys[j];
+      if (i < j && a === b) throw new Error(`Conflicting update paths: ${a} and ${b}`);
       if (b.startsWith(`${a}.`)) throw new Error(`Conflicting update paths: ${a} and ${b}`);
     }
   }
@@ -162,12 +165,40 @@ function branches(op: "$or" | "$and", condition: unknown): Filter[] {
   return condition as Filter[];
 }
 
+const FIELD_OPERATORS = new Set(["$gt", "$gte", "$lt", "$lte", "$ne", "$in", "$exists", "$regex", "$options"]);
+
+// Checks the shape of the whole filter before anything is evaluated, so a
+// malformed filter throws whatever the document is.
+function validateFilter(filter: Filter): void {
+  if (!isPlainObject(filter)) throw new Error("A filter must be an object");
+  for (const [key, condition] of Object.entries(filter)) {
+    if (key === "$or" || key === "$and") {
+      for (const sub of branches(key, condition)) validateFilter(sub);
+    } else if (key.startsWith("$")) {
+      throw new Error(`Unsupported filter operator: ${key}`);
+    } else {
+      if (key.includes(".")) splitPath(key);
+      if (!isOperatorObject(condition)) continue;
+      for (const [op, arg] of Object.entries(condition)) {
+        if (!FIELD_OPERATORS.has(op)) throw new Error(`Unsupported filter operator: ${op}`);
+        if (op === "$in" && !Array.isArray(arg)) throw new Error("$in needs an array");
+        if (op === "$regex") new RegExp(String(arg), typeof condition.$options === "string" ? condition.$options : undefined);
+      }
+    }
+  }
+}
+
 export function matches(doc: Doc, filter: Filter): boolean {
+  validateFilter(filter);
+  return matchesValid(doc, filter);
+}
+
+function matchesValid(doc: Doc, filter: Filter): boolean {
   for (const [key, condition] of Object.entries(filter)) {
     if (key === "$or") {
-      if (!branches("$or", condition).some((sub) => matches(doc, sub))) return false;
+      if (!branches("$or", condition).some((sub) => matchesValid(doc, sub))) return false;
     } else if (key === "$and") {
-      if (!branches("$and", condition).every((sub) => matches(doc, sub))) return false;
+      if (!branches("$and", condition).every((sub) => matchesValid(doc, sub))) return false;
     } else if (key.startsWith("$")) {
       throw new Error(`Unsupported filter operator: ${key}`);
     } else if (isOperatorObject(condition)) {
@@ -180,8 +211,7 @@ export function matches(doc: Doc, filter: Filter): boolean {
 }
 
 export function applyUpdate<T extends Doc>(doc: T, update: Update, inserting = false): T {
-  const applied = [inserting ? update.$setOnInsert : undefined, update.$set, update.$inc, update.$unset];
-  assertNoConflicts(applied.flatMap((part) => Object.keys(part ?? {})));
+  assertNoConflicts([update.$setOnInsert, update.$set, update.$inc, update.$unset].flatMap((part) => Object.keys(part ?? {})));
   const next: Doc = { ...doc };
   if (inserting && update.$setOnInsert) {
     for (const [key, value] of Object.entries(update.$setOnInsert)) setPath(next, key, value);
