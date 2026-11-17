@@ -3,6 +3,7 @@
 import { allRoutes } from "./all-routes";
 import { BrowserStore, type StorageLike } from "./browser-store";
 import { dispatch, unwrap } from "./dispatch";
+import { createSerialQueue } from "./serial-queue";
 import { createStorageResolver } from "./storage";
 import { COLLECTIONS, type CollectionName } from "./store";
 
@@ -35,6 +36,11 @@ export function getBrowserStore(): BrowserStore {
   return created;
 }
 
-export async function localRequest<T>(method: string, url: string, body?: unknown): Promise<T> {
-  return unwrap<T>(await dispatch(allRoutes, getBrowserStore(), method, url, body));
+// One request at a time: a handler's read-then-write can then never interleave with another
+// request's (e.g. two page-load GETs both posting the same due payment). FIFO; a failed
+// request does not block the ones after it.
+const serial = createSerialQueue();
+
+export function localRequest<T>(method: string, url: string, body?: unknown): Promise<T> {
+  return serial(async () => unwrap<T>(await dispatch(allRoutes, getBrowserStore(), method, url, body)));
 }

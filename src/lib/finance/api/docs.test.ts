@@ -22,6 +22,9 @@ import {
   type ProfileDoc,
   type TransactionDoc,
 } from "./docs";
+import { BrowserStore } from "@/lib/data/browser-store";
+import type { BaseDoc, Collection, CollectionName, Store } from "@/lib/data/store";
+import { memoryStorage } from "@/lib/data/test-helpers";
 import { countingStore } from "./test-helpers";
 
 const base = { _id: "a".repeat(24), createdAt: "c", updatedAt: "u" };
@@ -86,6 +89,7 @@ test("a legacy transaction saved with no change gets its defaults stored without
     recurrenceRule: { frequency: "monthly", startDate: "2026-11-01T00:00:00.000Z" } } as never);
   await new Promise((r) => setTimeout(r, 5));
   await saveTransaction(store, legacy, { amount: 100, "recurrenceRule.endDate": null });
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- rest destructuring drops the store fields
   const { _id, createdAt, updatedAt, ...after } = (await transactions(store).findById(legacy._id))!;
   assert.deepEqual(after, { amount: 100, date: "2026-11-01T00:00:00.000Z", description: "x", accountId: "b".repeat(24), type: "debit", isRecurring: false, categoryTags: [], balanceApplied: true,
     recurrenceRule: { frequency: "monthly", startDate: "2026-11-01T00:00:00.000Z", interval: 1, daysOfMonth: [] } });
@@ -106,6 +110,7 @@ test("ensureCashAccount inserts Cash once and never writes again", async () => {
   await ensureCashAccount(store);
   await ensureCashAccount(store);
   const all = await accounts(store).find();
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- rest destructuring drops the store fields
   assert.deepEqual(all.map(({ _id, createdAt, updatedAt, ...a }) => a), [{ name: "Cash", type: "bank", isCash: true, balance: 0, currency: "USD", isArchived: false }]);
   assert.equal(writes("accounts"), 1);
 });
@@ -119,4 +124,57 @@ test("saveTransaction skips the write when nothing changed, and uses a dotted pa
   await saveTransaction(store, tx, { "recurrenceRule.endDate": "2027-01-01T00:00:00.000Z" });
   assert.equal(writes("transactions"), 2);
   assert.deepEqual((await transactions(store).findById(tx._id))!.recurrenceRule, { frequency: "monthly", interval: 1, startDate: "2026-11-01T00:00:00.000Z", endDate: "2027-01-01T00:00:00.000Z", daysOfMonth: [] });
+});
+
+test("concurrent ensureCashAccount calls share one check-and-insert", async () => {
+  const { store, writes } = countingStore();
+  await Promise.all([ensureCashAccount(store), ensureCashAccount(store), ensureCashAccount(store)]);
+  assert.equal((await accounts(store).find({ isCash: true })).length, 1);
+  assert.equal(writes("accounts"), 1);
+  await ensureCashAccount(store);
+  assert.equal(writes("accounts"), 1);
+});
+
+test("a rejected ensureCashAccount does not poison later calls", async () => {
+  const real = new BrowserStore(memoryStorage());
+  let fail = true;
+  const flaky: Store = {
+    collection<T extends BaseDoc>(name: CollectionName): Collection<T> {
+      const c = real.collection<T>(name);
+      // Inherits every other method from the real collection; only exists can fail.
+      const wrapped: Collection<T> = Object.create(c);
+      wrapped.exists = (filter) => (fail ? Promise.reject(new Error("boom")) : c.exists(filter));
+      return wrapped;
+    },
+  };
+  await assert.rejects(ensureCashAccount(flaky), /boom/);
+  fail = false;
+  await ensureCashAccount(flaky);
+  assert.equal((await accounts(real).find({ isCash: true })).length, 1);
+});
+
+test("saveUpdate: setting a missing defaulted path to its default value is a change", () => {
+  // Mongoose marks a default-state path modified when it is set to the default again (non-null)
+  assert.deepEqual(saveUpdate({ balanceApplied: true }, { balanceApplied: true, isRecurring: false }, { balanceApplied: true }), { $set: { balanceApplied: true, isRecurring: false }, touch: true });
+  // a differing value still wins over the default at the same path
+  assert.deepEqual(saveUpdate({ balanceApplied: true }, { balanceApplied: true }, { balanceApplied: false }), { $set: { balanceApplied: false }, touch: true });
+  // null onto a path whose shaped value is null stays no change
+  assert.equal(saveUpdate({ recurrenceRule: { endDate: null } }, {}, { "recurrenceRule.endDate": null }), null);
+});
+
+test("saveUpdate refuses undefined values, top-level and nested", () => {
+  const message = /saveUpdate: undefined values are not supported; pass null or omit the key/;
+  assert.throws(() => saveUpdate({}, {}, { amount: undefined }), message);
+  assert.throws(() => saveUpdate({}, {}, { rap: { enabled: true, dependents: undefined } }), message);
+  assert.throws(() => saveUpdate({}, {}, { amountSchedule: [{ effectiveDate: "a", amount: 1, source: undefined }] }), message);
+  assert.throws(() => saveUpdate({}, {}, { list: [1, undefined] }), message);
+});
+
+test("a partial rap reassigned its defaults-filled value writes only the missing rap defaults", () => {
+  const raw = { _id: "a".repeat(24), createdAt: "c", updatedAt: "u", name: "L", type: "debt", balance: 1, currency: "USD", isCash: false, isArchived: false, rap: { enabled: true } } as unknown as AccountDoc;
+  const filled = { enabled: true, autoSchedule: true, recertDate: "07-01", dependents: 0 };
+  assert.deepEqual(
+    saveUpdate(shapeAccount(raw) as unknown as Record<string, unknown>, accountDefaults(raw as unknown as Record<string, unknown>), { rap: { dependents: 0, recertDate: "07-01", autoSchedule: true, enabled: true } }),
+    { $set: { "rap.autoSchedule": filled.autoSchedule, "rap.recertDate": filled.recertDate, "rap.dependents": filled.dependents }, touch: false },
+  );
 });

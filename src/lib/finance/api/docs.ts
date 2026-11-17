@@ -258,20 +258,36 @@ function sameValue(a: unknown, b: unknown): boolean {
   return false;
 }
 
+function assertNoUndefined(value: unknown): void {
+  if (value === undefined) throw new Error("saveUpdate: undefined values are not supported; pass null or omit the key");
+  if (Array.isArray(value)) value.forEach(assertNoUndefined);
+  else if (isPlainObject(value)) Object.values(value).forEach(assertNoUndefined);
+}
+
 /**
  * What Mongoose 9 save() writes after in-place assignment of `changes` (field or dotted path → value).
  * `current` is the stored document after shape*; `defaults` are the non-null schema defaults the
  * unshaped stored document lacks. Changed values move updatedAt (`touch`); defaults alone do not.
  * `null` means save() would write nothing.
+ *
+ * Values are compared and written exactly as given: callers pass already-trimmed, already-cast,
+ * complete values (dates as full ISO strings via `toIso`, ids as strings, whole subdocuments).
+ * An `undefined` anywhere in `changes` throws; pass `null` or omit the key.
+ *
+ * A change at a path listed in `defaults` (the stored document lacks it) counts as a change even
+ * when it equals the default, unless it is null: Mongoose 9.2.1 marks such a path modified
+ * (`lib/document.js` `$__shouldModify`, "a path with a default was $unset on the server").
  */
 export function saveUpdate(
   current: Record<string, unknown>,
   defaults: Record<string, unknown>,
   changes: Record<string, unknown>,
 ): { $set: Record<string, unknown>; touch: boolean } | null {
+  for (const value of Object.values(changes)) assertNoUndefined(value);
   const changed: Doc = {};
   for (const [path, value] of Object.entries(changes)) {
-    if (!sameValue(getPath(current, path), value)) changed[path] = value;
+    const resetsDefault = Object.hasOwn(defaults, path) && value !== null;
+    if (resetsDefault || !sameValue(getPath(current, path), value)) changed[path] = value;
   }
   const changedPaths = Object.keys(changed);
   const filled: Doc = {};
@@ -308,10 +324,21 @@ export async function saveTransaction(
   }
 }
 
+// One check-and-insert in flight per store: concurrent callers share it, so they cannot each
+// see "no Cash" and each insert one. Cleared when it settles (rejection included).
+const cashInFlight = new WeakMap<Store, Promise<void>>();
+
 /** The Cash account, inserted only when none exists (read first: never an upsert, so no write otherwise). */
-export async function ensureCashAccount(store: Store): Promise<void> {
-  const acc = accounts(store);
-  if (!(await acc.exists({ isCash: true }))) {
-    await acc.insert({ name: "Cash", type: "bank", isCash: true, balance: 0, currency: "USD", isArchived: false });
-  }
+export function ensureCashAccount(store: Store): Promise<void> {
+  const pending = cashInFlight.get(store);
+  if (pending) return pending;
+  const run = (async () => {
+    const acc = accounts(store);
+    if (!(await acc.exists({ isCash: true }))) {
+      await acc.insert({ name: "Cash", type: "bank", isCash: true, balance: 0, currency: "USD", isArchived: false });
+    }
+  })();
+  const shared = run.finally(() => cashInFlight.delete(store));
+  cashInFlight.set(store, shared);
+  return shared;
 }
