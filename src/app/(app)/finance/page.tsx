@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import Link from "next/link";
 import { format, addDays, endOfDay } from "date-fns";
-import { ArrowRight, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { ArrowRight, HandCoins, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { LoadingState } from "@/components/loading-state";
 import { EmptyState } from "@/components/empty-state";
 import { CurrencyDisplay } from "@/components/finance/currency-display";
 import { CategoryBadge } from "@/components/finance/category-badge";
+import { InfoTip } from "@/components/finance/info-tip";
 import { ProjectionAlerts } from "@/components/finance/projection-alerts";
 import { useAccounts } from "@/hooks/finance/use-accounts";
 import { useTransactions } from "@/hooks/finance/use-transactions";
@@ -268,6 +269,36 @@ export default function FinanceDashboardPage() {
                     className="font-medium text-sm"
                   />
                 </div>
+                {(summary?.totals.loanPayments ?? 0) > 0 && (
+                  <>
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        <HandCoins className="h-3.5 w-3.5 text-red-500" />
+                        Loan payments
+                        <InfoTip label="Loan payments">
+                          Money sent to loans and other debts this month. It lowers what you owe, so it is not
+                          part of Expenses or Net. Credit card payments are left out because card purchases are
+                          already counted as expenses.
+                        </InfoTip>
+                      </div>
+                      <CurrencyDisplay
+                        cents={-(summary?.totals.loanPayments ?? 0)}
+                        colored
+                        className="font-medium text-sm"
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1.5">
+                        Total out
+                        <InfoTip label="Total out">
+                          Expenses plus loan payments. Interest on a loan is counted once, not as both an expense
+                          and a payment.
+                        </InfoTip>
+                      </span>
+                      <CurrencyDisplay cents={-(summary?.totals.totalOut ?? 0)} className="font-mono" />
+                    </div>
+                  </>
+                )}
                 <div className="border-t pt-2 flex justify-between items-center">
                   <span className="text-sm font-medium">Net</span>
                   <CurrencyDisplay

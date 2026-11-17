@@ -33,6 +33,10 @@ export interface SummaryResult {
     income: number;
     expenses: number;
     net: number;
+    /** Payments into loan / debt accounts (cents). Transfers, so not part of expenses or net. */
+    loanPayments: number;
+    /** Expenses plus loan payments, with loan interest counted once (cents) */
+    totalOut: number;
   };
   categoryBreakdown: Array<{
     category: string;
