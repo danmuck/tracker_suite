@@ -6,7 +6,7 @@
 
 import { fail, isId, notFound, ok, type ApiResult, type Handler } from "@/lib/data/api";
 import type { Collection } from "@/lib/data/store";
-import { filterDate, startOfTomorrow, toIso } from "@/lib/finance/dates";
+import { filterDate, isFutureDated, toIso } from "@/lib/finance/dates";
 import { transactionSchema, type TransactionInput } from "@/lib/finance/validators";
 import {
   accounts,
@@ -205,7 +205,7 @@ export const createTransaction: Handler = async ({ store, body, now }) => {
     }
   }
 
-  const isFuture = new Date(validated.date) >= startOfTomorrow(now);
+  const isFuture = isFutureDated(validated.date, now);
 
   // T4
   const transaction = await transactions(store).insert(
@@ -271,7 +271,7 @@ export const updateTransaction: Handler = async ({ store, params, body, now }) =
 
   const acc = accounts(store);
   const newAmountInCents = Math.round(validated.amount * 100);
-  const newIsFuture = new Date(validated.date) >= startOfTomorrow(now);
+  const newIsFuture = isFutureDated(validated.date, now);
 
   // Reverse the old effect only if it was applied to balances
   if (existing.balanceApplied) await reverseEffect(acc, existing);

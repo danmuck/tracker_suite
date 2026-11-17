@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { BaseDoc } from "@/lib/data/store";
 import { accounts, transactions, type AccountDoc } from "./docs";
-import { NOW, setup } from "./test-helpers";
+import { setup, withTimeZone } from "./test-helpers";
 
 let t = setup();
 test.beforeEach(() => { t = setup(); });
@@ -37,13 +37,27 @@ test("an account stored without defaulted fields is returned with them", async (
   assert.ok(((await t.call("GET", "/api/accounts")).body as AccountDoc[]).some((a) => a.name === "Old" && a.isArchived === false));
 });
 
-test("loan disbursement credits the linked bank and records an applied transfer dated now", async () => {
+test("loan disbursement credits the linked bank and records an applied transfer dated today (UTC midnight)", async () => {
   const bank = await acct({ name: "Bank", type: "bank", balance: 100 });
   const loan = await acct({ name: "Car", type: "debt", balance: 8000, isLoan: true, linkedAccountId: bank._id, depositFunds: true });
   assert.deepEqual(await balances(), { Bank: 810000, Car: 800000 });
-  assert.deepEqual((await tx().find()).map(strip), [{ accountId: loan._id, toAccountId: bank._id, type: "transfer", amount: 800000, description: "Loan disbursement from Car", categoryTags: ["transfer"], date: NOW.toISOString(), isRecurring: false, balanceApplied: true }]);
+  assert.deepEqual((await tx().find()).map(strip), [{ accountId: loan._id, toAccountId: bank._id, type: "transfer", amount: 800000, description: "Loan disbursement from Car", categoryTags: ["transfer"], date: "2026-11-17T00:00:00.000Z", isRecurring: false, balanceApplied: true }]);
   await acct({ name: "Linked only", type: "debt", balance: 10, isLoan: true, linkedAccountId: bank._id });
   assert.equal(await tx().count(), 1);
+});
+
+test("the loan disbursement is dated the local calendar day, west and east of UTC", async () => {
+  const bank = await acct({ name: "Bank", type: "bank", balance: 100 });
+  const disburse = async (name: string) => {
+    await acct({ name, type: "debt", balance: 10, isLoan: true, linkedAccountId: bank._id, depositFunds: true });
+    return (await tx().find({ description: `Loan disbursement from ${name}` }))[0].date;
+  };
+  t.setNow(new Date("2026-11-18T03:00:00.000Z")); // 22:00 on 17 Nov in New York
+  assert.equal(await disburse("West"), "2026-11-17T00:00:00.000Z");
+  await withTimeZone("Asia/Tokyo", async () => {
+    t.setNow(new Date("2026-11-17T20:00:00.000Z")); // 05:00 on 18 Nov in Tokyo
+    assert.equal(await disburse("East"), "2026-11-18T00:00:00.000Z");
+  });
 });
 
 test("current behavior: a loan whose linked account is missing is created, then answered with 400", async () => {
@@ -116,6 +130,25 @@ test("a future transaction is applied once when its day arrives, and never twice
   await t.call("GET", "/api/accounts");
   assert.deepEqual(await balances(), { Bank: 6500, Card: 3700 });
   assert.deepEqual((await tx().find({ balanceApplied: false })).map((x) => x.amount), [700]);
+});
+
+test("pending transactions are applied by the local calendar day, west and east of UTC", async () => {
+  const bank = await acct({ name: "Bank", type: "bank", balance: 100 });
+  const pending = (date: string, amount: number) =>
+    tx().insert({ description: "p", isRecurring: false, categoryTags: [], balanceApplied: false, date, amount, type: "debit", accountId: bank._id });
+  await pending("2026-11-17T00:00:00.000Z", 100);
+  await pending("2026-11-18T00:00:00.000Z", 200);
+  await pending("2026-11-18T23:00:00.000Z", 400);
+  await pending("2026-11-19T00:00:00.000Z", 800);
+  t.setNow(new Date("2026-11-18T03:00:00.000Z")); // 22:00 on 17 Nov in New York, 18 Nov in UTC
+  await t.call("GET", "/api/accounts");
+  assert.equal((await balances()).Bank, 9900);
+  await withTimeZone("Asia/Tokyo", async () => {
+    t.setNow(new Date("2026-11-17T20:00:00.000Z")); // 05:00 on 18 Nov in Tokyo, 17 Nov in UTC
+    await t.call("GET", "/api/accounts");
+  });
+  assert.equal((await balances()).Bank, 9300);
+  assert.deepEqual((await tx().find({ balanceApplied: false })).map((x) => x.amount), [800]);
 });
 
 test("due plan payments post once, capped at what is owed, and nothing moves once nothing is owed", async () => {

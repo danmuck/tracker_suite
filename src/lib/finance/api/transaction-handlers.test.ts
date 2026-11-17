@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { BaseDoc } from "@/lib/data/store";
 import { accounts, transactions, type AccountDoc, type TransactionDoc } from "./docs";
-import { setup } from "./test-helpers";
+import { setup, withTimeZone } from "./test-helpers";
 
 let t = setup();
 const acct = async (body: object) => (await t.call("POST", "/api/accounts", body)).body as AccountDoc;
@@ -69,9 +69,44 @@ test("future and recurring transactions are not applied; an edit moves a transac
   assert.equal((await balances()).Bank, 100000);
 });
 
-test("current behavior: west of UTC a transaction dated tomorrow is applied today", async () => {
-  assert.equal((await post({ date: "2026-11-18" })).balanceApplied, true);
+test("a transaction dated tomorrow is not applied today; one dated today is", async () => {
+  assert.equal((await post({ date: "2026-11-18" })).balanceApplied, false);
+  assert.equal((await balances()).Bank, 100000);
+  assert.equal((await post({ date: "2026-11-17T23:00:00.000Z" })).balanceApplied, true);
   assert.equal((await balances()).Bank, 99000);
+});
+
+test("west of UTC, after the UTC day has turned: the local day decides (create and update)", async () => {
+  t.setNow(new Date("2026-11-18T03:00:00.000Z")); // 22:00 on 17 Nov in New York, 18 Nov in UTC
+  const tomorrow = await post({ date: "2026-11-18" });
+  assert.equal(tomorrow.balanceApplied, false);
+  assert.equal((await balances()).Bank, 100000);
+  const today = await post({ date: "2026-11-17" });
+  assert.equal(today.balanceApplied, true);
+  assert.equal((await balances()).Bank, 99000);
+  await t.call("PUT", `/api/transactions/${today._id}`, body({ date: "2026-11-18" }));
+  assert.equal((await tx().findById(today._id))?.balanceApplied, false);
+  assert.equal((await balances()).Bank, 100000);
+  await t.call("PUT", `/api/transactions/${tomorrow._id}`, body({ date: "2026-11-17" }));
+  assert.equal((await tx().findById(tomorrow._id))?.balanceApplied, true);
+  assert.equal((await balances()).Bank, 99000);
+});
+
+test("east of UTC, before the UTC day has turned: the local day decides (create and update)", async () => {
+  await withTimeZone("Asia/Tokyo", async () => {
+    t.setNow(new Date("2026-11-17T20:00:00.000Z")); // 05:00 on 18 Nov in Tokyo, 17 Nov in UTC
+    assert.equal((await post({ date: "2026-11-18" })).balanceApplied, true);
+    const lateToday = await post({ date: "2026-11-18T23:00:00.000Z" });
+    assert.equal(lateToday.balanceApplied, true);
+    assert.equal((await balances()).Bank, 98000);
+    const later = await post({ date: "2026-11-19" });
+    assert.equal(later.balanceApplied, false);
+    assert.equal((await balances()).Bank, 98000);
+    await t.call("PUT", `/api/transactions/${lateToday._id}`, body({ date: "2026-11-19" }));
+    assert.equal((await balances()).Bank, 99000);
+    await t.call("PUT", `/api/transactions/${later._id}`, body({ date: "2026-11-18T23:00:00.000Z" }));
+    assert.equal((await balances()).Bank, 98000);
+  });
 });
 
 test("dates are stored as instants; rules get their defaults; list range filters are inclusive", async () => {

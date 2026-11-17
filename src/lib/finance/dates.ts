@@ -74,12 +74,34 @@ export function localTodayStr(): string {
   return localDateStr(new Date());
 }
 
-/** Local midnight at the start of the day after `now`; `now` is not modified. */
-export function startOfTomorrow(now: Date): Date {
-  const d = new Date(now);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 1);
-  return d;
+/** The user's current calendar day as a stored date: UTC midnight of the local day of `now`, as an ISO string. */
+export function todayStoredDate(now: Date): string {
+  return localDateStr(now) + "T00:00:00.000Z";
+}
+
+/**
+ * The first stored instant that is in the future: UTC midnight of the day after the local
+ * calendar day of `now`. A stored date is in the future exactly when it is at or after this,
+ * i.e. when its UTC calendar day is after the user's local calendar day.
+ */
+export function firstFutureInstant(now: Date): string {
+  const d = new Date(todayStoredDate(now));
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString();
+}
+
+/**
+ * Whether a transaction dated `date` (read as it will be stored, see `toIso`) is dated after
+ * the user's local calendar day. An invalid date is not in the future, as before.
+ */
+export function isFutureDated(date: Date | string, now: Date): boolean {
+  let stored: string;
+  try {
+    stored = toIso(date);
+  } catch {
+    return false;
+  }
+  return new Date(stored).getTime() >= new Date(firstFutureInstant(now)).getTime();
 }
 
 export interface DateRangeStr {

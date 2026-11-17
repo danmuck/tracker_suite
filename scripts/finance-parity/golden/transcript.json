@@ -1,10 +1,10 @@
 {
   "meta": {
-    "capturedAt": "2026-11-17T22:00:40.954Z",
+    "capturedAt": "2026-11-17T23:04:28.214Z",
     "localDate": "2026-11-17",
     "utcDate": "2026-11-17",
     "timeZone": "America/New_York",
-    "commit": "aaca2d3561222d4843e0db60a83eb00a626fa059"
+    "commit": "ebf62ad9139d57c03a5070124bb900200c489199"
   },
   "steps": [
     {
@@ -1137,7 +1137,7 @@
         "_id": "<tTom>",
         "accountId": "<checking>",
         "amount": 1000,
-        "balanceApplied": true,
+        "balanceApplied": false,
         "categoryTags": [
           "spending"
         ],
@@ -1431,7 +1431,7 @@
             "_id": "<tTom>",
             "accountId": "<checking>",
             "amount": 1000,
-            "balanceApplied": true,
+            "balanceApplied": false,
             "categoryTags": [
               "spending"
             ],
@@ -1449,7 +1449,7 @@
             "categoryTags": [
               "transfer"
             ],
-            "date": "<instant>",
+            "date": "2026-11-17T00:00:00.000Z",
             "description": "Loan disbursement from Parity Car Loan",
             "isRecurring": false,
             "toAccountId": "<checking>",
@@ -1910,7 +1910,7 @@
             "categoryTags": [
               "transfer"
             ],
-            "date": "<instant>",
+            "date": "2026-11-17T00:00:00.000Z",
             "description": "Loan disbursement from Parity Car Loan",
             "isRecurring": false,
             "toAccountId": "<checking>",
@@ -1921,7 +1921,7 @@
             "_id": "<tTom>",
             "accountId": "<checking>",
             "amount": 1000,
-            "balanceApplied": true,
+            "balanceApplied": false,
             "categoryTags": [
               "spending"
             ],
@@ -2020,7 +2020,7 @@
             "categoryTags": [
               "transfer"
             ],
-            "date": "<instant>",
+            "date": "2026-11-17T00:00:00.000Z",
             "description": "Loan disbursement from Parity Car Loan",
             "isRecurring": false,
             "toAccountId": "<checking>",
@@ -2311,7 +2311,7 @@
             "_id": "<tTom>",
             "accountId": "<checking>",
             "amount": 1000,
-            "balanceApplied": true,
+            "balanceApplied": false,
             "categoryTags": [
               "spending"
             ],
@@ -2329,7 +2329,7 @@
             "categoryTags": [
               "transfer"
             ],
-            "date": "<instant>",
+            "date": "2026-11-17T00:00:00.000Z",
             "description": "Loan disbursement from Parity Car Loan",
             "isRecurring": false,
             "toAccountId": "<checking>",
@@ -2622,7 +2622,7 @@
             "_id": "<tTom>",
             "accountId": "<checking>",
             "amount": 1000,
-            "balanceApplied": true,
+            "balanceApplied": false,
             "categoryTags": [
               "spending"
             ],
@@ -2875,7 +2875,7 @@
             "categoryTags": [
               "transfer"
             ],
-            "date": "<instant>",
+            "date": "2026-11-17T00:00:00.000Z",
             "description": "Loan disbursement from Parity Car Loan",
             "isRecurring": false,
             "toAccountId": "<checking>",
@@ -3519,7 +3519,7 @@
             "categoryTags": [
               "transfer"
             ],
-            "date": "<instant>",
+            "date": "2026-11-17T00:00:00.000Z",
             "description": "Loan disbursement from Parity Car Loan",
             "isRecurring": false,
             "toAccountId": "<checking>",
@@ -18870,7 +18870,7 @@
             "categoryTags": [
               "transfer"
             ],
-            "date": "<instant>",
+            "date": "2026-11-17T00:00:00.000Z",
             "description": "Loan disbursement from Parity Car Loan",
             "isRecurring": false,
             "toAccountId": "<checking>",
@@ -19440,7 +19440,7 @@
             "categoryTags": [
               "transfer"
             ],
-            "date": "<instant>",
+            "date": "2026-11-17T00:00:00.000Z",
             "description": "Loan disbursement from Parity Car Loan",
             "isRecurring": false,
             "toAccountId": "<checking>",

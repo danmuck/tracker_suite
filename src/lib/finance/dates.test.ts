@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { asDate, toIso, filterDate, localDateStr, startOfTomorrow } from "./dates";
+import { asDate, toIso, filterDate, firstFutureInstant, isFutureDated, localDateStr, todayStoredDate } from "./dates";
 
 test("toIso stores what Mongoose's date cast stores", () => {
   assert.equal(toIso("2026-11-01"), "2026-11-01T00:00:00.000Z");
@@ -26,23 +26,32 @@ test("asDate passes Dates through and parses strings", () => {
   assert.equal(asDate("2026-11-01T00:00:00.000Z").getTime(), d.getTime());
 });
 
-test("localDateStr and startOfTomorrow use the local calendar day of the given clock", () => {
+test("localDateStr, todayStoredDate and firstFutureInstant use the local calendar day of the given clock", () => {
   assert.equal(localDateStr(new Date("2026-11-17T15:00:00.000Z")), "2026-11-17");
   assert.equal(localDateStr(new Date("2026-11-17T03:00:00.000Z")), "2026-11-16");
-  assert.equal(startOfTomorrow(new Date("2026-11-17T15:00:00.000Z")).toISOString(), "2026-11-18T05:00:00.000Z");
   const now = new Date("2026-11-17T15:00:00.000Z");
-  startOfTomorrow(now);
+  assert.equal(todayStoredDate(now), "2026-11-17T00:00:00.000Z");
+  assert.equal(firstFutureInstant(now), "2026-11-18T00:00:00.000Z");
   assert.equal(now.toISOString(), "2026-11-17T15:00:00.000Z");
 });
 
-test("localDateStr and startOfTomorrow across DST, year end and a UTC date that is already tomorrow", () => {
+test("todayStoredDate and firstFutureInstant across DST, year end and a UTC date that is already tomorrow", () => {
   const cases: [string, string, string][] = [
-    ["2026-03-08T06:30:00Z", "2026-03-08", "2026-03-09T04:00:00.000Z"],
-    ["2026-12-31T23:30:00Z", "2026-12-31", "2027-01-01T05:00:00.000Z"],
-    ["2026-11-17T03:00:00Z", "2026-11-16", "2026-11-17T05:00:00.000Z"],
+    ["2026-03-08T06:30:00Z", "2026-03-08T00:00:00.000Z", "2026-03-09T00:00:00.000Z"],
+    ["2026-12-31T23:30:00Z", "2026-12-31T00:00:00.000Z", "2027-01-01T00:00:00.000Z"],
+    ["2026-11-17T03:00:00Z", "2026-11-16T00:00:00.000Z", "2026-11-17T00:00:00.000Z"],
   ];
-  for (const [instant, day, tomorrow] of cases) {
-    assert.equal(localDateStr(new Date(instant)), day);
-    assert.equal(startOfTomorrow(new Date(instant)).toISOString(), tomorrow);
+  for (const [instant, today, future] of cases) {
+    assert.equal(todayStoredDate(new Date(instant)), today);
+    assert.equal(firstFutureInstant(new Date(instant)), future);
   }
+});
+
+test("isFutureDated compares the stored UTC day with the local day of now", () => {
+  const west = new Date("2026-11-18T03:00:00.000Z"); // 17 Nov in New York, 18 Nov in UTC
+  assert.equal(isFutureDated("2026-11-17", west), false);
+  assert.equal(isFutureDated("2026-11-17T23:59:59.999Z", west), false);
+  assert.equal(isFutureDated("2026-11-18", west), true);
+  assert.equal(isFutureDated(new Date("2026-11-18T00:00:00.000Z"), west), true);
+  assert.equal(isFutureDated("garbage", west), false);
 });

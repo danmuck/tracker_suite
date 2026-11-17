@@ -10,6 +10,18 @@ import { financeRoutes } from "./routes";
 /** 10:00 on 17 Nov 2026 in New York (the tests run with TZ=America/New_York). */
 export const NOW = new Date("2026-11-17T15:00:00.000Z");
 
+/** Runs `fn` with the process time zone set to `tz`, then restores it (Node rereads `TZ` when it changes). */
+export async function withTimeZone<T>(tz: string, fn: () => Promise<T>): Promise<T> {
+  const before = process.env.TZ;
+  process.env.TZ = tz;
+  try {
+    return await fn();
+  } finally {
+    if (before === undefined) delete process.env.TZ;
+    else process.env.TZ = before;
+  }
+}
+
 /** A BrowserStore over memory storage that counts storage writes per collection. */
 export function countingStore(): { store: BrowserStore; writes: (name: CollectionName) => number } {
   const storage = memoryStorage();

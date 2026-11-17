@@ -4,7 +4,7 @@
 
 import { fail, invalid, isId, notFound, ok, type Handler } from "@/lib/data/api";
 import { planFieldsToDb } from "@/lib/finance/account-plan-fields";
-import { startOfTomorrow } from "@/lib/finance/dates";
+import { firstFutureInstant, todayStoredDate } from "@/lib/finance/dates";
 import { accountArchiveSchema, accountSchema } from "@/lib/finance/validators";
 import { accounts, assertId, isDebtType, requiredText, shapeAccount, shapeTransaction, transactions, type AccountDoc } from "./docs";
 import { postDuePayments } from "./post-payments";
@@ -27,7 +27,7 @@ export const listAccounts: Handler = async ({ store, query, now }) => {
 
   // Apply any pending transactions whose date has arrived (A1)
   const pending = (
-    await txs.find({ balanceApplied: false, isRecurring: { $ne: true }, date: { $lt: startOfTomorrow(now).toISOString() } })
+    await txs.find({ balanceApplied: false, isRecurring: { $ne: true }, date: { $lt: firstFutureInstant(now) } })
   ).map(shapeTransaction);
 
   for (const tx of pending) {
@@ -111,7 +111,7 @@ export const createAccount: Handler = async ({ store, body, now }) => {
       amount: balanceInCents,
       description: `Loan disbursement from ${account.name}`,
       categoryTags: ["transfer"],
-      date: now.toISOString(),
+      date: todayStoredDate(now),
       isRecurring: false,
       balanceApplied: true,
     });
