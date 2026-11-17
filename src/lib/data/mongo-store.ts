@@ -3,6 +3,9 @@
 import type { Model } from "mongoose";
 import LinkGroup from "@/models/links/LinkGroup";
 import Link from "@/models/links/Link";
+import Listing from "@/models/future/Listing";
+import Tour from "@/models/future/Tour";
+import FutureSettings from "@/models/future/FutureSettings";
 import type { Filter, Update } from "./query";
 import { ConflictError } from "./store";
 import type { BaseDoc, Collection, CollectionName, FindOptions, Store } from "./store";
@@ -14,6 +17,9 @@ type AnyModel = Model<Doc>;
 const MODELS: Record<CollectionName, AnyModel> = {
   linkGroups: LinkGroup as unknown as AnyModel,
   links: Link as unknown as AnyModel,
+  listings: Listing as unknown as AnyModel,
+  tours: Tour as unknown as AnyModel,
+  futureSettings: FutureSettings as unknown as AnyModel,
 };
 
 const OBJECT_ID = /^[0-9a-f]{24}$/i;

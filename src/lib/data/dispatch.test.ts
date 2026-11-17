@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isId, fail, ok, type RouteDef } from "./api";
+import { escapeRegex, fail, isId, ok, setAndUnset, type RouteDef } from "./api";
 import { BrowserStore } from "./browser-store";
 import { demoApiGuard, dispatch, serverGuard } from "./dispatch";
 import { ConflictError } from "./store";
@@ -65,4 +65,10 @@ test("matchRoute prefers static segments over params regardless of registration 
   ];
   assert.equal((await dispatch(mixed, store, "GET", "/api/x/special")).body, "static");
   assert.equal((await dispatch(mixed, store, "GET", "/api/x/abc")).body, "param");
+});
+
+test("setAndUnset sets provided fields and unsets omitted optional ones; escapeRegex escapes", () => {
+  assert.deepEqual(setAndUnset({ a: 1, b: "", c: undefined }, ["b", "c", "d"]), { $set: { a: 1 }, $unset: { b: 1, c: 1, d: 1 } });
+  assert.deepEqual(setAndUnset({ a: 1 }, []), { $set: { a: 1 } });
+  assert.equal(escapeRegex("St. Paul (West)"), "St\\. Paul \\(West\\)");
 });

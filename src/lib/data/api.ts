@@ -38,3 +38,27 @@ export const invalid = (error: ZodError): ApiResult =>
   fail(400, "Validation failed", error.flatten());
 
 export const isId = (value: string): boolean => /^[0-9a-f]{24}$/i.test(value);
+
+/** Escape a string for literal use inside a RegExp */
+export function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Update for a full-replace PUT: sets every provided field and
+ * removes each optional field that was left out, so clearing a field sticks.
+ */
+export function setAndUnset<T extends Record<string, unknown>>(
+  data: T,
+  optionalKeys: readonly string[],
+): { $set: Record<string, unknown>; $unset?: Record<string, 1> } {
+  const $set: Record<string, unknown> = {};
+  const $unset: Record<string, 1> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined && value !== "") $set[key] = value;
+  }
+  for (const key of optionalKeys) {
+    if (!(key in $set)) $unset[key] = 1;
+  }
+  return Object.keys($unset).length ? { $set, $unset } : { $set };
+}

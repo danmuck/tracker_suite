@@ -19,6 +19,9 @@ export interface FindOptions {
 export const COLLECTIONS = {
   linkGroups: { unique: ["slug"] },
   links: { unique: [] },
+  listings: { unique: [] },
+  tours: { unique: [] },
+  futureSettings: { unique: ["key"] },
 } as const;
 
 export type CollectionName = keyof typeof COLLECTIONS;
