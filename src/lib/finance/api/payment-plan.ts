@@ -1,6 +1,6 @@
-// Payment plans over the Store. Same logic and order of reads and writes as
-// src/lib/finance/payment-plan.ts (the Mongoose version, used by the old route until Task 13);
-// its mutate-then-save() sites go through saveAccount / saveTransaction (save() semantics).
+// Payment plans over the Store: reading a plan, setting up, updating and unlinking payments, and
+// the RAP schedule. Changes to a loaded account or transaction go through saveAccount /
+// saveTransaction, which reproduce Mongoose save() semantics.
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import { addYears } from "date-fns";
@@ -18,6 +18,7 @@ import {
   accounts,
   assertId,
   loadProfile,
+  RAP_DEFAULTS,
   saveAccount,
   saveTransaction,
   shapeAccount,
@@ -63,7 +64,6 @@ export function describeCadence(
       return rule.frequency;
   }
 }
-const DEFAULT_RAP = { enabled: false, autoSchedule: true, recertDate: "07-01", dependents: 0 };
 
 export class PaymentPlanError extends Error {
   status: number;
@@ -200,10 +200,10 @@ export async function getPaymentPlan(store: Store, accountId: string, now: Date)
   const apr = blendedApr(account.subLoans, account.apr);
   const rap = account.rap
     ? {
-        enabled: account.rap.enabled ?? DEFAULT_RAP.enabled,
-        autoSchedule: account.rap.autoSchedule ?? DEFAULT_RAP.autoSchedule,
-        recertDate: account.rap.recertDate ?? DEFAULT_RAP.recertDate,
-        dependents: account.rap.dependents ?? DEFAULT_RAP.dependents,
+        enabled: account.rap.enabled ?? RAP_DEFAULTS.enabled,
+        autoSchedule: account.rap.autoSchedule ?? RAP_DEFAULTS.autoSchedule,
+        recertDate: account.rap.recertDate ?? RAP_DEFAULTS.recertDate,
+        dependents: account.rap.dependents ?? RAP_DEFAULTS.dependents,
       }
     : null;
 

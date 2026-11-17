@@ -4,10 +4,11 @@ import useSWR from "swr";
 import { profileFromDollars, profileToDollars } from "@/lib/finance/finance-profile";
 import type { FinanceProfileData } from "@/types/finance/datasheet";
 import { fetcher, send } from "@/hooks/request";
+import { FINANCE_SWR } from "@/hooks/finance/swr-options";
 
 /** Datasheet profile, converted to cents for the calculation libs. */
 export function useFinanceProfile() {
-  const { data, error, isLoading, mutate } = useSWR("/api/finance-profile", fetcher);
+  const { data, error, isLoading, mutate } = useSWR("/api/finance-profile", fetcher, FINANCE_SWR);
   return {
     profile: data?.data ? profileFromDollars(data.data) : undefined,
     isLoading,

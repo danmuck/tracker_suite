@@ -6,12 +6,11 @@ import { fail, invalid, isId, notFound, ok, type Handler } from "@/lib/data/api"
 import { planFieldsToDb } from "@/lib/finance/account-plan-fields";
 import { startOfTomorrow } from "@/lib/finance/dates";
 import { accountArchiveSchema, accountSchema } from "@/lib/finance/validators";
-import { accounts, assertId, requiredText, shapeAccount, shapeTransaction, transactions, type AccountDoc } from "./docs";
+import { accounts, assertId, isDebtType, requiredText, shapeAccount, shapeTransaction, transactions, type AccountDoc } from "./docs";
 import { postDuePayments } from "./post-payments";
 
 const ACCOUNT = "Account";
 
-const isDebtType = (type: string | undefined) => type === "credit_card" || type === "debt";
 
 /** GET /api/accounts — post due payments, apply pending transactions, then list. */
 export const listAccounts: Handler = async ({ store, query, now }) => {

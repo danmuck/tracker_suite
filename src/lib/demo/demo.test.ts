@@ -121,7 +121,9 @@ test("loadSampleData fills Finance through the real handlers, relative to today,
   const store = new BrowserStore(memoryStorage());
   const today = new Date(2026, 10, 17, 10);
   await loadSampleData(store, today);
+  assert.equal(await store.collection<Account>("accounts").count({ isCash: true }), 1);
   await loadSampleData(store, today);
+  assert.equal(await store.collection<Account>("accounts").count({ isCash: true }), 1);
   const accts = await store.collection<Account>("accounts").find();
   assert.deepEqual(Object.fromEntries(accts.map((a) => [a.name, a.balance])), {
     Cash: 0, "Everyday Checking (sample)": 263450, "Rainy Day Savings (sample)": 1280000, "Example Rewards Card": 39604, "Example Auto Loan": 980000 });

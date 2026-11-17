@@ -12,6 +12,7 @@ import {
   accounts,
   assertId,
   buildRule,
+  isDebtType,
   requiredText,
   shapeAccount,
   shapeTransaction,
@@ -22,7 +23,6 @@ import {
 
 const TRANSACTION = "Transaction";
 
-const isDebtType = (type: string | undefined) => type === "credit_card" || type === "debt";
 
 /** `Account.findById` as a hydrated document: shaped, or null. */
 async function findAccount(acc: Collection<AccountDoc>, id: string): Promise<AccountDoc | null> {

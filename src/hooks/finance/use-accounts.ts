@@ -4,6 +4,7 @@ import useSWR from "swr";
 import type { Account, AccountFormData } from "@/types/finance/account";
 import { dollarsToCents } from "@/lib/finance/formatters";
 import { fetcher, send } from "@/hooks/request";
+import { FINANCE_SWR } from "@/hooks/finance/swr-options";
 
 export function useAccounts(
   type?: string,
@@ -15,7 +16,8 @@ export function useAccounts(
   const qs = search.toString();
   const { data, error, isLoading, mutate } = useSWR(
     `/api/accounts${qs ? `?${qs}` : ""}`,
-    fetcher
+    fetcher,
+    FINANCE_SWR
   );
   return {
     accounts: (data || []) as Account[],
@@ -28,7 +30,8 @@ export function useAccounts(
 export function useAccount(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/api/accounts/${id}` : null,
-    fetcher
+    fetcher,
+    FINANCE_SWR
   );
   return {
     account: data as Account | undefined,

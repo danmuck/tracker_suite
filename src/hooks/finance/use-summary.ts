@@ -2,6 +2,7 @@
 
 import useSWR from "swr";
 import { fetcher } from "@/hooks/request";
+import { FINANCE_SWR } from "@/hooks/finance/swr-options";
 import type { SummaryResult, SummaryView } from "@/types/finance/summary";
 import { formatDateISO } from "@/lib/finance/formatters";
 
@@ -15,7 +16,8 @@ export function useSummary(view: SummaryView, date: Date, accountId?: string) {
 
   const { data, error, isLoading } = useSWR(
     `/api/summary?${params.toString()}`,
-    fetcher
+    fetcher,
+    FINANCE_SWR
   );
 
   return {

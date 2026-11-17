@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Database } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { ensureDemoSeed } from "@/lib/demo";
-import { getBrowserStorage, getBrowserStore, isBrowserStoragePersistent } from "@/lib/data/local";
+import { getBrowserStorage, getBrowserStore, isBrowserStoragePersistent, runExclusive } from "@/lib/data/local";
 import { IS_DEMO, useResolvedDataSource } from "@/lib/data/mode";
 import { shouldReloadAfterSeed } from "@/lib/data/storage";
 import { modules } from "@/lib/modules";
@@ -23,7 +23,7 @@ export function ModuleGate({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!IS_DEMO) return;
     const store = getBrowserStore();
-    demoSeed ??= ensureDemoSeed(store, getBrowserStorage());
+    demoSeed ??= runExclusive(() => ensureDemoSeed(store, getBrowserStorage()));
     demoSeed
       .then((seeded) => {
         if (shouldReloadAfterSeed(seeded, isBrowserStoragePersistent())) window.location.reload();

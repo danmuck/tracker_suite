@@ -1,10 +1,11 @@
 import { localRequest } from "@/lib/data/local";
 import { getDataSource } from "@/lib/data/mode";
+import { RequestError } from "@/lib/data/request-error";
 
 export const fetcher = (url: string) => {
   if (getDataSource() === "browser") return localRequest("GET", url);
   return fetch(url).then((r) => {
-    if (!r.ok) throw new Error(`Request failed: ${r.status}`);
+    if (!r.ok) throw new RequestError(`Request failed: ${r.status}`, r.status);
     return r.json();
   });
 };
@@ -18,7 +19,7 @@ export async function send<T = unknown>(url: string, method: string, body?: unkn
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `Request failed: ${res.status}`);
+    throw new RequestError(err.error || `Request failed: ${res.status}`, res.status);
   }
   return res.json();
 }

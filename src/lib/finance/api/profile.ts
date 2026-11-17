@@ -1,5 +1,5 @@
 // Saving the Datasheet profile and applying it to the linked Salary and Rent transactions, over the Store.
-// Same order of reads and writes as src/lib/finance/apply-profile.ts (saveProfileAndApply).
+// Used by the profile routes in both data sources.
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import type { Store } from "@/lib/data/store";

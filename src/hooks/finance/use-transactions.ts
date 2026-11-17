@@ -4,6 +4,7 @@ import useSWR from "swr";
 import type { Transaction, TransactionFormData } from "@/types/finance/transaction";
 import type { TransactionFilters, PaginatedResponse } from "@/types/api";
 import { fetcher, send } from "@/hooks/request";
+import { FINANCE_SWR } from "@/hooks/finance/swr-options";
 
 export function useTransactions(filters: TransactionFilters = {}) {
   const params = new URLSearchParams();
@@ -15,7 +16,7 @@ export function useTransactions(filters: TransactionFilters = {}) {
   const queryString = params.toString();
   const url = `/api/transactions${queryString ? `?${queryString}` : ""}`;
 
-  const { data, error, isLoading, mutate } = useSWR(url, fetcher);
+  const { data, error, isLoading, mutate } = useSWR(url, fetcher, FINANCE_SWR);
 
   return {
     transactions: (data?.data || []) as Transaction[],
@@ -29,7 +30,8 @@ export function useTransactions(filters: TransactionFilters = {}) {
 export function useTransaction(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
     id ? `/api/transactions/${id}` : null,
-    fetcher
+    fetcher,
+    FINANCE_SWR
   );
   return {
     transaction: data?.data as Transaction | undefined,

@@ -2,6 +2,7 @@
 
 import useSWR, { mutate as globalMutate } from "swr";
 import { fetcher, send as request } from "@/hooks/request";
+import { FINANCE_SWR } from "@/hooks/finance/swr-options";
 
 /** Payment plan as returned by the API (dollars, percent). */
 export interface PaymentPlan {
@@ -27,10 +28,8 @@ export interface RapSettings {
 const planKey = (accountId: string) => `/api/accounts/${accountId}/payment-plan`;
 
 export function usePaymentPlan(accountId: string) {
-  const { data, error, isLoading } = useSWR(accountId ? planKey(accountId) : null, fetcher, {
-    // 400 (bank account) and 404 (missing) are expected answers, not transient failures
-    shouldRetryOnError: false,
-  });
+  // 400 (bank account) and 404 (missing) are expected answers, not transient failures: not retried
+  const { data, error, isLoading } = useSWR(accountId ? planKey(accountId) : null, fetcher, FINANCE_SWR);
   return { plan: data?.data as PaymentPlan | undefined, isLoading, isError: !!error };
 }
 

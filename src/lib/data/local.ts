@@ -44,3 +44,11 @@ const serial = createSerialQueue();
 export function localRequest<T>(method: string, url: string, body?: unknown): Promise<T> {
   return serial(async () => unwrap<T>(await dispatch(allRoutes, getBrowserStore(), method, url, body)));
 }
+
+/**
+ * Runs a job that touches browser storage directly (loading the sample, a reset, the demo seed)
+ * on the same queue, so it never interleaves with an in-flight local request.
+ */
+export function runExclusive<T>(job: () => Promise<T>): Promise<T> {
+  return serial(job);
+}

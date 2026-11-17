@@ -2,6 +2,7 @@
 // Pure: no framework, browser or server imports.
 
 import { fail, type ApiResult, type RouteDef } from "./api";
+import { RequestError } from "./request-error";
 import { ConflictError, type Store } from "./store";
 
 function matchPath(pattern: string, pathname: string): Record<string, string> | null {
@@ -85,9 +86,10 @@ export async function dispatch(
 }
 
 /**
- * The body of a 2xx result; otherwise throws the result's error message. A 2xx body is
- * round-tripped through JSON so it equals what an HTTP client would parse (NaN becomes null,
- * undefined properties vanish, Dates become ISO strings).
+ * The body of a 2xx result; otherwise throws a RequestError with the result's status and error
+ * message (as `send` does for an HTTP error status). A 2xx body is round-tripped through JSON so
+ * it equals what an HTTP client would parse (NaN becomes null, undefined properties vanish,
+ * Dates become ISO strings).
  */
 export function unwrap<T>(result: ApiResult): T {
   if (result.status >= 200 && result.status < 300) {
@@ -95,7 +97,7 @@ export function unwrap<T>(result: ApiResult): T {
     return (json === undefined ? undefined : JSON.parse(json)) as T;
   }
   const error = (result.body as { error?: string } | null)?.error;
-  throw new Error(error ?? `Request failed: ${result.status}`);
+  throw new RequestError(error ?? `Request failed: ${result.status}`, result.status);
 }
 
 export function serverGuard(isDemo: boolean): ApiResult | null {

@@ -6,6 +6,7 @@ import { demoApiGuard, dispatch, matchRoute, serverGuard, unwrap } from "./dispa
 import { linksRoutes } from "@/lib/links/api/routes";
 import { futureRoutes } from "@/lib/future/api/routes";
 import { ConflictError } from "./store";
+import { RequestError } from "./request-error";
 import { memoryStorage } from "./test-helpers";
 
 const routes: RouteDef[] = [
@@ -139,6 +140,20 @@ test("unwrap returns 2xx bodies and throws the error message otherwise", () => {
   assert.throws(() => unwrap({ status: 404, body: { error: "Link not found" } }), { message: "Link not found" });
   assert.throws(() => unwrap({ status: 500, body: null }), { message: "Request failed: 500" });
   assert.throws(() => unwrap({ status: 500, body: {} }), { message: "Request failed: 500" });
+});
+
+test("unwrap throws a RequestError carrying the result's status and its error message", () => {
+  for (const [result, message] of [
+    [{ status: 404, body: { error: "Account not found" } }, "Account not found"],
+    [{ status: 400, body: { error: "Validation failed", details: {} } }, "Validation failed"],
+    [{ status: 500, body: null }, "Request failed: 500"],
+  ] as const) {
+    assert.throws(
+      () => unwrap(result),
+      (error: unknown) =>
+        error instanceof RequestError && error.status === result.status && error.message === message,
+    );
+  }
 });
 
 test("unwrap delivers what HTTP would: the body round-tripped through JSON", () => {

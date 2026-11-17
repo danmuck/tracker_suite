@@ -1,13 +1,11 @@
-// Due payment-plan payments, posted over the Store. Same logic and call order as
-// src/lib/finance/post-payments.ts (the Mongoose version, used by the old routes until Task 13).
+// Due payment-plan payments, posted over the Store, once each (run before the Finance reads that
+// show balances or projections). Same logic and call order in both data sources.
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import type { Store } from "@/lib/data/store";
 import { localDateStr, toDateStr, toIso } from "@/lib/finance/dates";
 import { dueOccurrences } from "@/lib/finance/posting";
-import { accounts, shapeAccount, shapeTransaction, transactions } from "./docs";
-
-const isLiability = (type: string) => type === "credit_card" || type === "debt";
+import { accounts, isDebtType, shapeAccount, shapeTransaction, transactions } from "./docs";
 
 /**
  * Post every due, not-yet-posted payment-plan payment to account balances
@@ -71,7 +69,7 @@ export async function postDuePayments(store: Store, now: Date): Promise<void> {
     await acc.batchUpdate([
       { filter: { _id: debt._id }, update: { $inc: { balance: -total } } },
       ...(source
-        ? [{ filter: { _id: source._id }, update: { $inc: { balance: isLiability(source.type) ? total : -total } } }]
+        ? [{ filter: { _id: source._id }, update: { $inc: { balance: isDebtType(source.type) ? total : -total } } }]
         : []),
     ]);
   }

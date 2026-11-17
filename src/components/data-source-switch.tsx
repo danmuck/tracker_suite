@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { loadSampleData, SEEDED_KEY } from "@/lib/demo";
-import { getBrowserStore } from "@/lib/data/local";
+import { getBrowserStore, runExclusive } from "@/lib/data/local";
 import { IS_DEMO, setDataSource, useResolvedDataSource } from "@/lib/data/mode";
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : undefined);
@@ -22,7 +22,7 @@ const errorMessage = (error: unknown) => (error instanceof Error ? error.message
 async function loadSample() {
   if (!window.confirm("Replace browser data with the sample set?")) return;
   try {
-    await loadSampleData(getBrowserStore());
+    await runExclusive(() => loadSampleData(getBrowserStore()));
   } catch (error) {
     toast.error("Could not load sample data", { description: errorMessage(error) });
     return;
@@ -30,12 +30,14 @@ async function loadSample() {
   window.location.reload();
 }
 
-function resetBrowserData() {
+async function resetBrowserData() {
   if (!window.confirm("Delete all browser data?")) return;
   try {
-    getBrowserStore().clear();
-    // Deliberate second guard: clear() already removes the key, but a reset must always reseed in the demo.
-    window.localStorage.removeItem(SEEDED_KEY);
+    await runExclusive(async () => {
+      getBrowserStore().clear();
+      // Deliberate second guard: clear() already removes the key, but a reset must always reseed in the demo.
+      window.localStorage.removeItem(SEEDED_KEY);
+    });
   } catch (error) {
     toast.error("Could not reset browser data", { description: errorMessage(error) });
     return;
@@ -88,7 +90,7 @@ export function DataSourceSwitch() {
         <DropdownMenuItem disabled={!inBrowser} onSelect={() => void loadSample()}>
           Load sample data
         </DropdownMenuItem>
-        <DropdownMenuItem disabled={!inBrowser} onSelect={resetBrowserData}>
+        <DropdownMenuItem disabled={!inBrowser} onSelect={() => void resetBrowserData()}>
           Reset browser data
         </DropdownMenuItem>
       </DropdownMenuContent>

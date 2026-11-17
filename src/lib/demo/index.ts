@@ -66,8 +66,8 @@ async function loadFuture(store: Store, today: Date): Promise<void> {
   }
 }
 
-// Finance is created through its own handlers, with `today` as their clock, so balances,
-// payment plans and the applied Datasheet profile are exactly what the app would produce.
+// Finance is created through its own handlers, with `today` as their clock, so balances and
+// the applied Datasheet profile are exactly what the app would produce.
 async function loadFinance(store: Store, today: Date): Promise<void> {
   await transactions(store).deleteMany({});
   await accounts(store).deleteMany({});
