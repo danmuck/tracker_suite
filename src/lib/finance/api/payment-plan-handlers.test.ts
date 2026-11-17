@@ -1,9 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { BaseDoc } from "@/lib/data/store";
+import { dispatch } from "@/lib/data/dispatch";
+import type { BaseDoc, Collection, CollectionName, Store } from "@/lib/data/store";
 import { DEFAULT_PROFILE } from "@/lib/finance/finance-profile";
 import { accounts, profileToDoc, profiles, transactions, type AccountDoc } from "./docs";
 import { regenerateAllRapSchedules, type PaymentPlanDTO } from "./payment-plan";
+import { financeRoutes } from "./routes";
 import { NOW, setup } from "./test-helpers";
 
 let t = setup();
@@ -94,10 +96,31 @@ test("errors carry today's messages and statuses", async () => {
   assert.deepEqual(await t.call("PUT", plan(card._id), { rap: RAP }), err(400, "RAP applies to debt accounts only"));
 });
 
-test("current behavior: a refused RAP change still writes the schedule sent with it", async () => {
+test("a refused RAP change writes nothing, not even the schedule sent with it", async () => {
   await t.call("POST", plan(card._id), setupBody());
-  assert.equal((await t.call("PUT", plan(card._id), { schedule: [{ effectiveDate: "2026-12-15", amount: 75 }], rap: RAP })).status, 400);
-  assert.deepEqual((await tx().find())[0].amountSchedule, [{ effectiveDate: "2026-12-15T00:00:00.000Z", amount: 7500 }]);
+  const before = [await tx().find(), await accounts(t.store).find()];
+  const res = await t.call("PUT", plan(card._id), { schedule: [{ effectiveDate: "2026-12-15", amount: 75 }], subLoans: [{ name: "A", balance: 1, apr: 1 }], rap: RAP });
+  assert.deepEqual(res, { status: 400, body: { error: "RAP applies to debt accounts only" } });
+  assert.deepEqual([await tx().find(), await accounts(t.store).find()], before);
+});
+
+test("payment setup whose link write fails deletes the transfer it created and fails", async () => {
+  const before = [await tx().find(), await accounts(t.store).find()];
+  // A store whose accounts.updateById throws from now on: the transfer insert succeeds, the link write fails
+  const broken: Store = {
+    collection<T extends BaseDoc>(name: CollectionName): Collection<T> {
+      const inner = t.store.collection<T>(name);
+      if (name !== "accounts") return inner;
+      return Object.assign(Object.create(inner) as Collection<T>, {
+        updateById: async () => {
+          throw new Error("write failed");
+        },
+      });
+    },
+  };
+  const res = await dispatch(financeRoutes, broken, "POST", plan(card._id), setupBody(), NOW);
+  assert.deepEqual(res, { status: 500, body: { error: "Failed to update payment plan" } });
+  assert.deepEqual([await tx().find(), await accounts(t.store).find()], before);
 });
 
 test("the plan routes post due payments first", async () => {

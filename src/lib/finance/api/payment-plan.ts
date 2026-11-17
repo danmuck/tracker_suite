@@ -303,8 +303,14 @@ export async function setupPayments(
     balanceApplied: false,
     amountSchedule: [{ effectiveDate: start, amount: cents }],
   });
-  // PP12: account.paymentTransactionId = tx._id; account.save()
-  await saveAccount(store, raw, { paymentTransactionId: created._id });
+  // PP12: account.paymentTransactionId = tx._id; account.save(). If the link cannot be written,
+  // the transfer just created is removed so no unlinked recurring payment is left behind.
+  try {
+    await saveAccount(store, raw, { paymentTransactionId: created._id });
+  } catch (error) {
+    await transactions(store).deleteById(created._id);
+    throw error;
+  }
   await regenerateRapSchedule(store, accountId, now);
 }
 
@@ -319,6 +325,8 @@ export async function updatePaymentPlan(
   now: Date,
 ): Promise<void> {
   const { raw, account } = await loadAccount(store, accountId);
+  // Every refusal comes before the first write
+  if (input.rap && account.type !== "debt") throw new PaymentPlanError("RAP applies to debt accounts only", 400);
   if (input.schedule) {
     const loaded = await loadPaymentTx(store, account);
     if (!loaded) throw new PaymentPlanError("No payment linked — set up payments", 409);
@@ -331,7 +339,6 @@ export async function updatePaymentPlan(
     changes.subLoans = input.subLoans.map((l) => ({ name: l.name.trim(), balance: Math.round(l.balance * 100), apr: l.apr / 100 }));
   }
   if (input.rap) {
-    if (account.type !== "debt") throw new PaymentPlanError("RAP applies to debt accounts only", 400);
     changes.rap = {
       enabled: input.rap.enabled,
       autoSchedule: input.rap.autoSchedule,

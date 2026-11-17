@@ -1,7 +1,7 @@
 // Transaction routes (R11–R15) as store-backed handlers, shared by the server and browser data modes.
-// Same order of reads and writes, signs and caps as src/app/api/transactions/route.ts and
-// [transactionId]/route.ts, including their known bugs (a failed PUT can leave the old effect
-// reversed; a PUT keeps a stale toAccountId).
+// Same signs and caps as src/app/api/transactions/route.ts and [transactionId]/route.ts. A PUT
+// resolves and checks the new state before its first write (a refused edit changes nothing); it
+// still keeps a stale toAccountId (bug 2).
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import { fail, isId, notFound, ok, type ApiResult, type Handler } from "@/lib/data/api";
@@ -75,31 +75,52 @@ function transactionFields(v: TransactionInput, amount: number, balanceApplied: 
   return doc;
 }
 
-/** The old effect undone (PUT and DELETE share it): the opposite signs of the apply paths. */
-async function reverseEffect(acc: Collection<AccountDoc>, existing: TransactionDoc): Promise<void> {
+/** A balance change to one account. */
+interface BalanceChange {
+  accountId: string;
+  delta: number;
+}
+
+/**
+ * The balance changes that undo an applied transaction (PUT and DELETE share them): the opposite
+ * signs of the apply paths. Reads only; `applyChanges` writes them.
+ */
+async function reversalOf(acc: Collection<AccountDoc>, existing: TransactionDoc): Promise<BalanceChange[]> {
   if (existing.type === "transfer" && existing.toAccountId) {
-    if (existing.amount > 0) {
-      const oldSource = await findAccount(acc, existing.accountId); // T10 / T21
-      const oldDest = await findAccount(acc, existing.toAccountId); // T11 / T22
-      const oldIsDebtSource = isDebtType(oldSource?.type);
-      const oldIsDebtDest = isDebtType(oldDest?.type);
-      // T12 / T23
-      await acc.batchUpdate([
-        { filter: { _id: existing.accountId }, update: { $inc: { balance: oldIsDebtSource ? -existing.amount : existing.amount } } },
-        { filter: { _id: existing.toAccountId }, update: { $inc: { balance: oldIsDebtDest ? existing.amount : -existing.amount } } },
-      ]);
-    }
-  } else {
-    const oldAcct = await findAccount(acc, existing.accountId); // T13 / T24
-    const oldIsDebt = isDebtType(oldAcct?.type);
-    let reversal: number;
-    if (oldIsDebt) {
-      reversal = existing.type === "credit" ? existing.amount : -existing.amount;
-    } else {
-      reversal = existing.type === "credit" ? -existing.amount : existing.amount;
-    }
-    await acc.updateById(existing.accountId, { $inc: { balance: reversal } }); // T14 / T25
+    if (existing.amount <= 0) return [];
+    const oldSource = await findAccount(acc, existing.accountId); // T10 / T21
+    const oldDest = await findAccount(acc, existing.toAccountId); // T11 / T22
+    const oldIsDebtSource = isDebtType(oldSource?.type);
+    const oldIsDebtDest = isDebtType(oldDest?.type);
+    return [
+      { accountId: existing.accountId, delta: oldIsDebtSource ? -existing.amount : existing.amount },
+      { accountId: existing.toAccountId, delta: oldIsDebtDest ? existing.amount : -existing.amount },
+    ];
   }
+  const oldAcct = await findAccount(acc, existing.accountId); // T13 / T24
+  const oldIsDebt = isDebtType(oldAcct?.type);
+  let reversal: number;
+  if (oldIsDebt) {
+    reversal = existing.type === "credit" ? existing.amount : -existing.amount;
+  } else {
+    reversal = existing.type === "credit" ? -existing.amount : existing.amount;
+  }
+  return [{ accountId: existing.accountId, delta: reversal }];
+}
+
+/** Writes balance changes: one change as a single update, two as one batch (T12 / T23, T14 / T25). */
+async function applyChanges(acc: Collection<AccountDoc>, changes: BalanceChange[]): Promise<void> {
+  if (changes.length === 1) {
+    await acc.updateById(changes[0].accountId, { $inc: { balance: changes[0].delta } });
+  } else if (changes.length > 1) {
+    await acc.batchUpdate(changes.map((c) => ({ filter: { _id: c.accountId }, update: { $inc: { balance: c.delta } } })));
+  }
+}
+
+/** `account` with `changes` to it applied in memory (the balance it has once they are written). */
+function afterChanges(account: AccountDoc, changes: BalanceChange[]): AccountDoc {
+  const delta = changes.filter((c) => c.accountId === account._id).reduce((sum, c) => sum + c.delta, 0);
+  return delta === 0 ? account : { ...account, balance: account.balance + delta };
 }
 
 /** GET /api/transactions — filters, sort and paging; `data` is the stored documents as they are. */
@@ -254,8 +275,8 @@ export const getTransaction: Handler = async ({ store, params }) => {
 
 /**
  * PUT /api/transactions/:transactionId — reverse the old effect, apply the new one, then update.
- * Nothing is undone when a later step fails: the reversal (and, for a non-transfer, the new
- * effect) stays written, as today.
+ * Everything that can refuse the edit (ids, the new accounts, the stored fields) is checked
+ * before the first write, so a refused edit leaves balances and the transaction as they were.
  */
 export const updateTransaction: Handler = async ({ store, params, body, now }) => {
   if (!isId(params.transactionId)) return notFound(TRANSACTION);
@@ -272,33 +293,38 @@ export const updateTransaction: Handler = async ({ store, params, body, now }) =
   const acc = accounts(store);
   const newAmountInCents = Math.round(validated.amount * 100);
   const newIsFuture = isFutureDated(validated.date, now);
+  const shouldApplyNew = !validated.isRecurring && !newIsFuture;
+  const isTransfer = validated.type === "transfer" && !validated.isRecurring;
 
-  // Reverse the old effect only if it was applied to balances
-  if (existing.balanceApplied) await reverseEffect(acc, existing);
-
-  // Where today's code first casts the new accountId (a lookup or the final update), after the reversal
+  // Resolve and check the new state before any write: malformed ids and unusable fields throw
+  // (the route's 500), a missing transfer account is the 400. The amount is set below.
   assertId(validated.accountId);
+  const fields = transactionFields(validated, newAmountInCents, shouldApplyNew); // asserts toAccountId when present
+  const toAccountId = validated.toAccountId as string;
+  let sourceAccount: AccountDoc | null = null;
+  let destAccount: AccountDoc | null = null;
+  if (isTransfer) {
+    // T15 (the schema requires toAccountId for a transfer, so it was asserted above)
+    [sourceAccount, destAccount] = await Promise.all([findAccount(acc, validated.accountId), findAccount(acc, toAccountId)]);
+    if (!sourceAccount || !destAccount) return fail(400, "Source or destination account not found");
+  }
+
+  // The old effect is undone only if it was applied to balances
+  const reversal = existing.balanceApplied ? await reversalOf(acc, existing) : [];
 
   let finalNewAmount = newAmountInCents;
-  const shouldApplyNew = !validated.isRecurring && !newIsFuture;
+  let newEffect: BalanceChange[] = [];
 
-  if (validated.type === "transfer" && !validated.isRecurring) {
-    const toAccountId = validated.toAccountId as string;
-    assertId(toAccountId); // cast by the lookup below today
-    // T15
-    const [sourceAccount, destAccount] = await Promise.all([
-      findAccount(acc, validated.accountId),
-      findAccount(acc, toAccountId),
-    ]);
-
-    if (!sourceAccount || !destAccount) return fail(400, "Source or destination account not found");
-
-    const isDebtSource = isDebtType(sourceAccount.type);
-    const isDebtDest = isDebtType(destAccount.type);
+  if (isTransfer && sourceAccount && destAccount) {
+    // Caps see the balances as they are once the old effect is undone
+    const source = afterChanges(sourceAccount, reversal);
+    const dest = afterChanges(destAccount, reversal);
+    const isDebtSource = isDebtType(source.type);
+    const isDebtDest = isDebtType(dest.type);
 
     // Credit limit cap (positive balance = owed, available = limit - owed)
-    if (sourceAccount.type === "credit_card" && sourceAccount.creditLimit) {
-      const availableCredit = sourceAccount.creditLimit - sourceAccount.balance;
+    if (source.type === "credit_card" && source.creditLimit) {
+      const availableCredit = source.creditLimit - source.balance;
       if (availableCredit <= 0) {
         finalNewAmount = 0;
       } else {
@@ -308,7 +334,7 @@ export const updateTransaction: Handler = async ({ store, params, body, now }) =
 
     // Debt cap (positive balance = owed)
     if (isDebtDest) {
-      const owed = destAccount.balance;
+      const owed = dest.balance;
       if (owed <= 0) {
         finalNewAmount = 0;
       } else {
@@ -317,27 +343,27 @@ export const updateTransaction: Handler = async ({ store, params, body, now }) =
     }
 
     if (shouldApplyNew && finalNewAmount > 0) {
-      // T16
-      await acc.batchUpdate([
-        { filter: { _id: validated.accountId }, update: { $inc: { balance: isDebtSource ? finalNewAmount : -finalNewAmount } } },
-        { filter: { _id: toAccountId }, update: { $inc: { balance: isDebtDest ? -finalNewAmount : finalNewAmount } } },
-      ]);
+      newEffect = [
+        { accountId: validated.accountId, delta: isDebtSource ? finalNewAmount : -finalNewAmount },
+        { accountId: toAccountId, delta: isDebtDest ? -finalNewAmount : finalNewAmount },
+      ];
     }
   } else if (shouldApplyNew) {
     const newAcct = await findAccount(acc, validated.accountId); // T17
     const newIsDebt = isDebtType(newAcct?.type);
-    let newEffect: number;
+    let delta: number;
     if (newIsDebt) {
-      newEffect = validated.type === "credit" ? -newAmountInCents : newAmountInCents;
+      delta = validated.type === "credit" ? -newAmountInCents : newAmountInCents;
     } else {
-      newEffect = validated.type === "credit" ? newAmountInCents : -newAmountInCents;
+      delta = validated.type === "credit" ? newAmountInCents : -newAmountInCents;
     }
-    await acc.updateById(validated.accountId, { $inc: { balance: newEffect } }); // T18
+    newEffect = [{ accountId: validated.accountId, delta }];
   }
 
-  const savedAmount = validated.type === "transfer" ? finalNewAmount : newAmountInCents;
-  // T19: today's cast and update validators fail here (after both balance writes)
-  const fields = transactionFields(validated, savedAmount, shouldApplyNew);
+  // Writes: the reversal, the new effect (T16 / T18), then the document (T19)
+  await applyChanges(acc, reversal);
+  await applyChanges(acc, newEffect);
+  fields.amount = validated.type === "transfer" ? finalNewAmount : newAmountInCents;
   const updated = await txs.updateById(transactionId, { $set: fields });
   return ok(updated);
 };
@@ -353,7 +379,7 @@ export const deleteTransaction: Handler = async ({ store, params }) => {
 
   const acc = accounts(store);
   // Only reverse the balance if it was applied
-  if (transaction.balanceApplied) await reverseEffect(acc, transaction);
+  if (transaction.balanceApplied) await applyChanges(acc, await reversalOf(acc, transaction));
 
   await txs.deleteById(transactionId); // T26
   // A deleted payment-plan transfer leaves no plan behind (T27)

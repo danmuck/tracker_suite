@@ -153,6 +153,7 @@ export function buildScenario(today: string): Step[] {
       201,
       { save: { name: "car", from: "_id" } },
     ),
+    // Bug 3: refused before anything is created (A11 lists no orphan loan)
     send("A08", "POST", "/api/accounts", { name: "Parity Orphan Loan", type: "debt", balance: 50, isLoan: true, linkedAccountId: B, depositFunds: true }, 400),
     send("A09", "POST", "/api/accounts", { name: "", type: "nope", balance: "x" }, 400),
     raw("A10", "POST", "/api/accounts", 500, { allow: d1c("Validation failed") }),
@@ -377,6 +378,7 @@ export function buildScenario(today: string): Step[] {
       },
       200,
     ),
+    // Bug 1: the refused edit changes nothing; T43 still shows tLoan's payment applied
     send("T42", "PUT", "/api/transactions/{tLoan}", { ...t08, toAccountId: B }, 400),
     get("T43", "/api/accounts", 200),
     send("T44", "PUT", "/api/transactions/{tPay}", { ...t01, amount: -5 }, 400),
@@ -427,6 +429,7 @@ export function buildScenario(today: string): Step[] {
     // Its updatedAt marker must be <same>: P15 wrote nothing
     get("P16", "/api/transactions/{loanPay}", 200),
     send("P17", "PUT", plan("{card}"), { rap: { enabled: true, autoSchedule: true, recertDate: "07-01", dependents: 0 } }, 400),
+    // Bug 11: refused before the schedule is written; P19 keeps the 45 set up at P05
     send(
       "P18",
       "PUT",

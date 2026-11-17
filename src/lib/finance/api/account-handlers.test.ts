@@ -60,10 +60,13 @@ test("the loan disbursement is dated the local calendar day, west and east of UT
   });
 });
 
-test("current behavior: a loan whose linked account is missing is created, then answered with 400", async () => {
+test("a loan whose linked account is missing is refused before anything is created", async () => {
   const res = await t.call("POST", "/api/accounts", { name: "Orphan", type: "debt", balance: 50, isLoan: true, linkedAccountId: "a".repeat(24), depositFunds: true });
   assert.deepEqual(res, { status: 400, body: { error: "Linked account not found for loan disbursement" } });
-  assert.equal(await accounts(t.store).count({ name: "Orphan" }), 1);
+  assert.equal(await accounts(t.store).count({ name: "Orphan" }), 0);
+  assert.equal(await tx().count(), 0);
+  // Not asked to deposit: the link is not looked up, as before
+  assert.equal((await t.call("POST", "/api/accounts", { name: "Linked only", type: "debt", balance: 50, isLoan: true, linkedAccountId: "a".repeat(24) })).status, 201);
   assert.deepEqual(await t.call("POST", "/api/accounts", { name: "Bad", type: "debt", balance: 1, linkedAccountId: "abc" }), { status: 500, body: { error: "Failed to create account" } });
   assert.equal(await accounts(t.store).count({ name: "Bad" }), 0);
 });

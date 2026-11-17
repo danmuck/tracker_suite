@@ -188,24 +188,41 @@ test("update keeps fields the body leaves out; current behavior: a transfer chan
   assert.deepEqual(await t.call("GET", `/api/transactions/${move._id}`), { status: 200, body: updated });
 });
 
-test("current behavior: an edit refused for a missing account leaves the old effect reversed", async () => {
+test("an edit refused for a missing account changes nothing", async () => {
   const move = await post({ type: "transfer", toAccountId: card._id, amount: 50 });
+  const before = [await balances(), await tx().findById(move._id)];
   const res = await t.call("PUT", `/api/transactions/${move._id}`, body({ type: "transfer", toAccountId: "a".repeat(24), amount: 50 }));
   assert.deepEqual(res, { status: 400, body: { error: "Source or destination account not found" } });
-  assert.deepEqual(await balances(), { Bank: 100000, Card: 20000, Loan: 30000 });
-  const still = (await tx().findById(move._id))!;
-  assert.deepEqual([still.amount, still.balanceApplied, still.toAccountId], [5000, true, card._id]);
+  assert.deepEqual([await balances(), await tx().findById(move._id)], before);
+  const noSource = await t.call("PUT", `/api/transactions/${move._id}`, body({ type: "transfer", accountId: "a".repeat(24), toAccountId: card._id, amount: 50 }));
+  assert.deepEqual(noSource, { status: 400, body: { error: "Source or destination account not found" } });
+  assert.deepEqual([await balances(), await tx().findById(move._id)], before);
 });
 
-test("current behavior: a debit edit carrying a malformed toAccountId fails after the new effect is applied", async () => {
+test("an edit carrying a malformed id or an unusable field fails before any write", async () => {
   const debit = await post();                                                   // bank 99000
+  const before = [await balances(), await tx().findById(debit._id)];
   const res = await t.call("PUT", `/api/transactions/${debit._id}`, body({ amount: 30, toAccountId: "abc" }));
   assert.deepEqual(res, { status: 500, body: { error: "Failed to update transaction" } });
-  assert.equal((await balances()).Bank, 97000);                                 // old effect reversed, new one applied
-  assert.equal((await tx().findById(debit._id))!.amount, 1000);                 // the document itself was not updated
+  assert.deepEqual([await balances(), await tx().findById(debit._id)], before);
   const move = await t.call("PUT", `/api/transactions/${debit._id}`, body({ type: "transfer", toAccountId: "abc" }));
   assert.deepEqual(move, { status: 500, body: { error: "Failed to update transaction" } });
-  assert.equal((await balances()).Bank, 98000);                                 // reversed again; a transfer fails before its new effect
+  assert.deepEqual([await balances(), await tx().findById(debit._id)], before);
+  for (const bad of [{ accountId: "abc" }, { description: "   " }, { date: "not a date" }]) {
+    assert.equal((await t.call("PUT", `/api/transactions/${debit._id}`, body(bad))).status, 500);
+    assert.deepEqual([await balances(), await tx().findById(debit._id)], before);
+  }
+});
+
+test("an edited transfer is capped against the balances after its old effect is undone", async () => {
+  const payoff = await post({ type: "transfer", toAccountId: card._id, amount: 200 }); // card paid off
+  assert.deepEqual(await balances(), { Bank: 80000, Card: 0, Loan: 30000 });
+  const res = await t.call("PUT", `/api/transactions/${payoff._id}`, body({ type: "transfer", toAccountId: card._id, amount: 150 }));
+  assert.deepEqual([res.status, (res.body as TransactionDoc).amount], [200, 15000]);
+  assert.deepEqual(await balances(), { Bank: 85000, Card: 5000, Loan: 30000 });
+  const over = await t.call("PUT", `/api/transactions/${payoff._id}`, body({ type: "transfer", toAccountId: card._id, amount: 999 }));
+  assert.deepEqual([over.status, (over.body as TransactionDoc).amount], [200, 20000]); // capped at the 200 owed once 150 is undone
+  assert.deepEqual(await balances(), { Bank: 80000, Card: 0, Loan: 30000 });
 });
 
 test("a legacy transaction without balanceApplied is treated as applied", async () => {
@@ -262,14 +279,16 @@ test("golden T17, T18, T20: validation details are the ZodError as JSON (name an
   });
 });
 
-test("golden T19, T22, T42: a missing account is 400 (on PUT after the reversal); a malformed accountId is 500 and writes nothing", async () => {
+test("golden T19, T22, T42: a missing account is 400; a malformed accountId is 500; neither writes anything", async () => {
   const before = [t.writes("accounts"), t.writes("transactions")];
   assert.deepEqual(await t.call("POST", "/api/transactions", body({ type: "transfer", toAccountId: "b".repeat(24) })), { status: 400, body: { error: "Source or destination account not found" } });
   assert.deepEqual(await t.call("POST", "/api/transactions", body({ accountId: "abc" })), { status: 500, body: { error: "Failed to create transaction" } });
   assert.deepEqual([t.writes("accounts"), t.writes("transactions")], before);
   const pay = await post({ type: "transfer", toAccountId: loan._id, amount: 200 });     // bank 80000, loan 10000
+  const after = [t.writes("accounts"), t.writes("transactions")];
   assert.deepEqual(await t.call("PUT", `/api/transactions/${pay._id}`, body({ type: "transfer", toAccountId: "b".repeat(24), amount: 200 })), { status: 400, body: { error: "Source or destination account not found" } });
-  assert.deepEqual(await balances(), { Bank: 100000, Card: 20000, Loan: 30000 });
+  assert.deepEqual(await balances(), { Bank: 80000, Card: 20000, Loan: 10000 });
+  assert.deepEqual([t.writes("accounts"), t.writes("transactions")], after);
 });
 
 test("golden T37, T38, T39, T41: PUT keeps omitted fields, toggles the applied state by date, and stores the rule with its defaults", async () => {
@@ -290,13 +309,13 @@ test("golden T37, T38, T39, T41: PUT keeps omitted fields, toggles the applied s
   assert.deepEqual(await balances(), { Bank: 100000 - 13025, Card: 26000, Loan: 30000 });
 });
 
-test("list: unshaped stored documents, the default page size, and a whitespace-only description on PUT fails after the new effect", async () => {
+test("list: unshaped stored documents, the default page size, and a whitespace-only description on PUT fails before any write", async () => {
   const old = await tx().insert({ amount: 700, date: "2026-10-01T00:00:00.000Z", description: "old", accountId: bank._id, type: "debit" } as never);
   const list = (await t.call("GET", "/api/transactions")).body as { data: TransactionDoc[]; pagination: object };
   assert.deepEqual([list.data, list.pagination], [[old], { page: 1, limit: 20, total: 1, totalPages: 1 }]);
   assert.deepEqual(await t.call("GET", `/api/transactions/${old._id}`), { status: 200, body: old });
-  // Mongoose's update validators refuse the trimmed "" only at the final update, after both balance writes
+  // The trimmed "" is refused (the route's 500) before the balance writes
   assert.deepEqual(await t.call("PUT", `/api/transactions/${old._id}`, body({ description: "   " })), { status: 500, body: { error: "Failed to update transaction" } });
-  assert.equal((await balances()).Bank, 100000 + 700 - 1000);
+  assert.equal((await balances()).Bank, 100000);
   assert.deepEqual(await tx().findById(old._id), old);
 });

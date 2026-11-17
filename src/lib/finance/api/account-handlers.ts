@@ -94,13 +94,16 @@ export const createAccount: Handler = async ({ store, body, now }) => {
   Object.assign(doc, planFieldsToDb(data).set);
 
   const acc = accounts(store);
+  // Loan disbursement, only when asked: the linked account is checked before anything is created
+  const disburse = data.depositFunds === true && data.type === "debt" && data.isLoan === true && !!data.linkedAccountId;
+  if (disburse) {
+    const linkedAccount = await acc.findById(data.linkedAccountId as string); // A10
+    if (!linkedAccount) return fail(400, "Linked account not found for loan disbursement");
+  }
+
   const account = await acc.insert(doc as Omit<AccountDoc, "_id" | "createdAt" | "updatedAt">);
 
-  // Side-effect: loan disbursement, only when asked
-  if (data.depositFunds === true && account.type === "debt" && account.isLoan === true && account.linkedAccountId) {
-    const linkedAccount = await acc.findById(account.linkedAccountId); // A10
-    if (!linkedAccount) return fail(400, "Linked account not found for loan disbursement");
-
+  if (disburse && account.linkedAccountId) {
     await acc.updateById(account.linkedAccountId, { $inc: { balance: balanceInCents } }); // A11
 
     // A12
