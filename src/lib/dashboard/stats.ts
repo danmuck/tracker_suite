@@ -68,7 +68,7 @@ export interface ExpenseItem {
 }
 
 export interface MonthExpenses {
-  /** Dated today or earlier, latest first */
+  /** Dated today or earlier, earliest first */
   paid: ExpenseItem[];
   /** Dated after today, soonest first */
   upcoming: ExpenseItem[];
@@ -94,8 +94,28 @@ export function monthExpenses(days: ExpenseDay[], today: string): MonthExpenses 
         }))
     )
     .sort((a, b) => a.date.localeCompare(b.date));
-  const paid = items.filter((i) => i.date <= today).reverse();
+  const paid = items.filter((i) => i.date <= today);
   const upcoming = items.filter((i) => i.date > today);
   const sum = (list: ExpenseItem[]) => list.reduce((n, i) => n + i.amount, 0);
   return { paid, upcoming, paidTotal: sum(paid), upcomingTotal: sum(upcoming) };
+}
+
+export interface CategoryAmount {
+  category: string;
+  /** Cents */
+  amount: number;
+}
+
+/**
+ * Expense categories with loan payments added as their own "loans" category, largest first.
+ * Loan payments are transfers, so the Finance breakdown leaves them out.
+ */
+export function expenseCategories(breakdown: CategoryAmount[], loanPayments: number): CategoryAmount[] {
+  const rows = breakdown.map(({ category, amount }) => ({ category, amount }));
+  if (loanPayments > 0) {
+    const existing = rows.find((r) => r.category === "loans");
+    if (existing) existing.amount += loanPayments;
+    else rows.push({ category: "loans", amount: loanPayments });
+  }
+  return rows.sort((a, b) => b.amount - a.amount || a.category.localeCompare(b.category));
 }

@@ -6,7 +6,7 @@ import { HBarList, SparkBars } from "@/components/dashboard/spark";
 import { CurrencyDisplay } from "@/components/finance/currency-display";
 import { useAccounts } from "@/hooks/finance/use-accounts";
 import { useSummary } from "@/hooks/finance/use-summary";
-import { monthExpenses, type ExpenseItem } from "@/lib/dashboard/stats";
+import { expenseCategories, monthExpenses, type ExpenseItem } from "@/lib/dashboard/stats";
 import { computeAccountTotals } from "@/lib/finance/account-utils";
 import { centsToDollars, formatCurrency, formatDateISO, formatDateShort } from "@/lib/finance/formatters";
 import { monthWeekBuckets } from "@/lib/finance/summary-utils";
@@ -15,7 +15,7 @@ import { monthWeekBuckets } from "@/lib/finance/summary-utils";
 const INCOME_COLOR = "var(--chart-2)";
 const EXPENSE_COLOR = "var(--chart-1)";
 
-const MAX_CATEGORIES = 4;
+const MAX_CATEGORIES = 5;
 const MAX_PAID = 6;
 const MAX_UPCOMING = 3;
 
@@ -32,7 +32,6 @@ export function FinanceCard() {
     expenses: centsToDollars(w.totalDebits),
   }));
   const hasFlow = weeks.some((w) => w.income > 0 || w.expenses > 0);
-  const topCategory = summary?.categoryBreakdown[0];
   const monthLabel = summary?.period.label ?? "This month";
   const expenses = monthExpenses(summary?.days ?? [], formatDateISO(new Date()));
   // This month's payments into loan / debt accounts, by date. They are transfers, so the expense lists skip them.
@@ -48,7 +47,10 @@ export function FinanceCard() {
         amount: t.amount,
       }))
   );
-  const categories = (summary?.categoryBreakdown ?? []).slice(0, MAX_CATEGORIES);
+  // Loan payments count as a "loans" category here, next to the spending categories
+  const allCategories = expenseCategories(summary?.categoryBreakdown ?? [], summary?.totals.loanPayments ?? 0);
+  const topCategory = allCategories[0];
+  const categories = allCategories.slice(0, MAX_CATEGORIES);
   const maxCategory = Math.max(...categories.map((c) => c.amount), 1);
 
   return (
@@ -118,7 +120,7 @@ export function FinanceCard() {
           />
 
           {categories.length > 0 && (
-            <ChartBlock caption="Month's expenses by category">
+            <ChartBlock caption="Month's expenses by category, loans included">
               <HBarList
                 color={EXPENSE_COLOR}
                 rows={categories.map((c) => ({
@@ -133,8 +135,9 @@ export function FinanceCard() {
 
           <ExpenseList
             title="Paid"
-            items={expenses.paid.slice(0, MAX_PAID)}
+            items={expenses.paid.slice(-MAX_PAID)}
             more={expenses.paid.length - MAX_PAID}
+            moreFirst
             empty="No expenses yet this month"
           />
           {expenses.upcoming.length > 0 && (
@@ -158,6 +161,7 @@ function ExpenseList({
   empty,
   muted = false,
   mutedAfter,
+  moreFirst = false,
 }: {
   title: string;
   items: ExpenseItem[];
@@ -167,11 +171,19 @@ function ExpenseList({
   muted?: boolean;
   /** Lines dated after this day (yyyy-MM-dd) are dimmed as not yet paid */
   mutedAfter?: string;
+  /** The left-out lines are the earliest ones, so say so above the list */
+  moreFirst?: boolean;
 }) {
+  const moreLink = more > 0 && (
+    <Link href="/finance/transactions" className="block text-xs text-muted-foreground hover:underline">
+      {more} {moreFirst ? "earlier" : "more"}
+    </Link>
+  );
   return (
     <div className="space-y-1.5 border-t pt-3 text-sm">
       <p className="text-xs text-muted-foreground">{title}</p>
       {items.length === 0 && empty && <p className="text-muted-foreground">{empty}</p>}
+      {moreFirst && moreLink}
       {items.map((item) => (
         <div key={item.key} className={`flex items-baseline gap-3 ${
             muted || (mutedAfter && item.date > mutedAfter) ? "text-muted-foreground" : ""
@@ -183,11 +195,7 @@ function ExpenseList({
           <span className="shrink-0 font-medium tabular-nums">{formatCurrency(item.amount)}</span>
         </div>
       ))}
-      {more > 0 && (
-        <Link href="/finance/transactions" className="block text-xs text-muted-foreground hover:underline">
-          {more} more
-        </Link>
-      )}
+      {!moreFirst && moreLink}
     </div>
   );
 }

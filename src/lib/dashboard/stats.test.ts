@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { monthExpenses, projectRollup, weekDelta } from "./stats";
+import { expenseCategories, monthExpenses, projectRollup, weekDelta } from "./stats";
 
 const project = (name: string, status: "active" | "archived" | "completed", total?: number, done?: number) => ({
   _id: name,
@@ -67,7 +67,7 @@ test("monthExpenses keeps debits only and splits them at today", () => {
   );
   assert.deepEqual(
     r.paid.map((i) => i.description),
-    ["Coffee", "Gas", "Rent"]
+    ["Rent", "Gas", "Coffee"]
   );
   assert.deepEqual(
     r.upcoming.map((i) => i.date),
@@ -75,10 +75,27 @@ test("monthExpenses keeps debits only and splits them at today", () => {
   );
   assert.equal(r.paidTotal, 93700);
   assert.equal(r.upcomingTotal, 20000);
-  assert.equal(r.paid[2].category, "bills");
+  assert.equal(r.paid[0].category, "bills");
   assert.equal(r.paid[1].category, undefined);
 });
 
 test("monthExpenses handles an empty month", () => {
   assert.deepEqual(monthExpenses([], "2026-11-16"), { paid: [], upcoming: [], paidTotal: 0, upcomingTotal: 0 });
+});
+
+test("expenseCategories adds loan payments as a loans category, largest first", () => {
+  const breakdown = [
+    { category: "bills", amount: 122500, percentage: 0.7 },
+    { category: "spending", amount: 45000, percentage: 0.3 },
+  ];
+  assert.deepEqual(expenseCategories(breakdown, 51000), [
+    { category: "bills", amount: 122500 },
+    { category: "loans", amount: 51000 },
+    { category: "spending", amount: 45000 },
+  ]);
+});
+
+test("expenseCategories leaves loans out when nothing was paid, and merges into an existing loans tag", () => {
+  assert.deepEqual(expenseCategories([{ category: "bills", amount: 100 }], 0), [{ category: "bills", amount: 100 }]);
+  assert.deepEqual(expenseCategories([{ category: "loans", amount: 100 }], 400), [{ category: "loans", amount: 500 }]);
 });
