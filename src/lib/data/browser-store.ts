@@ -164,12 +164,19 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
   }
 
   private query(filter: Filter = {}, options: FindOptions = {}): Doc[] {
+    // Array slice would quietly accept NaN, negative or fractional paging values and differ
+    // from MongoDB, so refuse them before any work.
+    for (const [name, value] of [["skip", options.skip], ["limit", options.limit]] as const) {
+      if (value !== undefined && !(Number.isInteger(value) && value >= 0)) {
+        throw new Error(`Unsupported ${name}: ${value}`);
+      }
+    }
     let result = this.docs().filter((d) => matches(d, filter));
     if (options.sort) result = sortDocs(result, options.sort);
     const skip = options.skip ?? 0;
     const limit = options.limit;
-    // As in MongoDB, 0 (and anything not positive) means no limit.
-    result = limit === undefined || limit <= 0 ? result.slice(skip) : result.slice(skip, skip + limit);
+    // As in MongoDB, 0 means no limit.
+    result = limit === undefined || limit === 0 ? result.slice(skip) : result.slice(skip, skip + limit);
     return result;
   }
 

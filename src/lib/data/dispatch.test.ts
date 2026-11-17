@@ -141,6 +141,17 @@ test("unwrap returns 2xx bodies and throws the error message otherwise", () => {
   assert.throws(() => unwrap({ status: 500, body: {} }), { message: "Request failed: 500" });
 });
 
+test("unwrap delivers what HTTP would: the body round-tripped through JSON", () => {
+  const body = { a: NaN, b: Infinity, c: undefined, d: new Date("2026-11-17T00:00:00.000Z"), e: [undefined, 1] };
+  assert.deepEqual(unwrap({ status: 200, body }), { a: null, b: null, d: "2026-11-17T00:00:00.000Z", e: [null, 1] });
+  const plain = { x: [1, { y: 2 }] };
+  const out = unwrap({ status: 200, body: plain });
+  assert.deepEqual(out, plain);
+  assert.notEqual(out, plain);
+  assert.equal(unwrap({ status: 200, body: undefined }), undefined);
+  assert.throws(() => unwrap({ status: 400, body: { error: "Bad", extra: NaN } }), { message: "Bad" });
+});
+
 test("dispatch hands the handler the clock it was given, and the current time by default", async () => {
   const routes: RouteDef[] = [{ method: "GET", path: "/api/now", handler: async ({ now }) => ok(now.toISOString()) }];
   const store = new BrowserStore(memoryStorage());

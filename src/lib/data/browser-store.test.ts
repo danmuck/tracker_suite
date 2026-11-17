@@ -107,8 +107,20 @@ test("limit 0 means no limit, as in MongoDB", async () => {
   await groups.insert({ name: "A", slug: "a", order: 1 });
   await groups.insert({ name: "B", slug: "b", order: 2 });
   assert.equal((await groups.find({}, { limit: 0 })).length, 2);
-  assert.equal((await groups.find({}, { limit: -1 })).length, 2);
   assert.ok(await groups.findOne({}, { limit: 0 }));
+  assert.equal((await groups.find({}, { skip: 0 })).length, 2);
+  assert.equal((await groups.find({}, { skip: 1, limit: 1 })).length, 1);
+});
+
+test("unsupported skip and limit values reject instead of differing from MongoDB", async () => {
+  const groups = new BrowserStore(memoryStorage()).collection<Group>("linkGroups");
+  await groups.insert({ name: "A", slug: "a", order: 1 });
+  await assert.rejects(groups.find({}, { skip: NaN }), { message: "Unsupported skip: NaN" });
+  await assert.rejects(groups.find({}, { skip: -1 }), { message: "Unsupported skip: -1" });
+  await assert.rejects(groups.find({}, { skip: 1.5 }), { message: "Unsupported skip: 1.5" });
+  await assert.rejects(groups.find({}, { limit: NaN }), { message: "Unsupported limit: NaN" });
+  await assert.rejects(groups.find({}, { limit: -5 }), { message: "Unsupported limit: -5" });
+  await assert.rejects(groups.findOne({}, { limit: -1 }), { message: "Unsupported limit: -1" });
 });
 
 test("updates that change _id reject; createdAt is silently kept", async () => {

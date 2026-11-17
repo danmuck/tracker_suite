@@ -84,9 +84,16 @@ export async function dispatch(
   }
 }
 
-/** The body of a 2xx result; otherwise throws the result's error message. */
+/**
+ * The body of a 2xx result; otherwise throws the result's error message. A 2xx body is
+ * round-tripped through JSON so it equals what an HTTP client would parse (NaN becomes null,
+ * undefined properties vanish, Dates become ISO strings).
+ */
 export function unwrap<T>(result: ApiResult): T {
-  if (result.status >= 200 && result.status < 300) return result.body as T;
+  if (result.status >= 200 && result.status < 300) {
+    const json = JSON.stringify(result.body); // undefined when the body has no JSON form
+    return (json === undefined ? undefined : JSON.parse(json)) as T;
+  }
   const error = (result.body as { error?: string } | null)?.error;
   throw new Error(error ?? `Request failed: ${result.status}`);
 }
