@@ -27,7 +27,7 @@ interface ExerciseRow {
 }
 
 let k = 0;
-const setRow = (reps = "", weight = "", done = true): SetRow => ({ key: k++, reps, weight, done });
+const setRow = (reps = "", weight = "", done = false): SetRow => ({ key: k++, reps, weight, done });
 
 function useDebounced<T>(value: T, ms: number): T {
   const [v, setV] = useState(value);

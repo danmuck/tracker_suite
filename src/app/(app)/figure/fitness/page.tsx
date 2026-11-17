@@ -70,7 +70,7 @@ function logFromWorkout(w: Workout, date: string): WorkoutLogFormData {
       sets: Array.from({ length: e.targetSets }, () => ({
         reps: e.targetReps,
         weight: e.targetWeight ?? 0,
-        done: true,
+        done: false,
       })),
     })),
   };

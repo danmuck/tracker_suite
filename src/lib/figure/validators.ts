@@ -19,7 +19,7 @@ export const workoutSchema = z.object({
 export const loggedSetSchema = z.object({
   reps: z.number().int().min(0).max(1000),
   weight: z.number().nonnegative().max(10000),
-  done: z.boolean().default(true),
+  done: z.boolean().default(false),
 });
 
 export const workoutLogSchema = z.object({

@@ -18,7 +18,7 @@ const LoggedSetSchema = new Schema(
   {
     reps: { type: Number, required: true, min: 0 },
     weight: { type: Number, required: true, min: 0 },
-    done: { type: Boolean, default: true },
+    done: { type: Boolean, default: false },
   },
   { _id: false }
 );
