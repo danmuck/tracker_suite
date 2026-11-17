@@ -15,6 +15,7 @@ import { createCategory, listCategories } from "./category-handlers";
 import { ensureCashAccount } from "./docs";
 import { getPlan, setupPlan, unlinkPlan, updatePlan } from "./payment-plan-handlers";
 import { getProfile, mergeRent, saveProfile } from "./profile-handlers";
+import { getProjection, getSummary, postProjection } from "./projection-handlers";
 import {
   createTransaction,
   deleteTransaction,
@@ -64,6 +65,9 @@ export const financeRoutes: RouteDef[] = [
   { method: "DELETE", path: "/api/transactions/:transactionId", handler: withCash(deleteTransaction), failure: "Failed to delete transaction" },
   { method: "GET", path: "/api/categories", handler: withCash(noConflict(listCategories)), failure: "Failed to fetch categories" },
   { method: "POST", path: "/api/categories", handler: withCash(noConflict(createCategory)), failure: "Failed to create category" },
+  { method: "GET", path: "/api/projections", handler: withCash(getProjection), failure: "Failed to generate projections" },
+  { method: "POST", path: "/api/projections", handler: withCash(postProjection), failure: "Failed to generate projections" },
+  { method: "GET", path: "/api/summary", handler: withCash(getSummary), failure: "Failed to generate summary" },
   { method: "GET", path: "/api/finance-profile", handler: withCash(getProfile), failure: "Failed to load profile" },
   { method: "PUT", path: "/api/finance-profile", handler: withCash(saveProfile), failure: "Failed to save profile" },
   { method: "POST", path: "/api/finance-profile/merge-rent", handler: withCash(mergeRent), failure: "Failed to merge rent" },

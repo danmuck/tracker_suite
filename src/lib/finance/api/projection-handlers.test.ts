@@ -1,0 +1,115 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import type { ProjectionResult } from "@/types/finance/projection";
+import type { SummaryResult } from "@/types/finance/summary";
+import type { AccountDoc, TransactionDoc } from "./docs";
+import { setup } from "./test-helpers";
+
+let t = setup();
+const acct = async (body: object) => (await t.call("POST", "/api/accounts", body)).body as AccountDoc;
+
+let bank: AccountDoc, savings: AccountDoc;
+test.beforeEach(async () => {
+  t = setup();
+  bank = await acct({ name: "Bank", type: "bank", balance: 1000 });
+  savings = await acct({ name: "Savings", type: "bank", balance: 0 });
+});
+const body = (over: object = {}) => ({ amount: 10, date: "2026-11-10", description: "t", accountId: bank._id, type: "debit", ...over });
+const post = async (over: object = {}) => (await t.call("POST", "/api/transactions", body(over))).body as TransactionDoc;
+
+const proj = async (qs: string) => (await t.call("GET", `/api/projections${qs}`)).body as { data: ProjectionResult; dataVersion: string };
+const NOV = "?startDate=2026-11-01&endDate=2026-11-30";
+const on = (r: { data: ProjectionResult }, date: string) => r.data.timeline.find((d) => d.date === date)!.transactions.map((x) => [x.description, x.amount, x.isProjected]);
+
+test("projection: past transactions shown, recurring ones projected, balances carried forward", async () => {
+  await post({ amount: 100, description: "shoes", categoryTags: ["spending"] });                                           // 10 Nov, applied
+  await post({ amount: 500, type: "credit", description: "pay", isRecurring: true, recurrenceRule: { frequency: "monthly", startDate: "2026-11-20", dayOfMonth: 20 } });
+  await post({ amount: 7, description: "ended", isRecurring: true, recurrenceRule: { frequency: "daily", startDate: "2026-01-01", endDate: "2026-10-31" } });
+  const r = await proj(NOV);
+  assert.equal(r.data.timeline.length, 30);
+  assert.deepEqual(on(r, "2026-11-10"), [["shoes", 10000, false]]);
+  assert.deepEqual(on(r, "2026-11-20"), [["pay", 50000, true]]);
+  assert.equal(r.data.timeline.flatMap((d) => d.transactions).some((x) => x.description === "ended"), false);
+  assert.equal(r.data.summary.endBalances[bank._id], 140000);
+  assert.equal((await proj(`${NOV}&granularity=monthly`)).data.timeline.length, 1);
+});
+
+test("the account filter includes transfers into the account", async () => {
+  await post({ amount: 50, type: "transfer", toAccountId: savings._id, description: "move" });
+  await post({ amount: 9, description: "other" });
+  const r = await proj(`${NOV}&accountId=${savings._id}`);
+  assert.deepEqual(r.data.timeline.flatMap((d) => d.transactions).map((x) => x.description), ["move"]);
+});
+
+test("dataVersion is stable while nothing changes and moves when data does", async () => {
+  const a = (await proj(NOV)).dataVersion;
+  assert.match(a, /^0\|0\|0\|[0-9a-f]{24}:\d+:\d+(,[0-9a-f]{24}:-?\d+:\d+)*$/);
+  assert.equal((await proj(NOV)).dataVersion, a);
+  await post();
+  const b = (await proj(NOV)).dataVersion;
+  assert.ok(b !== a && b.startsWith("1|"));
+});
+
+test("projection errors", async () => {
+  assert.deepEqual(await t.call("GET", "/api/projections?startDate=2026-11-01"), { status: 400, body: { error: "startDate and endDate are required" } });
+  assert.deepEqual(await t.call("GET", "/api/projections?startDate=1900-01-01&endDate=2100-01-01"), { status: 400, body: { error: "Projection window exceeds 36600 days" } });
+  assert.deepEqual(await t.call("GET", `/api/projections${NOV}&accountId=abc`), { status: 500, body: { error: "Failed to generate projections" } });
+  assert.deepEqual(await t.call("GET", "/api/projections?startDate=1garbage&endDate=2026-12-31"), { status: 500, body: { error: "Failed to generate projections" } });
+  assert.deepEqual(await t.call("GET", "/api/projections?startDate=garbage&endDate=2026-12-31"), { status: 400, body: { error: "Invalid time value" } });
+  const bad = await t.call("POST", "/api/projections", {});
+  assert.deepEqual([bad.status, (bad.body as { error: string }).error, Array.isArray((bad.body as { details: unknown }).details)], [400, "Invalid projection request", true]);
+  assert.equal((await t.call("POST", "/api/projections", undefined)).status, 400);
+});
+
+test("a sandbox projection applies what-if changes and saves nothing", async () => {
+  const real = await post({ amount: 100, description: "shoes" });
+  const writes = [t.writes("accounts"), t.writes("transactions")];
+  const res = await t.call("POST", "/api/projections", { startDate: "2026-11-01", endDate: "2026-11-30", sandbox: {
+    added: [{ id: "s1", data: { amount: 42, date: "2026-11-25", description: "what-if", accountId: bank._id, type: "debit" } }], removed: [real._id] } });
+  assert.equal(res.status, 200);
+  const all = (res.body as { data: ProjectionResult }).data.timeline.flatMap((d) => d.transactions).map((x) => [x.description, x.amount]);
+  assert.deepEqual(all, [["what-if", 4200]]);
+  assert.deepEqual([t.writes("accounts"), t.writes("transactions")], writes);
+});
+
+// Golden X08: the engine's window guard through the sandbox path
+test("a sandbox projection over too long a window is the engine's RangeError (400)", async () => {
+  assert.deepEqual(await t.call("POST", "/api/projections", { startDate: "1900-01-01", endDate: "2100-01-01", sandbox: {} }), {
+    status: 400,
+    body: { error: "Projection window exceeds 36600 days" },
+  });
+});
+
+test("a window starting after today also selects what falls between today and its start", async () => {
+  await post({ amount: 5, date: "2026-11-16", description: "past" });       // applied, before today: not selected
+  await post({ amount: 100, date: "2026-11-25", description: "pending" });  // future: not applied, carried into December
+  const r = await proj("?startDate=2026-12-01&endDate=2026-12-31");
+  assert.equal(r.data.timeline.flatMap((d) => d.transactions).length, 0);
+  assert.equal(r.data.summary.endBalances[bank._id], 89500);
+});
+
+const summary = async (qs: string) => (await t.call("GET", `/api/summary${qs}`)).body as { data: SummaryResult };
+
+test("summary: periods, days or months, totals and category breakdown", async () => {
+  await post({ amount: 100, description: "shoes", categoryTags: ["spending"] });
+  const month = (await summary("?view=monthly&date=2026-11-17")).data;
+  assert.deepEqual([month.view, month.period, month.days!.length, month.months], ["monthly", { start: "2026-11-01", end: "2026-11-30", label: "November 2026" }, 30, undefined]);
+  assert.deepEqual([month.totals.expenses, month.categoryBreakdown], [10000, [{ category: "spending", amount: 10000, percentage: 1 }]]);
+  assert.deepEqual((await summary("?view=weekly&date=2026-11-17")).data.period, { start: "2026-11-15", end: "2026-11-21", label: "Week of Nov 15, 2026" });
+  const year = (await summary("?view=annual&date=2026-11-17")).data;
+  assert.deepEqual([year.period, year.months!.length, year.days], [{ start: "2026-01-01", end: "2026-12-31", label: "2026" }, 12, undefined]);
+  assert.deepEqual((await summary("")).data.period.start, "2026-11-01"); // defaults: monthly, today from the clock
+  assert.deepEqual(await t.call("GET", "/api/summary?date=garbage"), { status: 400, body: { error: "Invalid time value" } });
+  assert.deepEqual(await t.call("GET", "/api/summary?accountId=abc"), { status: 500, body: { error: "Failed to generate summary" } });
+});
+
+test("current behavior: the summary account filter misses transfers into the account", async () => {
+  await post({ amount: 50, type: "transfer", toAccountId: savings._id });
+  const days = (await summary(`?view=monthly&date=2026-11-17&accountId=${savings._id}`)).data.days!;
+  assert.equal(days.flatMap((d) => d.transactions).length, 0);
+});
+
+test("current behavior: an unknown view uses the year's bounds with daily entries", async () => {
+  const odd = (await summary("?view=bogus&date=2026-11-17")).data;
+  assert.deepEqual([odd.view, odd.period.start, odd.period.end, odd.days!.length], ["bogus", "2026-01-01", "2026-12-31", 365]);
+});
