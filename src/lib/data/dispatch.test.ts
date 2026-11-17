@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { isId, fail, ok, type RouteDef } from "./api";
 import { BrowserStore } from "./browser-store";
-import { dispatch, serverGuard } from "./dispatch";
+import { demoApiGuard, dispatch, serverGuard } from "./dispatch";
 import { ConflictError } from "./store";
 import { memoryStorage } from "./test-helpers";
 
@@ -45,4 +45,15 @@ test("serverGuard blocks only the demo, and isId accepts 24 hex characters", () 
   assert.equal(serverGuard(false), null);
   assert.deepEqual(serverGuard(true), { status: 403, body: { error: "The demo does not use a server database" } });
   assert.deepEqual([isId("a".repeat(24)), isId("abc"), isId("z".repeat(24))], [true, false, false]);
+});
+
+test("demoApiGuard refuses every API path in the demo and nothing else", () => {
+  const refused = { status: 403, body: { error: "The demo does not use a server database" } };
+  for (const path of ["/api/accounts", "/api", "/api/links/abc"]) {
+    assert.deepEqual(demoApiGuard(path, true), refused);
+  }
+  assert.equal(demoApiGuard("/api/accounts", false), null);
+  for (const path of ["/links", "/apiary", "/"]) {
+    assert.equal(demoApiGuard(path, true), null);
+  }
 });

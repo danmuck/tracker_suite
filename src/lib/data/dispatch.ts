@@ -60,3 +60,9 @@ export async function dispatch(
 export function serverGuard(isDemo: boolean): ApiResult | null {
   return isDemo ? fail(403, "The demo does not use a server database") : null;
 }
+
+// Refuses every /api request in the demo; used by the proxy before any route runs.
+export function demoApiGuard(pathname: string, isDemo: boolean): ApiResult | null {
+  if (pathname !== "/api" && !pathname.startsWith("/api/")) return null;
+  return serverGuard(isDemo);
+}
