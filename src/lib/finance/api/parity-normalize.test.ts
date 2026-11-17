@@ -29,27 +29,28 @@ test("substitute fills {name} in strings and in object keys", () => {
   assert.deepEqual(substitute({ path: "/x/{a}", edited: { "{a}": { id: "{a}" } }, n: 1 }, { a: A }), { path: `/x/${A}`, edited: { [A]: { id: A } }, n: 1 });
 });
 
-test("compareTranscripts: equal passes; an allowed step compares status and error only; anything else is reported", () => {
+test("compareTranscripts: every step is compared exactly; an allowed step's golden must hold the allowed result", () => {
   const steps = [
     { id: "S1", method: "GET", path: "/a", expect: 200 },
     { id: "S2", method: "GET", path: "/a/abc", expect: 500, allow: { rule: "D1a", status: 404, error: "Account not found" } },
   ] as Step[];
   const meta = { capturedAt: "", localDate: "", timeZone: "", commit: "" };
-  const golden = { meta, finalBalances: { Cash: 0 }, steps: [{ id: "S1", request: "GET /a", status: 200, body: [1] }, { id: "S2", request: "GET /a/abc", status: 500, body: { error: "Failed to fetch account" } }] };
-  const after = { meta, finalBalances: { Cash: 0 }, steps: [golden.steps[0], { id: "S2", request: "GET /a/abc", status: 404, body: { error: "Account not found" } }] };
-  assert.deepEqual(compareTranscripts(golden, after, steps), []);
-  assert.equal(compareTranscripts(golden, golden, steps).length, 1); // S2 did not change to the allowed result
-  assert.deepEqual(compareTranscripts(after, after, steps), []); // a golden re-recorded on the converted routes
-  const odd = { ...golden, steps: [golden.steps[0], { ...golden.steps[1], status: 400 }] };
-  assert.equal(compareTranscripts(odd, after, steps).length, 1); // a golden status that is neither
-  assert.equal(compareTranscripts(golden, { ...after, finalBalances: { Cash: 1 } }, steps).length, 1);
-  assert.equal(compareTranscripts(golden, { ...after, steps: [{ ...golden.steps[0], body: [2] }, after.steps[1]] }, steps).length, 1);
+  const golden = { meta, finalBalances: { Cash: 0 }, steps: [{ id: "S1", request: "GET /a", status: 200, body: [1] }, { id: "S2", request: "GET /a/abc", status: 404, body: { error: "Account not found" } }] };
+  assert.deepEqual(compareTranscripts(golden, golden, steps), []);
+  // An allowed step's body is compared exactly too
+  assert.equal(compareTranscripts(golden, { ...golden, steps: [golden.steps[0], { ...golden.steps[1], body: { error: "Account not found", extra: 1 } }] }, steps).length, 1);
+  // A golden still holding the unconverted result (expect) is reported, even against itself
+  const old = { ...golden, steps: [golden.steps[0], { id: "S2", request: "GET /a/abc", status: 500, body: { error: "Failed to fetch account" } }] };
+  assert.equal(compareTranscripts(old, old, steps).length, 1);
+  assert.equal(compareTranscripts(old, golden, steps).length, 2);
+  assert.equal(compareTranscripts(golden, { ...golden, finalBalances: { Cash: 1 } }, steps).length, 1);
+  assert.equal(compareTranscripts(golden, { ...golden, steps: [{ ...golden.steps[0], body: [2] }, golden.steps[1]] }, steps).length, 1);
 });
 
 test("scenario: unique step ids, relative dates, distinct amounts and dates among created transactions", () => {
   const steps = buildScenario("2026-11-17");
   assert.equal(new Set(steps.map((s) => s.id)).size, steps.length);
-  assert.equal(steps.length, 199);
+  assert.equal(steps.length, 200);
   const posts = steps.filter((s) => s.method === "POST" && s.path === "/api/transactions" && s.expect === 201);
   const created = posts.map((s) => s.body as { amount: number; date: string });
   assert.equal(new Set(created.map((b) => b.amount)).size, created.length);

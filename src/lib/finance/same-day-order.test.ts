@@ -28,9 +28,9 @@ test("sameDayOrder: within a day credits, then debits, then transfers", () => {
   assert.deepEqual(ids(list), ["c", "d", "t"]);
 });
 
-test("sameDayOrder: same day and kind, older createdAt first; a missing createdAt sorts first", () => {
-  const list = [tx("new", { createdAt: "2026-11-02T00:00:00.000Z" }), tx("old", { createdAt: "2026-11-01T00:00:00.000Z" }), tx("legacy", { createdAt: undefined })];
-  assert.deepEqual(ids(list), ["legacy", "old", "new"]);
+test("sameDayOrder: same day and kind, older createdAt first; a missing createdAt (what-if) sorts last", () => {
+  const list = [tx("new", { createdAt: "2026-11-02T00:00:00.000Z" }), tx("old", { createdAt: "2026-11-01T00:00:00.000Z" }), tx("whatif", { createdAt: undefined })];
+  assert.deepEqual(ids(list), ["old", "new", "whatif"]);
 });
 
 test("sameDayOrder: a createdAt tie falls to _id ascending; identical keys compare equal", () => {

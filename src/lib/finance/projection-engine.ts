@@ -2,6 +2,7 @@ import { addDays } from "date-fns";
 import { expandRecurrence } from "./recurrence";
 import { amountOn, type AmountStep } from "./amount-schedule";
 import { blendedApr, monthlyInterest, rapMonthEnd } from "./interest";
+import { sameDayOrder, type OrderedTransaction } from "./same-day-order";
 import {
   asDate,
   toDateStr as toUTCDateStr,
@@ -52,6 +53,8 @@ export interface EngineTransaction {
   amountSchedule?: AmountStep[];
   categoryTags: string[];
   balanceApplied: boolean;
+  /** Breaks same-day ties between entries of one kind (oldest first); absent sorts last */
+  createdAt?: Date | string;
 }
 
 interface ProjectionInput {
@@ -116,12 +119,16 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
 
   // Expand recurrences into projected transactions
   const allProjected: ProjectedTransaction[] = [];
+  // Each entry's same-day order key: its source transaction's kind, createdAt and _id
+  const orderKey = new WeakMap<ProjectedTransaction, OrderedTransaction>();
+  // `date` is the day the entry falls on (an occurrence's day, not its rule's stored start)
+  const keyOf = (t: EngineTransaction, day: string): OrderedTransaction => ({ _id: t._id, date: day, type: t.type, createdAt: t.createdAt });
 
   // Add one-time transactions
   for (const t of oneTimeTransactions) {
     const dateStr = toUTCDateStr(t.date);
     if (dateStr >= startStr && dateStr <= endStr) {
-      allProjected.push({
+      const entry: ProjectedTransaction = {
         date: dateStr,
         amount: t.amount,
         description: t.description,
@@ -132,7 +139,9 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         isProjected: false,
         balanceApplied: t.balanceApplied,
         sourceTransactionId: t._id.toString(),
-      });
+      };
+      orderKey.set(entry, keyOf(t, dateStr));
+      allProjected.push(entry);
     }
   }
 
@@ -156,7 +165,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
     for (const d of dates) {
       const dateStr = toUTCDateStr(d);
       const isPast = dateStr <= todayStr;
-      allProjected.push({
+      const entry: ProjectedTransaction = {
         date: dateStr,
         amount: amountOn(t.amount, t.amountSchedule, dateStr),
         description: t.description,
@@ -170,7 +179,9 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
         // and other recurring items are kept current by the user
         balanceApplied: isPast,
         sourceTransactionId: t._id.toString(),
-      });
+      };
+      orderKey.set(entry, keyOf(t, dateStr));
+      allProjected.push(entry);
     }
   }
 
@@ -294,7 +305,12 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
 
   for (const day of days) {
     const dateStr = toUTCDateStr(day);
-    const dayTx = filteredProjected.filter((t) => t.date === dateStr);
+    // Income first: credits, then debits, then transfers, whether one-time or recurring, then by the
+    // source's createdAt and _id. This order drives caps, payoffs, alerts and the ledger below, and
+    // does not depend on the order the transactions arrived in.
+    const dayTx = filteredProjected
+      .filter((t) => t.date === dateStr)
+      .sort((a, b) => sameDayOrder(orderKey.get(a)!, orderKey.get(b)!));
     if (dateStr.slice(0, 7) !== currentMonth) {
       currentMonth = dateStr.slice(0, 7);
       paidThisMonth = {};

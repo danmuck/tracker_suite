@@ -1,10 +1,10 @@
 {
   "meta": {
-    "capturedAt": "2026-11-17T21:30:03.349Z",
+    "capturedAt": "2026-11-17T22:00:40.954Z",
     "localDate": "2026-11-17",
     "utcDate": "2026-11-17",
     "timeZone": "America/New_York",
-    "commit": "2acf7be107f98bc9706f5c6e73f650388763ea55"
+    "commit": "aaca2d3561222d4843e0db60a83eb00a626fa059"
   },
   "steps": [
     {
@@ -5369,24 +5369,6 @@
               "date": "2026-11-17",
               "transactions": [
                 {
-                  "accountId": "<car>",
-                  "amount": 800000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-17",
-                  "description": "Loan disbursement from Parity Car Loan",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 2381621,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:16>",
-                  "toAccountId": "<checking>",
-                  "type": "transfer"
-                },
-                {
                   "accountId": "<checking>",
                   "amount": 217429,
                   "balanceApplied": true,
@@ -5398,11 +5380,29 @@
                   "isProjected": false,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2599050,
+                    "bank": 1799050,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<car>",
+                  "amount": 800000,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-17",
+                  "description": "Loan disbursement from Parity Car Loan",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 2599050,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:16>",
+                  "toAccountId": "<checking>",
+                  "type": "transfer"
                 }
               ]
             },
@@ -5913,24 +5913,6 @@
                   "type": "transfer"
                 },
                 {
-                  "accountId": "<car>",
-                  "amount": 800000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-17",
-                  "description": "Loan disbursement from Parity Car Loan",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 2381621,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:16>",
-                  "toAccountId": "<checking>",
-                  "type": "transfer"
-                },
-                {
                   "accountId": "<checking>",
                   "amount": 217429,
                   "balanceApplied": true,
@@ -5942,11 +5924,29 @@
                   "isProjected": false,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2599050,
+                    "bank": 1799050,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<car>",
+                  "amount": 800000,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-17",
+                  "description": "Loan disbursement from Parity Car Loan",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 2599050,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:16>",
+                  "toAccountId": "<checking>",
+                  "type": "transfer"
                 },
                 {
                   "accountId": "<checking>",
@@ -6067,24 +6067,6 @@
               "transactions": [
                 {
                   "accountId": "<checking>",
-                  "amount": 145000,
-                  "balanceApplied": false,
-                  "categoryTags": [
-                    "bills"
-                  ],
-                  "date": "2026-12-01",
-                  "description": "Parity Rent",
-                  "isProjected": true,
-                  "isRecurring": true,
-                  "ledger": {
-                    "bank": 2452050,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<rent>",
-                  "type": "debit"
-                },
-                {
-                  "accountId": "<checking>",
                   "amount": 217429,
                   "balanceApplied": false,
                   "categoryTags": [
@@ -6095,11 +6077,29 @@
                   "isProjected": true,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2669479,
+                    "bank": 2814479,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<checking>",
+                  "amount": 145000,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "bills"
+                  ],
+                  "date": "2026-12-01",
+                  "description": "Parity Rent",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 2669479,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<rent>",
+                  "type": "debit"
                 },
                 {
                   "accountId": "<checking>",
@@ -7033,25 +7033,6 @@
               "transactions": [
                 {
                   "accountId": "<checking>",
-                  "amount": 8000,
-                  "balanceApplied": false,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2027-04-01",
-                  "description": "Parity auto-save",
-                  "isProjected": true,
-                  "isRecurring": true,
-                  "ledger": {
-                    "bank": 3916771,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:15>",
-                  "toAccountId": "<savings>",
-                  "type": "transfer"
-                },
-                {
-                  "accountId": "<checking>",
                   "amount": 145000,
                   "balanceApplied": false,
                   "categoryTags": [
@@ -7067,6 +7048,25 @@
                   },
                   "sourceTransactionId": "<rent>",
                   "type": "debit"
+                },
+                {
+                  "accountId": "<checking>",
+                  "amount": 8000,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2027-04-01",
+                  "description": "Parity auto-save",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 3771771,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:15>",
+                  "toAccountId": "<savings>",
+                  "type": "transfer"
                 },
                 {
                   "accountId": "<checking>",
@@ -7316,6 +7316,24 @@
                 },
                 {
                   "accountId": "<checking>",
+                  "amount": 1000,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "spending"
+                  ],
+                  "date": "2027-05-05",
+                  "description": "Parity tomorrow",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 4294703,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<tTom>",
+                  "type": "debit"
+                },
+                {
+                  "accountId": "<checking>",
                   "amount": 30000,
                   "balanceApplied": false,
                   "categoryTags": [
@@ -7327,30 +7345,12 @@
                   "isProjected": true,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 4265703,
+                    "bank": 4264703,
                     "credit": 0
                   },
                   "sourceTransactionId": "<loanPay>",
                   "toAccountId": "<loan>",
                   "type": "transfer"
-                },
-                {
-                  "accountId": "<checking>",
-                  "amount": 1000,
-                  "balanceApplied": false,
-                  "categoryTags": [
-                    "spending"
-                  ],
-                  "date": "2027-05-05",
-                  "description": "Parity tomorrow",
-                  "isProjected": true,
-                  "isRecurring": true,
-                  "ledger": {
-                    "bank": 4264703,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<tTom>",
-                  "type": "debit"
                 },
                 {
                   "accountId": "<checking>",
@@ -8864,24 +8864,6 @@
               "date": "2026-11-17",
               "transactions": [
                 {
-                  "accountId": "<car>",
-                  "amount": 800000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-17",
-                  "description": "Loan disbursement from Parity Car Loan",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 1179071,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:16>",
-                  "toAccountId": "<checking>",
-                  "type": "transfer"
-                },
-                {
                   "accountId": "<checking>",
                   "amount": 217429,
                   "balanceApplied": true,
@@ -8893,11 +8875,29 @@
                   "isProjected": false,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 1396500,
+                    "bank": 596500,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<car>",
+                  "amount": 800000,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-17",
+                  "description": "Loan disbursement from Parity Car Loan",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 1396500,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:16>",
+                  "toAccountId": "<checking>",
+                  "type": "transfer"
                 }
               ]
             },
@@ -9077,24 +9077,6 @@
               "transactions": [
                 {
                   "accountId": "<checking>",
-                  "amount": 145000,
-                  "balanceApplied": false,
-                  "categoryTags": [
-                    "bills"
-                  ],
-                  "date": "2026-12-01",
-                  "description": "Parity Rent",
-                  "isProjected": true,
-                  "isRecurring": true,
-                  "ledger": {
-                    "bank": 1236500,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<rent>",
-                  "type": "debit"
-                },
-                {
-                  "accountId": "<checking>",
                   "amount": 217429,
                   "balanceApplied": false,
                   "categoryTags": [
@@ -9105,11 +9087,29 @@
                   "isProjected": true,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 1453929,
+                    "bank": 1598929,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<checking>",
+                  "amount": 145000,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "bills"
+                  ],
+                  "date": "2026-12-01",
+                  "description": "Parity Rent",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 1453929,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<rent>",
+                  "type": "debit"
                 }
               ]
             },
@@ -10856,24 +10856,6 @@
                   "type": "transfer"
                 },
                 {
-                  "accountId": "<car>",
-                  "amount": 800000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-17",
-                  "description": "Loan disbursement from Parity Car Loan",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 2349050,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:16>",
-                  "toAccountId": "<checking>",
-                  "type": "transfer"
-                },
-                {
                   "accountId": "<checking>",
                   "amount": 250000,
                   "balanceApplied": true,
@@ -10885,11 +10867,29 @@
                   "isProjected": false,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2599050,
+                    "bank": 1799050,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<car>",
+                  "amount": 800000,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-17",
+                  "description": "Loan disbursement from Parity Car Loan",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 2599050,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:16>",
+                  "toAccountId": "<checking>",
+                  "type": "transfer"
                 },
                 {
                   "accountId": "<checking>",
@@ -11041,24 +11041,6 @@
                 },
                 {
                   "accountId": "<checking>",
-                  "amount": 145000,
-                  "balanceApplied": false,
-                  "categoryTags": [
-                    "bills"
-                  ],
-                  "date": "2026-12-01",
-                  "description": "Parity Rent",
-                  "isProjected": true,
-                  "isRecurring": true,
-                  "ledger": {
-                    "bank": 2352150,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<rent>",
-                  "type": "debit"
-                },
-                {
-                  "accountId": "<checking>",
                   "amount": 250000,
                   "balanceApplied": false,
                   "categoryTags": [
@@ -11069,11 +11051,29 @@
                   "isProjected": true,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2602150,
+                    "bank": 2747150,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<checking>",
+                  "amount": 145000,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "bills"
+                  ],
+                  "date": "2026-12-01",
+                  "description": "Parity Rent",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 2602150,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<rent>",
+                  "type": "debit"
                 },
                 {
                   "accountId": "<checking>",
@@ -12347,24 +12347,6 @@
               "date": "2026-11-17",
               "transactions": [
                 {
-                  "accountId": "<car>",
-                  "amount": 800000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-17",
-                  "description": "Loan disbursement from Parity Car Loan",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 2351208,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:16>",
-                  "toAccountId": "<checking>",
-                  "type": "transfer"
-                },
-                {
                   "accountId": "<checking>",
                   "amount": 247842,
                   "balanceApplied": true,
@@ -12376,11 +12358,29 @@
                   "isProjected": false,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2599050,
+                    "bank": 1799050,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<car>",
+                  "amount": 800000,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-17",
+                  "description": "Loan disbursement from Parity Car Loan",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 2599050,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:16>",
+                  "toAccountId": "<checking>",
+                  "type": "transfer"
                 }
               ]
             },
@@ -12675,24 +12675,6 @@
               "transactions": [
                 {
                   "accountId": "<checking>",
-                  "amount": 145000,
-                  "balanceApplied": false,
-                  "categoryTags": [
-                    "bills"
-                  ],
-                  "date": "2026-12-01",
-                  "description": "Parity Rent",
-                  "isProjected": true,
-                  "isRecurring": true,
-                  "ledger": {
-                    "bank": 2452050,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<rent>",
-                  "type": "debit"
-                },
-                {
-                  "accountId": "<checking>",
                   "amount": 247842,
                   "balanceApplied": false,
                   "categoryTags": [
@@ -12703,11 +12685,29 @@
                   "isProjected": true,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2699892,
+                    "bank": 2844892,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<checking>",
+                  "amount": 145000,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "bills"
+                  ],
+                  "date": "2026-12-01",
+                  "description": "Parity Rent",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 2699892,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<rent>",
+                  "type": "debit"
                 }
               ]
             },
@@ -15058,24 +15058,6 @@
               "totalDebits": 0,
               "transactions": [
                 {
-                  "accountId": "<car>",
-                  "amount": 800000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-17",
-                  "description": "Loan disbursement from Parity Car Loan",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 2381621,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:16>",
-                  "toAccountId": "<checking>",
-                  "type": "transfer"
-                },
-                {
                   "accountId": "<checking>",
                   "amount": 217429,
                   "balanceApplied": true,
@@ -15087,11 +15069,29 @@
                   "isProjected": false,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2599050,
+                    "bank": 1799050,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<car>",
+                  "amount": 800000,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-17",
+                  "description": "Loan disbursement from Parity Car Loan",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 2599050,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:16>",
+                  "toAccountId": "<checking>",
+                  "type": "transfer"
                 }
               ]
             },
@@ -15495,24 +15495,6 @@
               "totalDebits": 0,
               "transactions": [
                 {
-                  "accountId": "<car>",
-                  "amount": 800000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-17",
-                  "description": "Loan disbursement from Parity Car Loan",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 2381621,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:16>",
-                  "toAccountId": "<checking>",
-                  "type": "transfer"
-                },
-                {
                   "accountId": "<checking>",
                   "amount": 217429,
                   "balanceApplied": true,
@@ -15524,11 +15506,29 @@
                   "isProjected": false,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2599050,
+                    "bank": 1799050,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<car>",
+                  "amount": 800000,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-17",
+                  "description": "Loan disbursement from Parity Car Loan",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 2599050,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:16>",
+                  "toAccountId": "<checking>",
+                  "type": "transfer"
                 }
               ]
             },
@@ -16234,24 +16234,6 @@
               "totalDebits": 0,
               "transactions": [
                 {
-                  "accountId": "<car>",
-                  "amount": 800000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-17",
-                  "description": "Loan disbursement from Parity Car Loan",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 1179071,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:16>",
-                  "toAccountId": "<checking>",
-                  "type": "transfer"
-                },
-                {
                   "accountId": "<checking>",
                   "amount": 217429,
                   "balanceApplied": true,
@@ -16263,11 +16245,29 @@
                   "isProjected": false,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 1396500,
+                    "bank": 596500,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<car>",
+                  "amount": 800000,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-17",
+                  "description": "Loan disbursement from Parity Car Loan",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 1396500,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:16>",
+                  "toAccountId": "<checking>",
+                  "type": "transfer"
                 }
               ]
             },
@@ -17321,24 +17321,6 @@
               "totalDebits": 0,
               "transactions": [
                 {
-                  "accountId": "<car>",
-                  "amount": 800000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-17",
-                  "description": "Loan disbursement from Parity Car Loan",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 2381621,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:16>",
-                  "toAccountId": "<checking>",
-                  "type": "transfer"
-                },
-                {
                   "accountId": "<checking>",
                   "amount": 217429,
                   "balanceApplied": true,
@@ -17350,11 +17332,29 @@
                   "isProjected": false,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2599050,
+                    "bank": 1799050,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<car>",
+                  "amount": 800000,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-17",
+                  "description": "Loan disbursement from Parity Car Loan",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 2599050,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:16>",
+                  "toAccountId": "<checking>",
+                  "type": "transfer"
                 }
               ]
             },
@@ -18138,24 +18138,6 @@
               "totalDebits": 0,
               "transactions": [
                 {
-                  "accountId": "<car>",
-                  "amount": 800000,
-                  "balanceApplied": true,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2026-11-17",
-                  "description": "Loan disbursement from Parity Car Loan",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 2381621,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:16>",
-                  "toAccountId": "<checking>",
-                  "type": "transfer"
-                },
-                {
                   "accountId": "<checking>",
                   "amount": 217429,
                   "balanceApplied": true,
@@ -18167,11 +18149,29 @@
                   "isProjected": false,
                   "isRecurring": true,
                   "ledger": {
-                    "bank": 2599050,
+                    "bank": 1799050,
                     "credit": 0
                   },
                   "sourceTransactionId": "<salary>",
                   "type": "credit"
+                },
+                {
+                  "accountId": "<car>",
+                  "amount": 800000,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-17",
+                  "description": "Loan disbursement from Parity Car Loan",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 2599050,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:16>",
+                  "toAccountId": "<checking>",
+                  "type": "transfer"
                 }
               ]
             },
@@ -19586,7 +19586,7 @@
       "body": {
         "_id": "<id:20>",
         "accountId": "<order>",
-        "amount": 10425,
+        "amount": 1225,
         "balanceApplied": false,
         "categoryTags": [
           "salary"
@@ -19594,6 +19594,33 @@
         "date": "2026-11-20T00:00:00.000Z",
         "description": "Parity order credit",
         "isRecurring": false,
+        "type": "credit",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X25b",
+      "request": "POST /api/transactions",
+      "status": 201,
+      "body": {
+        "_id": "<id:21>",
+        "accountId": "<order>",
+        "amount": 10440,
+        "balanceApplied": false,
+        "categoryTags": [
+          "salary"
+        ],
+        "date": "2026-10-23T00:00:00.000Z",
+        "description": "Parity order allowance",
+        "isRecurring": true,
+        "recurrenceRule": {
+          "dayOfWeek": 5,
+          "daysOfMonth": [],
+          "endDate": null,
+          "frequency": "weekly",
+          "interval": 1,
+          "startDate": "2026-10-23T00:00:00.000Z"
+        },
         "type": "credit",
         "updatedAt": "<new>"
       }
@@ -19608,7 +19635,7 @@
           "summary": {
             "debtPayments": 0,
             "endBalances": {
-              "<order>": 5000
+              "<order>": 6240
             },
             "interestCharged": 0,
             "loanPayments": 0,
@@ -19616,13 +19643,13 @@
               "amount": 0,
               "date": "2026-11-17"
             },
-            "netChange": 8150,
+            "netChange": 9390,
             "payoffDates": {},
             "startBalances": {
               "<order>": 0
             },
             "totalExpenses": 2275,
-            "totalIncome": 10425,
+            "totalIncome": 11665,
             "totalOut": 2275
           },
           "timeline": [
@@ -19649,13 +19676,13 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 6240
               },
               "date": "2026-11-20",
               "transactions": [
                 {
                   "accountId": "<order>",
-                  "amount": 10425,
+                  "amount": 1225,
                   "balanceApplied": false,
                   "categoryTags": [
                     "salary"
@@ -19664,10 +19691,28 @@
                   "description": "Parity order credit",
                   "isProjected": false,
                   "ledger": {
-                    "bank": 10425,
+                    "bank": 1225,
                     "credit": 0
                   },
                   "sourceTransactionId": "<id:20>",
+                  "type": "credit"
+                },
+                {
+                  "accountId": "<order>",
+                  "amount": 10440,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "salary"
+                  ],
+                  "date": "2026-11-20",
+                  "description": "Parity order allowance",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 11665,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:21>",
                   "type": "credit"
                 },
                 {
@@ -19681,7 +19726,7 @@
                   "description": "Parity order debit",
                   "isProjected": false,
                   "ledger": {
-                    "bank": 8150,
+                    "bank": 9390,
                     "credit": 0
                   },
                   "sourceTransactionId": "<id:19>",
@@ -19698,7 +19743,7 @@
                   "description": "Parity order transfer",
                   "isProjected": false,
                   "ledger": {
-                    "bank": 5000,
+                    "bank": 6240,
                     "credit": 0
                   },
                   "sourceTransactionId": "<id:18>",
@@ -19709,21 +19754,21 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 6240
               },
               "date": "2026-11-21",
               "transactions": []
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 6240
               },
               "date": "2026-11-22",
               "transactions": []
             }
           ]
         },
-        "dataVersion": "13|<changed>|<changed>|<car>:800000:<same>,<card>:0:<changed>,<cash>:2500:<same>,<checking>:1396500:<same>,<id:10>:5000:<same>,<loan>:1900000:<changed>,<order>:0:<new>"
+        "dataVersion": "14|<changed>|<changed>|<car>:800000:<same>,<card>:0:<changed>,<cash>:2500:<same>,<checking>:1396500:<same>,<id:10>:5000:<same>,<loan>:1900000:<changed>,<order>:0:<new>"
       }
     },
     {
@@ -19742,7 +19787,7 @@
           "days": [
             {
               "balances": {
-                "<order>": 0
+                "<order>": -20880
               },
               "date": "2026-11-01",
               "totalCredits": 0,
@@ -19751,7 +19796,7 @@
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -20880
               },
               "date": "2026-11-02",
               "totalCredits": 0,
@@ -19760,7 +19805,7 @@
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -20880
               },
               "date": "2026-11-03",
               "totalCredits": 0,
@@ -19769,7 +19814,7 @@
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -20880
               },
               "date": "2026-11-04",
               "totalCredits": 0,
@@ -19778,7 +19823,7 @@
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -20880
               },
               "date": "2026-11-05",
               "totalCredits": 0,
@@ -19787,16 +19832,35 @@
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -10440
               },
               "date": "2026-11-06",
-              "totalCredits": 0,
+              "totalCredits": 10440,
               "totalDebits": 0,
-              "transactions": []
+              "transactions": [
+                {
+                  "accountId": "<order>",
+                  "amount": 10440,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "salary"
+                  ],
+                  "date": "2026-11-06",
+                  "description": "Parity order allowance",
+                  "isProjected": false,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": -10440,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:21>",
+                  "type": "credit"
+                }
+              ]
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -10440
               },
               "date": "2026-11-07",
               "totalCredits": 0,
@@ -19805,7 +19869,7 @@
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -10440
               },
               "date": "2026-11-08",
               "totalCredits": 0,
@@ -19814,7 +19878,7 @@
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -10440
               },
               "date": "2026-11-09",
               "totalCredits": 0,
@@ -19823,7 +19887,7 @@
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -10440
               },
               "date": "2026-11-10",
               "totalCredits": 0,
@@ -19832,7 +19896,7 @@
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -10440
               },
               "date": "2026-11-11",
               "totalCredits": 0,
@@ -19841,7 +19905,7 @@
             },
             {
               "balances": {
-                "<order>": 0
+                "<order>": -10440
               },
               "date": "2026-11-12",
               "totalCredits": 0,
@@ -19853,9 +19917,28 @@
                 "<order>": 0
               },
               "date": "2026-11-13",
-              "totalCredits": 0,
+              "totalCredits": 10440,
               "totalDebits": 0,
-              "transactions": []
+              "transactions": [
+                {
+                  "accountId": "<order>",
+                  "amount": 10440,
+                  "balanceApplied": true,
+                  "categoryTags": [
+                    "salary"
+                  ],
+                  "date": "2026-11-13",
+                  "description": "Parity order allowance",
+                  "isProjected": false,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 0,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:21>",
+                  "type": "credit"
+                }
+              ]
             },
             {
               "balances": {
@@ -19913,15 +19996,15 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 6240
               },
               "date": "2026-11-20",
-              "totalCredits": 10425,
+              "totalCredits": 11665,
               "totalDebits": 2275,
               "transactions": [
                 {
                   "accountId": "<order>",
-                  "amount": 10425,
+                  "amount": 1225,
                   "balanceApplied": false,
                   "categoryTags": [
                     "salary"
@@ -19930,10 +20013,28 @@
                   "description": "Parity order credit",
                   "isProjected": false,
                   "ledger": {
-                    "bank": 10425,
+                    "bank": 1225,
                     "credit": 0
                   },
                   "sourceTransactionId": "<id:20>",
+                  "type": "credit"
+                },
+                {
+                  "accountId": "<order>",
+                  "amount": 10440,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "salary"
+                  ],
+                  "date": "2026-11-20",
+                  "description": "Parity order allowance",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 11665,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:21>",
                   "type": "credit"
                 },
                 {
@@ -19947,7 +20048,7 @@
                   "description": "Parity order debit",
                   "isProjected": false,
                   "ledger": {
-                    "bank": 8150,
+                    "bank": 9390,
                     "credit": 0
                   },
                   "sourceTransactionId": "<id:19>",
@@ -19964,7 +20065,7 @@
                   "description": "Parity order transfer",
                   "isProjected": false,
                   "ledger": {
-                    "bank": 5000,
+                    "bank": 6240,
                     "credit": 0
                   },
                   "sourceTransactionId": "<id:18>",
@@ -19975,7 +20076,7 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 6240
               },
               "date": "2026-11-21",
               "totalCredits": 0,
@@ -19984,7 +20085,7 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 6240
               },
               "date": "2026-11-22",
               "totalCredits": 0,
@@ -19993,7 +20094,7 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 6240
               },
               "date": "2026-11-23",
               "totalCredits": 0,
@@ -20002,7 +20103,7 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 6240
               },
               "date": "2026-11-24",
               "totalCredits": 0,
@@ -20011,7 +20112,7 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 6240
               },
               "date": "2026-11-25",
               "totalCredits": 0,
@@ -20020,7 +20121,7 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 6240
               },
               "date": "2026-11-26",
               "totalCredits": 0,
@@ -20029,16 +20130,35 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 16680
               },
               "date": "2026-11-27",
-              "totalCredits": 0,
+              "totalCredits": 10440,
               "totalDebits": 0,
-              "transactions": []
+              "transactions": [
+                {
+                  "accountId": "<order>",
+                  "amount": 10440,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "salary"
+                  ],
+                  "date": "2026-11-27",
+                  "description": "Parity order allowance",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 16680,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:21>",
+                  "type": "credit"
+                }
+              ]
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 16680
               },
               "date": "2026-11-28",
               "totalCredits": 0,
@@ -20047,7 +20167,7 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 16680
               },
               "date": "2026-11-29",
               "totalCredits": 0,
@@ -20056,7 +20176,7 @@
             },
             {
               "balances": {
-                "<order>": 5000
+                "<order>": 16680
               },
               "date": "2026-11-30",
               "totalCredits": 0,
@@ -20071,9 +20191,9 @@
           },
           "totals": {
             "expenses": 2275,
-            "income": 10425,
+            "income": 42985,
             "loanPayments": 0,
-            "net": 8150,
+            "net": 40710,
             "totalOut": 2275
           },
           "view": "monthly"

@@ -28,6 +28,7 @@ export interface SandboxBaseTx {
   amount: number;
   balanceApplied?: boolean;
   amountSchedule?: AmountStep[];
+  createdAt?: Date | string;
 }
 
 /** Turn form-style input (dollars, ISO date strings) into the shape the engine reads */
@@ -57,6 +58,8 @@ export function toEngineTransaction(id: string, data: TransactionInput, base?: S
     balanceApplied: base?.balanceApplied ?? false,
     // Datasheet / payment-plan amounts still apply unless the amount itself was changed
     amountSchedule: base && base.amount === amount ? base.amountSchedule : undefined,
+    // An edit keeps its place among the day's entries (same-day order); an addition has none
+    createdAt: base?.createdAt,
   };
 }
 

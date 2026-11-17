@@ -4,7 +4,8 @@
 // `{name}` in `path`, in any string inside `body`, and in object keys of `body` is replaced with the id
 // saved under that name. `save.from` is a dot path into the response body. `expect` is the status the
 // unconverted code returns (null = record whatever comes back). `allow` marks a step whose response
-// changes by decision D1a (malformed path id → the route's 404) or D1c (malformed JSON body → 400).
+// changed by decision D1a (malformed path id → the route's 404) or D1c (malformed JSON body → 400);
+// the golden is recorded on the converted routes, so capture expects `allow.status` for those steps.
 
 export interface Step {
   id: string;
@@ -611,14 +612,32 @@ export function buildScenario(today: string): Step[] {
     get("X20", "/api/transactions?limit=100&sort=date&order=asc", 200),
     get("X21", "/api/finance-profile", 200),
 
-    // ── Same-day order (bug 18). Last, so no earlier step changes. A new empty account gets a
-    // transfer, a debit and a credit on one future day, created in the opposite of the order the
-    // engine applies them (credits, debits, transfers): in creation order the bank caps would cut
-    // the transfer and the debit to 0. ──
+    // ── Same-day order (bug 18, income first). Last, so no earlier step changes. A new empty account
+    // gets a one-time transfer, debit and credit on one future day, created in the opposite of the
+    // order the engine applies them, then a weekly recurring credit whose rule started four weeks
+    // earlier and falls on that day too. The day runs: credit 12.25 (one-time, older), credit 104.40
+    // (recurring, newer), debit, transfer. In creation order, or with one-time entries before
+    // recurring ones, the bank caps would cut the debit and the transfer. ──
     send("X22", "POST", "/api/accounts", { name: "Parity Order", type: "bank", balance: 0 }, 201, { save: { name: "order", from: "_id" } }),
     send("X23", "POST", "/api/transactions", { amount: 31.5, date: d(3), description: "Parity order transfer", accountId: "{order}", toAccountId: "{checking}", type: "transfer", categoryTags: ["transfer"] }, 201),
     send("X24", "POST", "/api/transactions", { amount: 22.75, date: d(3), description: "Parity order debit", accountId: "{order}", type: "debit", categoryTags: ["spending"] }, 201),
-    send("X25", "POST", "/api/transactions", { amount: 104.25, date: d(3), description: "Parity order credit", accountId: "{order}", type: "credit", categoryTags: ["salary"] }, 201),
+    send("X25", "POST", "/api/transactions", { amount: 12.25, date: d(3), description: "Parity order credit", accountId: "{order}", type: "credit", categoryTags: ["salary"] }, 201),
+    send(
+      "X25b",
+      "POST",
+      "/api/transactions",
+      {
+        amount: 104.4,
+        date: d(-25),
+        description: "Parity order allowance",
+        accountId: "{order}",
+        type: "credit",
+        isRecurring: true,
+        recurrenceRule: { frequency: "weekly", startDate: d(-25), dayOfWeek: noon(d(-25)).getUTCDay() },
+        categoryTags: ["salary"],
+      },
+      201,
+    ),
     get("X26", `/api/projections?startDate=${d(0)}&endDate=${d(5)}&accountId={order}`, 200),
     get("X27", `/api/summary?view=monthly&date=${d(3)}&accountId={order}`, 200),
   ];

@@ -146,10 +146,9 @@ function stable(value: unknown): string {
 }
 
 /**
- * Differences between two transcripts, empty when they match. A step with `allow` is checked
- * against its expected status (or, in a golden re-recorded on the converted routes, its allowed
- * status) in the golden and its allowed status (and error) in the actual run;
- * every other step must have the same status and body.
+ * Differences between two transcripts, empty when they match. Every step must have the same status
+ * and body. The golden is recorded on the converted routes, so a step with `allow` must hold its
+ * allowed status (and error) there; a golden that still holds `expect` predates the conversion.
  */
 export function compareTranscripts(golden: Transcript, actual: Transcript, steps: Step[]): string[] {
   const diffs: string[] = [];
@@ -164,19 +163,13 @@ export function compareTranscripts(golden: Transcript, actual: Transcript, steps
       continue;
     }
     if (a.request !== g.request) diffs.push(`${g.id}: request ${JSON.stringify(a.request)}, golden ${JSON.stringify(g.request)}`);
-    const step = byId.get(g.id);
-    if (step?.allow) {
-      // A golden recorded from the unconverted routes has `expect`; one re-recorded since has the allowed status
-      if (g.status !== step.expect && g.status !== step.allow.status) {
-        diffs.push(`${g.id}: golden status ${g.status}, scenario expects ${step.expect} (or ${step.allow.status} once re-recorded)`);
+    const allow = byId.get(g.id)?.allow;
+    if (allow) {
+      const error = isPlainObject(g.body) ? g.body.error : undefined;
+      if (g.status !== allow.status || (allow.error !== undefined && error !== allow.error)) {
+        const wanted = `${allow.status}${allow.error !== undefined ? ` ${JSON.stringify(allow.error)}` : ""}`;
+        diffs.push(`${g.id} ${g.request}: golden holds ${g.status} ${JSON.stringify(error)}, ${allow.rule} requires ${wanted} (re-record the golden)`);
       }
-      const error = isPlainObject(a.body) ? a.body.error : undefined;
-      const errorOk = step.allow.error === undefined || error === step.allow.error;
-      if (a.status !== step.allow.status || !errorOk) {
-        const wanted = `${step.allow.status}${step.allow.error !== undefined ? ` ${JSON.stringify(step.allow.error)}` : ""}`;
-        diffs.push(`${g.id} ${g.request}: got ${a.status} ${JSON.stringify(error)}, ${step.allow.rule} allows ${wanted}`);
-      }
-      continue;
     }
     const left = JSON.stringify({ status: g.status, body: g.body });
     const right = JSON.stringify({ status: a.status, body: a.body });

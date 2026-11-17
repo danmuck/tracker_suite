@@ -20,7 +20,6 @@ import {
 import { profileFromDollars } from "@/lib/finance/finance-profile";
 import { buildProjection, type EngineTransaction } from "@/lib/finance/projection-engine";
 import { applySandbox, applySandboxProfile, sandboxSchema, type SandboxInput } from "@/lib/finance/projection-sandbox";
-import { sameDayOrder } from "@/lib/finance/same-day-order";
 import type { Granularity } from "@/types/finance/projection";
 import type { DaySummary, MonthSummary, SummaryResult, SummaryView } from "@/types/finance/summary";
 import {
@@ -70,8 +69,7 @@ async function project(store: Store, now: Date, params: ProjectionParams, sandbo
   if (sandbox) {
     // Sandbox edits can move a transaction into the range, so start from
     // everything and let the engine pick what falls inside the window
-    // Sorted as fetched; sandbox edits keep their place and additions go last
-    let all: EngineTransaction[] = (await transactions(store).find()).map(shapeTransaction).sort(sameDayOrder); // PR2
+    let all: EngineTransaction[] = (await transactions(store).find()).map(shapeTransaction); // PR2
     if (sandbox.profile) {
       // The what-if Datasheet re-prices Salary and Rent; which transactions
       // those are always comes from the real Datasheet
@@ -116,7 +114,7 @@ async function project(store: Store, now: Date, params: ProjectionParams, sandbo
       : dateFilter;
 
     if (accountId) assertId(accountId);
-    txs = (await transactions(store).find(query)).map(shapeTransaction).sort(sameDayOrder); // PR3
+    txs = (await transactions(store).find(query)).map(shapeTransaction); // PR3
   }
 
   const result = buildProjection({
@@ -243,7 +241,8 @@ export const getSummary: Handler = ({ store, query: params, now }) =>
       : dateFilter;
 
     if (accountId) assertId(accountId);
-    const txs = (await transactions(store).find(query)).map(shapeTransaction).sort(sameDayOrder); // SU2
+    // The engine orders each day's entries itself (same-day-order.ts), so fetch order does not matter
+    const txs = (await transactions(store).find(query)).map(shapeTransaction); // SU2
 
     const granularity = view === "annual" ? "monthly" : "daily";
     const projection = buildProjection({

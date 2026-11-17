@@ -1,8 +1,9 @@
 // D10, in-process proof: the parity scenario replayed through `dispatch` against the Finance
 // handlers on a BrowserStore, at the golden's recorded clock, must reproduce the golden transcript
-// (recorded from the unconverted MongoDB routes) apart from the scenario's declared `allow` steps.
+// (recorded over HTTP on MongoDB from the converted routes) exactly, step for step.
 //
-// The golden is never wrong: a difference here means a handler, the store or this harness is wrong.
+// A difference here means a handler, the store or this harness is wrong, or the golden was not
+// re-recorded after an intended change.
 
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -12,7 +13,7 @@ import { BrowserStore } from "@/lib/data/browser-store";
 import { dispatch } from "@/lib/data/dispatch";
 import { memoryStorage } from "@/lib/data/test-helpers";
 import { localDateStr } from "@/lib/finance/dates";
-import { buildScenario, type Step } from "../../../../scripts/finance-parity/scenario";
+import { buildScenario } from "../../../../scripts/finance-parity/scenario";
 import {
   compareTranscripts,
   createNormalizer,
@@ -68,13 +69,12 @@ function bodyDifferences(expected: unknown, actual: unknown, max = 8): string[] 
 }
 
 /** A readable report: per differing step its status and the first differing paths, then compareTranscripts' own lines. */
-function report(golden: Transcript, actual: Transcript, steps: Step[], diffs: string[], logged: Map<string, string[]>): string {
-  const allowed = new Set(steps.filter((s) => s.allow).map((s) => s.id));
+function report(golden: Transcript, actual: Transcript, diffs: string[], logged: Map<string, string[]>): string {
   const actualById = new Map(actual.steps.map((s) => [s.id, s]));
   const lines = [`${diffs.length} difference(s) from the golden transcript:`];
   for (const g of golden.steps) {
     const a = actualById.get(g.id);
-    if (!a || allowed.has(g.id)) continue;
+    if (!a) continue;
     if (JSON.stringify({ s: g.status, b: g.body }) === JSON.stringify({ s: a.status, b: a.body })) continue;
     lines.push(`- ${g.id} ${g.request}: status expected ${g.status}, actual ${a.status}`);
     for (const d of bodyDifferences(g.body, a.body)) lines.push(`    ${d}`);
@@ -163,5 +163,5 @@ test("the handlers reproduce the golden transcript on a browser store", async (t
 
   const actual: Transcript = { meta: golden.meta, steps: out, finalBalances };
   const diffs = compareTranscripts(golden, actual, steps);
-  assert.deepEqual(diffs, [], report(golden, actual, steps, diffs, logged));
+  assert.deepEqual(diffs, [], report(golden, actual, diffs, logged));
 });
