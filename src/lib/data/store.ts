@@ -23,6 +23,10 @@ export const COLLECTIONS = {
   listings: { unique: [] },
   tours: { unique: [] },
   futureSettings: { unique: ["key"] },
+  accounts: { unique: [] },
+  transactions: { unique: [] },
+  financeCategories: { unique: ["name"] },
+  financeProfile: { unique: [] },
 } as const;
 
 export type CollectionName = keyof typeof COLLECTIONS;

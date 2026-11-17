@@ -6,6 +6,10 @@ import Link from "@/models/links/Link";
 import Listing from "@/models/future/Listing";
 import Tour from "@/models/future/Tour";
 import FutureSettings from "@/models/future/FutureSettings";
+import Account from "@/models/finance/Account";
+import Transaction from "@/models/finance/Transaction";
+import Category from "@/models/finance/Category";
+import FinanceProfile from "@/models/finance/FinanceProfile";
 import { isId } from "./api";
 import type { Filter, Update } from "./query";
 import { assertIdUnchanged, assertUpsertFilter, ConflictError } from "./store";
@@ -21,6 +25,10 @@ const MODELS: Record<CollectionName, AnyModel> = {
   listings: Listing as unknown as AnyModel,
   tours: Tour as unknown as AnyModel,
   futureSettings: FutureSettings as unknown as AnyModel,
+  accounts: Account as unknown as AnyModel,
+  transactions: Transaction as unknown as AnyModel,
+  financeCategories: Category as unknown as AnyModel,
+  financeProfile: FinanceProfile as unknown as AnyModel,
 };
 
 // Plain JSON: string ids, ISO date strings, no undefined values.
