@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
+import { SETTINGS_KEY } from "@/lib/future/validators";
 
-/** One document for the whole module, found by its fixed key */
-export const SETTINGS_KEY = "default";
+export { SETTINGS_KEY };
 
 export interface IFutureSettings extends Document {
   key: string;

@@ -7,7 +7,7 @@ import type { LinkGroup } from "@/types/links/link-group";
 import type { LinkItem } from "@/types/links/link";
 import type { Listing, Tour } from "@/types/future/apartments";
 import { listingSchema } from "@/lib/future/validators";
-import { ensureDemoSeed, loadSampleData } from "./index";
+import { ensureDemoSeed, loadSampleData, SEEDED_KEY } from "./index";
 import { futureSample } from "./future";
 import { linksSample } from "./links";
 
@@ -32,6 +32,26 @@ test("ensureDemoSeed seeds once", async () => {
   assert.equal(await ensureDemoSeed(store, storage), false);
   await store.collection<LinkGroup>("linkGroups").deleteMany({});
   assert.equal(await ensureDemoSeed(store, storage), false);
+});
+
+test("ensureDemoSeed leaves the key unset when loading fails, and a later call seeds", async () => {
+  const storage = memoryStorage();
+  const store = new BrowserStore(storage);
+  storage.failWrites = true;
+  await assert.rejects(ensureDemoSeed(store, storage));
+  assert.equal(storage.getItem(SEEDED_KEY), null);
+  storage.failWrites = false;
+  assert.equal(await ensureDemoSeed(store, storage), true);
+  assert.equal(storage.getItem(SEEDED_KEY), "1");
+  assert.ok((await store.collection<LinkGroup>("linkGroups").find()).length > 0);
+});
+
+test("after a reset (store.clear) the demo seeds again", async () => {
+  const storage = memoryStorage();
+  const store = new BrowserStore(storage);
+  assert.equal(await ensureDemoSeed(store, storage), true);
+  store.clear();
+  assert.equal(await ensureDemoSeed(store, storage), true);
 });
 
 test("availableModules hides modules without browser data in browser mode", () => {

@@ -6,6 +6,7 @@ import Link from "@/models/links/Link";
 import Listing from "@/models/future/Listing";
 import Tour from "@/models/future/Tour";
 import FutureSettings from "@/models/future/FutureSettings";
+import { isId } from "./api";
 import type { Filter, Update } from "./query";
 import { assertIdUnchanged, ConflictError } from "./store";
 import type { BaseDoc, Collection, CollectionName, FindOptions, Store } from "./store";
@@ -21,8 +22,6 @@ const MODELS: Record<CollectionName, AnyModel> = {
   tours: Tour as unknown as AnyModel,
   futureSettings: FutureSettings as unknown as AnyModel,
 };
-
-const OBJECT_ID = /^[0-9a-f]{24}$/i;
 
 // Plain JSON: string ids, ISO date strings, no undefined values.
 function plain<T>(doc: unknown): T {
@@ -82,7 +81,7 @@ class MongoCollection<T extends BaseDoc> implements Collection<T> {
   }
 
   async findById(id: string): Promise<T | null> {
-    if (!OBJECT_ID.test(id)) return null;
+    if (!isId(id)) return null;
     const doc = await this.model.findById(id).lean();
     return doc ? plain<T>(doc) : null;
   }
@@ -120,7 +119,7 @@ class MongoCollection<T extends BaseDoc> implements Collection<T> {
 
   async updateById(id: string, update: Update): Promise<T | null> {
     assertIdUnchanged(update);
-    if (!OBJECT_ID.test(id)) return null;
+    if (!isId(id)) return null;
     const doc = await this.guard(() =>
       this.model.findByIdAndUpdate(id, update, { returnDocument: "after", runValidators: true }).lean(),
     );
@@ -158,7 +157,7 @@ class MongoCollection<T extends BaseDoc> implements Collection<T> {
   }
 
   async deleteById(id: string): Promise<T | null> {
-    if (!OBJECT_ID.test(id)) return null;
+    if (!isId(id)) return null;
     const doc = await this.model.findByIdAndDelete(id).lean();
     return doc ? plain<T>(doc) : null;
   }

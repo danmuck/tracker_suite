@@ -62,3 +62,21 @@ test("links: a malformed groupId filter returns an empty list", async () => {
   const res = await call("GET", "/api/links?groupId=not-an-id");
   assert.deepEqual(res, { status: 200, body: [] });
 });
+
+test("groups: renaming onto a slug another group has gives a suffixed slug and leaves the other alone", async () => {
+  const other = (await call("POST", "/api/link-groups", { name: "Gaming" })).body as LinkGroup;
+  const g = (await call("POST", "/api/link-groups", { name: "Tools" })).body as LinkGroup;
+  const renamed = (await call("PUT", `/api/link-groups/${g._id}`, { name: "Gaming!" })).body as LinkGroup;
+  assert.match(renamed.slug, /^gaming-\d+$/);
+  assert.equal(((await call("GET", `/api/link-groups/${other._id}`)).body as LinkGroup).slug, "gaming");
+});
+
+test("updates: a malformed id is 404 even when the body is invalid", async () => {
+  assert.equal((await call("PUT", "/api/link-groups/abc", { name: "" })).status, 404);
+  assert.equal((await call("PUT", "/api/links/abc", { name: "", url: "nope" })).status, 404);
+});
+
+test("groups: updating with a whitespace-only name is 400", async () => {
+  const g = (await call("POST", "/api/link-groups", { name: "Tools" })).body as LinkGroup;
+  assert.equal((await call("PUT", `/api/link-groups/${g._id}`, { name: "   " })).status, 400);
+});

@@ -71,7 +71,3 @@ function subscribe(onChange: () => void): () => void {
 export function useResolvedDataSource(): DataSource | null {
   return useSyncExternalStore(subscribe, getDataSource, () => (IS_DEMO ? "browser" : null));
 }
-
-export function useDataSource(): DataSource {
-  return useSyncExternalStore(subscribe, getDataSource, () => resolveDataSource(IS_DEMO, null));
-}

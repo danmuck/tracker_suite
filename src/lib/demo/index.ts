@@ -7,6 +7,7 @@ import type { BaseDoc, Store } from "@/lib/data/store";
 import type { LinkGroup } from "@/types/links/link-group";
 import type { LinkItem } from "@/types/links/link";
 import type { Listing, Tour } from "@/types/future/apartments";
+import { SETTINGS_KEY } from "@/lib/future/validators";
 import { futureSample } from "./future";
 import { linksSample } from "./links";
 
@@ -46,7 +47,7 @@ async function loadFuture(store: Store, today: Date): Promise<void> {
   await settings.deleteMany({});
 
   const sample = futureSample(today);
-  await settings.insert({ key: "default", ...sample.settings });
+  await settings.insert({ key: SETTINGS_KEY, ...sample.settings });
   for (const { tours: sampleTours, ...data } of sample.listings) {
     const listing = await listings.insert(data);
     await tours.insertMany(
@@ -62,7 +63,7 @@ async function loadFuture(store: Store, today: Date): Promise<void> {
 
 export async function ensureDemoSeed(store: Store, storage: StorageLike): Promise<boolean> {
   if (storage.getItem(SEEDED_KEY) !== null) return false;
-  storage.setItem(SEEDED_KEY, "1");
   await loadSampleData(store);
+  storage.setItem(SEEDED_KEY, "1");
   return true;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { Database } from "lucide-react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,27 +15,44 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { loadSampleData, SEEDED_KEY } from "@/lib/demo";
 import { getBrowserStore } from "@/lib/data/local";
-import { IS_DEMO, setDataSource, useDataSource } from "@/lib/data/mode";
+import { IS_DEMO, setDataSource, useResolvedDataSource } from "@/lib/data/mode";
+
+const errorMessage = (error: unknown) => (error instanceof Error ? error.message : undefined);
 
 async function loadSample() {
   if (!window.confirm("Replace browser data with the sample set?")) return;
-  await loadSampleData(getBrowserStore());
+  try {
+    await loadSampleData(getBrowserStore());
+  } catch (error) {
+    toast.error("Could not load sample data", { description: errorMessage(error) });
+    return;
+  }
   window.location.reload();
 }
 
 function resetBrowserData() {
   if (!window.confirm("Delete all browser data?")) return;
-  getBrowserStore().clear();
   try {
+    getBrowserStore().clear();
+    // Deliberate second guard: clear() already removes the key, but a reset must always reseed in the demo.
     window.localStorage.removeItem(SEEDED_KEY);
-  } catch {
-    // storage unavailable; nothing to clear
+  } catch (error) {
+    toast.error("Could not reset browser data", { description: errorMessage(error) });
+    return;
   }
   window.location.reload();
 }
 
 export function DataSourceSwitch() {
-  const source = useDataSource();
+  const source = useResolvedDataSource();
+  // Until the saved source is known, show the button without a badge or menu (same on server and first client render).
+  if (source === null) {
+    return (
+      <Button variant="ghost" size="sm" aria-label="Data source" className="gap-2 px-2" disabled>
+        <Database className="h-4 w-4" />
+      </Button>
+    );
+  }
   const inBrowser = source === "browser";
 
   return (

@@ -6,6 +6,7 @@ import type { BaseDoc, Collection, Store } from "@/lib/data/store";
 import {
   LISTING_OPTIONAL_FIELDS,
   LISTING_STATUSES,
+  SETTINGS_KEY,
   listingSchema,
   listingStatusSchema,
   settingsSchema,
@@ -13,7 +14,7 @@ import {
 } from "@/lib/future/validators";
 import type { FutureSettings, Listing, Tour } from "@/types/future/apartments";
 
-export const SETTINGS_KEY = "default";
+export { SETTINGS_KEY };
 
 type SettingsDoc = FutureSettings & BaseDoc & { key: string };
 
@@ -32,7 +33,11 @@ const settingsBody = (doc: FutureSettings | null) => ({
   commuteDestination: doc?.commuteDestination,
 });
 
-const noListing = () => fail(400, "That listing no longer exists");
+/** A tour must point at a listing that exists; returns the 400 response when it does not */
+async function missingListing(store: Store, listingId: string) {
+  if (isId(listingId) && (await listings(store).exists({ _id: listingId }))) return null;
+  return fail(400, "That listing no longer exists");
+}
 
 export const listListings: Handler = async ({ store, query }) => {
   const filter: Record<string, unknown> = {};
@@ -86,7 +91,8 @@ export const createTour: Handler = async ({ store, body }) => {
   const parsed = tourSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
   const { listingId } = parsed.data;
-  if (!isId(listingId) || !(await listings(store).exists({ _id: listingId }))) return noListing();
+  const missing = await missingListing(store, listingId);
+  if (missing) return missing;
   return ok(await tours(store).insert(parsed.data), 201);
 };
 
@@ -95,7 +101,8 @@ export const updateTour: Handler = async ({ store, params, body }) => {
   const parsed = tourSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
   const { listingId } = parsed.data;
-  if (!isId(listingId) || !(await listings(store).exists({ _id: listingId }))) return noListing();
+  const missing = await missingListing(store, listingId);
+  if (missing) return missing;
   const updated = await tours(store).updateById(params.tourId, setAndUnset(parsed.data, TOUR_OPTIONAL_FIELDS));
   return updated ? ok(updated) : notFound(TOUR);
 };

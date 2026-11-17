@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { toast } from "sonner";
 import { Database } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { ensureDemoSeed } from "@/lib/demo";
@@ -30,6 +31,7 @@ export function ModuleGate({ children }: { children: React.ReactNode }) {
       })
       .catch((error) => {
         console.error(error);
+        toast.error("Could not load sample data");
         setSeedSettled(true);
       });
   }, []);

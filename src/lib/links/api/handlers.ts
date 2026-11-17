@@ -7,8 +7,8 @@ import { linkGroupSchema, linkSchema } from "@/lib/links/validators";
 import type { LinkItem } from "@/types/links/link";
 import type { LinkGroup } from "@/types/links/link-group";
 
-const GROUP_NOT_FOUND = "Group";
-const LINK_NOT_FOUND = "Link";
+const GROUP = "Group";
+const LINK = "Link";
 const BY_ORDER = { order: 1, createdAt: -1 } as const;
 
 function slugify(text: string): string {
@@ -57,12 +57,12 @@ export const createGroup: Handler = async ({ store, body }) => {
 
 export const getGroup: Handler = async ({ store, params }) => {
   const group = isId(params.groupId) ? await groups(store).findById(params.groupId) : null;
-  return group ? ok(group) : notFound(GROUP_NOT_FOUND);
+  return group ? ok(group) : notFound(GROUP);
 };
 
 export const updateGroup: Handler = async ({ store, params, body }) => {
   const existing = isId(params.groupId) ? await groups(store).findById(params.groupId) : null;
-  if (!existing) return notFound(GROUP_NOT_FOUND);
+  if (!existing) return notFound(GROUP);
 
   const parsed = linkGroupSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
@@ -77,12 +77,12 @@ export const updateGroup: Handler = async ({ store, params, body }) => {
   const set: Record<string, unknown> = { name, slug };
   if (icon !== undefined) set.icon = icon;
   const updated = await groups(store).updateById(existing._id, { $set: set });
-  return updated ? ok(updated) : notFound(GROUP_NOT_FOUND);
+  return updated ? ok(updated) : notFound(GROUP);
 };
 
 export const deleteGroup: Handler = async ({ store, params }) => {
   const group = isId(params.groupId) ? await groups(store).findById(params.groupId) : null;
-  if (!group) return notFound(GROUP_NOT_FOUND);
+  if (!group) return notFound(GROUP);
 
   await links(store).deleteMany({ groupId: group._id });
   await groups(store).deleteById(group._id);
@@ -111,12 +111,12 @@ export const createLink: Handler = async ({ store, body }) => {
 
 export const getLink: Handler = async ({ store, params }) => {
   const link = isId(params.linkId) ? await links(store).findById(params.linkId) : null;
-  return link ? ok(link) : notFound(LINK_NOT_FOUND);
+  return link ? ok(link) : notFound(LINK);
 };
 
 export const updateLink: Handler = async ({ store, params, body }) => {
   const existing = isId(params.linkId) ? await links(store).findById(params.linkId) : null;
-  if (!existing) return notFound(LINK_NOT_FOUND);
+  if (!existing) return notFound(LINK);
 
   const parsed = linkSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
@@ -124,12 +124,12 @@ export const updateLink: Handler = async ({ store, params, body }) => {
   const updated = await links(store).updateById(existing._id, {
     $set: { name: parsed.data.name, url: parsed.data.url },
   });
-  return updated ? ok(updated) : notFound(LINK_NOT_FOUND);
+  return updated ? ok(updated) : notFound(LINK);
 };
 
 export const deleteLink: Handler = async ({ store, params }) => {
   const link = isId(params.linkId) ? await links(store).findById(params.linkId) : null;
-  if (!link) return notFound(LINK_NOT_FOUND);
+  if (!link) return notFound(LINK);
 
   await links(store).deleteById(link._id);
   return ok({ message: "Link deleted" });

@@ -27,10 +27,20 @@ const BROWSER_REACHABLE = [
   "src/hooks/**",
   "src/components/**",
 ];
-const SERVER_ONLY_DATA = ["src/lib/data/mongo-store.ts", "src/lib/data/serve.ts"];
+// The server-only modules and their tests (which import them directly) are exempt.
+const SERVER_ONLY_DATA = [
+  "src/lib/data/mongo-store.ts",
+  "src/lib/data/mongo-store.test.ts",
+  "src/lib/data/serve.ts",
+];
 const browserPatterns = [
   {
-    regex: "^(mongoose|next/server|@/lib/db|@/lib/api-helpers|@/lib/data/mongo-store|@/lib/data/serve)$",
+    regex: "^(mongoose|next/server|@/lib/db|@/lib/api-helpers)$",
+    message: "Browser-reachable code may not import server-only code.",
+  },
+  {
+    // Any path ending in /mongo-store or /serve, absolute alias or relative (./mongo-store, ../data/serve).
+    regex: "/(mongo-store|serve)$",
     message: "Browser-reachable code may not import server-only code.",
   },
   { regex: "^@/models/", message: "Browser-reachable code may not import Mongoose models." },
