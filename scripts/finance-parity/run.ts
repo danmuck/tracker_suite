@@ -42,6 +42,9 @@ function parseArgs(argv: string[]) {
 function checkBase(base: string | undefined): string {
   if (!base) fail("--base is required");
   const url = new URL(base);
+  if (url.protocol !== "http:" || (url.hostname !== "localhost" && url.hostname !== "127.0.0.1")) {
+    fail(`Refusing ${url.origin}: the parity server must be http on localhost or 127.0.0.1`);
+  }
   const port = Number(url.port);
   if (port === 3030) fail("Refusing port 3030: that is the owner's server on the live database");
   if (!(port >= 3031 && port <= 3036)) fail(`Refusing port ${url.port || "(default)"}: use a parity server on 3031–3036`);
@@ -192,7 +195,7 @@ async function runScenario(base: string, mode: "capture" | "check"): Promise<{ t
   return {
     steps,
     transcript: {
-      meta: { capturedAt: started.toISOString(), localDate: today, timeZone: process.env.TZ, commit },
+      meta: { capturedAt: started.toISOString(), localDate: today, utcDate: startUtc, timeZone: process.env.TZ, commit },
       steps: out,
       finalBalances,
     },
@@ -212,10 +215,18 @@ async function main() {
   if (command === "check") {
     const base = checkBase(flags.base);
     const golden = JSON.parse(readFileSync(flags.golden ?? DEFAULT_GOLDEN, "utf8")) as Transcript;
-    const today = localDate(new Date());
+    const now = new Date();
+    const today = localDate(now);
     if (today !== golden.meta.localDate) {
       fail(`Today (${today}) is not the golden's capture date (${golden.meta.localDate}); the golden must be re-captured from the unconverted code first`);
     }
+    // The engine buckets by UTC day and the loan disbursement is dated "now": after 19:00 US-Eastern the
+    // UTC date is already tomorrow, and the run would differ from the golden for that reason alone
+    const goldenUtc = golden.meta.utcDate ?? golden.meta.capturedAt.slice(0, 10);
+    if (utcDate(now) !== goldenUtc) {
+      fail(`The UTC date (${utcDate(now)}) is not the golden's capture UTC date (${goldenUtc}); run check while the UTC date matches (before 19:00 US-Eastern standard time on ${golden.meta.localDate}), or re-capture the golden`);
+    }
+    if (golden.meta.timeZone !== process.env.TZ) fail(`TZ ${JSON.stringify(process.env.TZ)} differs from the golden's ${golden.meta.timeZone}`);
     const { transcript, steps } = await runScenario(base, "check");
     const diffs = compareTranscripts(golden, transcript, steps);
     if (diffs.length > 0) {

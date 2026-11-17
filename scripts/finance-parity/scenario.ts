@@ -542,5 +542,68 @@ export function buildScenario(today: string): Step[] {
     get("Z10", "/api/transactions?limit=100&sort=date&order=asc", 200),
     get("Z11", "/api/finance-profile", 200),
     get("Z12", "/api/categories", 200),
+
+    // ── Remaining error paths. After the final-state reads, so no earlier step's state changes. ──
+    // Payment plans: loadAccount (src/lib/finance/payment-plan.ts:81-87) runs first in every method
+    del("X01", plan(B), 404),
+    del("X02", plan("{checking}"), 400),
+    send("X03", "POST", plan(B), { fromAccountId: "{checking}", dayOfMonth: 5, startDate: d(10), firstAmount: 1 }, 404),
+    send("X04", "PUT", plan(B), {}, 404),
+    send("X05", "POST", plan("{checking}"), { fromAccountId: "{checking}", dayOfMonth: 5, startDate: d(10), firstAmount: 1 }, 400),
+    send("X06", "PUT", plan("{checking}"), {}, 400),
+    // Malformed fromAccountId reaches Account.findById (payment-plan.ts:251): a cast error, the route's 500
+    send("X07", "POST", plan("{car}"), { fromAccountId: "abc", dayOfMonth: 5, startDate: d(10), firstAmount: 1 }, 500),
+    // The engine's window guard (projection-engine.ts:67) through the sandbox path
+    send("X08", "POST", "/api/projections", { startDate: "1900-01-01", endDate: "2100-01-01", sandbox: {} }, 400),
+    // Malformed linkedAccountId in a body: Mongoose cast errors, the routes' 500s (nothing is written)
+    send("X09", "POST", "/api/accounts", { name: "Parity Bad Link", type: "debt", balance: 10, isLoan: true, linkedAccountId: "abc", depositFunds: true }, 500),
+    send("X10", "PUT", "/api/accounts/{car}", { name: "Parity Car Loan", type: "debt", balance: 8000, isLoan: true, linkedAccountId: "abc" }, 500),
+    // merge-rent: a schema failure is the same 400 as keepId === mergeId (merge-rent/route.ts:17-19)
+    send("X11", "POST", "/api/finance-profile/merge-rent", { keepId: "{rent}" }, 400),
+    send("X12", "POST", "/api/finance-profile/merge-rent", { keepId: "abc", mergeId: "{rent}" }, 500),
+    // Malformed link id reaches Transaction.exists (apply-profile.ts:89): the route's 500
+    send("X13", "PUT", "/api/finance-profile", { ...PROFILE, salaryTransactionId: "abc", rentSteps: [] }, 500),
+    // merge-rent 409: the profile's Salary link points at a deleted transaction (apply-profile.ts:89-91)
+    send(
+      "X14",
+      "POST",
+      "/api/transactions",
+      {
+        amount: 3333,
+        date: dom(-3, 12),
+        description: "Parity second salary",
+        accountId: "{checking}",
+        type: "credit",
+        isRecurring: true,
+        recurrenceRule: { frequency: "biweekly", startDate: dom(-3, 12) },
+        categoryTags: ["salary"],
+      },
+      201,
+      { save: { name: "salary2", from: "_id" } },
+    ),
+    send("X15", "PUT", "/api/finance-profile", { ...PROFILE, salaryTransactionId: "{salary2}", rentSteps: [] }, 200),
+    del("X16", "/api/transactions/{salary2}", 200),
+    send(
+      "X17",
+      "POST",
+      "/api/transactions",
+      {
+        amount: 1555,
+        date: dom(2, 3),
+        description: "Parity Rent (sublet)",
+        accountId: "{checking}",
+        type: "debit",
+        isRecurring: true,
+        recurrenceRule: { frequency: "monthly", startDate: dom(2, 3), dayOfMonth: 3 },
+        categoryTags: ["bills"],
+      },
+      201,
+      { save: { name: "rent3", from: "_id" } },
+    ),
+    // Writes the keep's endDate and deletes the merged transaction before the link check throws
+    send("X18", "POST", "/api/finance-profile/merge-rent", { keepId: "{rent}", mergeId: "{rent3}" }, 409),
+    get("X19", "/api/transactions/{rent}", 200),
+    get("X20", "/api/transactions?limit=100&sort=date&order=asc", 200),
+    get("X21", "/api/finance-profile", 200),
   ];
 }

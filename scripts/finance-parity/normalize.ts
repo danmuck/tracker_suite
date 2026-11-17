@@ -11,7 +11,8 @@ export interface TranscriptStep {
 }
 
 export interface Transcript {
-  meta: { capturedAt: string; localDate: string; timeZone: string; commit: string };
+  /** `utcDate` is the UTC calendar date at capture (also the first 10 characters of `capturedAt`) */
+  meta: { capturedAt: string; localDate: string; utcDate?: string; timeZone: string; commit: string };
   steps: TranscriptStep[];
   finalBalances: Record<string, number>;
 }
@@ -189,7 +190,7 @@ export function compareTranscripts(golden: Transcript, actual: Transcript, steps
 /**
  * N7, third check. For each day, two entries of the same kind (both recurring or both one-time)
  * with different source ids are reported when their creation order and their stored-date-descending
- * order disagree: the engine keeps input order within a day, and the stores return input in
+ * order disagree, or when their stored dates are equal (a tie): the engine keeps input order within a day, and the stores return input in
  * different orders. `created` is every stored transaction in creation order. One message per day.
  *
  * A weekly or monthly timeline entry concatenates its days in date order, so two entries whose own
@@ -219,15 +220,18 @@ export function dayOrderConflicts(
         const pa = position.get(a.sourceTransactionId), pb = position.get(b.sourceTransactionId);
         if (pa === undefined || pb === undefined) continue;
         const da = dateOf.get(a.sourceTransactionId)!, db = dateOf.get(b.sourceTransactionId)!;
-        if (da === db) continue; // stored-date order does not decide between them
+        const describe = `${a.sourceTransactionId} (created #${pa + 1}, ${da}) / ${b.sourceTransactionId} (created #${pb + 1}, ${db})`;
+        if (da === db) {
+          // Stored-date order cannot decide: MongoDB falls back to record order, the browser store to insertion order
+          pairs.push(`tie on stored date: ${describe}`);
+          continue;
+        }
         const creationFirstIsA = pa < pb;
         const dateDescFirstIsA = da > db;
-        if (creationFirstIsA !== dateDescFirstIsA) {
-          pairs.push(`${a.sourceTransactionId} (created #${pa + 1}, ${da}) / ${b.sourceTransactionId} (created #${pb + 1}, ${db})`);
-        }
+        if (creationFirstIsA !== dateDescFirstIsA) pairs.push(`order disagrees: ${describe}`);
       }
     }
-    if (pairs.length > 0) messages.push(`${day.date}: creation order and stored-date-descending order disagree: ${pairs.join("; ")}`);
+    if (pairs.length > 0) messages.push(`${day.date}: same-day order is not fixed by stored date: ${pairs.join("; ")}`);
   }
   return messages;
 }

@@ -46,7 +46,7 @@ test("compareTranscripts: equal passes; an allowed step compares status and erro
 test("scenario: unique step ids, relative dates, distinct amounts and dates among created transactions", () => {
   const steps = buildScenario("2026-11-17");
   assert.equal(new Set(steps.map((s) => s.id)).size, steps.length);
-  assert.equal(steps.length, 170);
+  assert.equal(steps.length, 191);
   const created = steps.filter((s) => s.method === "POST" && s.path === "/api/transactions" && s.expect === 201).map((s) => s.body as { amount: number; date: string });
   assert.equal(new Set(created.map((b) => b.amount)).size, created.length);
   assert.equal(new Set(created.map((b) => b.date)).size, created.length);
@@ -79,4 +79,12 @@ test("order check: a day whose same-kind entries are in creation order but not s
   // A weekly or monthly bucket lists its days in date order: entries on different days are not compared
   const bucket = { date: "2026-12-01", transactions: [{ sourceTransactionId: "x", isRecurring: true, date: "2026-12-01" }, { sourceTransactionId: "y", isRecurring: true, date: "2026-12-02" }] };
   assert.deepEqual(dayOrderConflicts([bucket], created), []);
+  // Equal stored dates are a tie: neither order is guaranteed
+  const tied = [{ _id: "x", date: "2026-08-01T00:00:00.000Z" }, { _id: "y", date: "2026-08-01T00:00:00.000Z" }];
+  const tieMessages = dayOrderConflicts([day(["x", "y"])], tied);
+  assert.equal(tieMessages.length, 1);
+  assert.match(tieMessages[0], /tie on stored date/);
+  // …but only between entries of the same kind
+  const mixed = { date: "2026-12-01", transactions: [{ sourceTransactionId: "x", isRecurring: true }, { sourceTransactionId: "y", isRecurring: false }] };
+  assert.deepEqual(dayOrderConflicts([mixed], tied), []);
 });

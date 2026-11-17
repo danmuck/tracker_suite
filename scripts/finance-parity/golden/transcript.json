@@ -1,9 +1,10 @@
 {
   "meta": {
-    "capturedAt": "2026-11-17T05:36:21.320Z",
+    "capturedAt": "2026-11-17T05:45:00.441Z",
     "localDate": "2026-11-17",
+    "utcDate": "2026-11-17",
     "timeZone": "America/New_York",
-    "commit": "cbfebdb1049f29cb32eacdbec77e7ec7e9da55ca"
+    "commit": "5acbee804289812577ead2923bfd211bc7d86b77"
   },
   "steps": [
     {
@@ -25485,6 +25486,508 @@
             "updatedAt": "<same>"
           }
         ]
+      }
+    },
+    {
+      "id": "X01",
+      "request": "DELETE /api/accounts/bbbbbbbbbbbbbbbbbbbbbbbb/payment-plan",
+      "status": 404,
+      "body": {
+        "error": "Account not found"
+      }
+    },
+    {
+      "id": "X02",
+      "request": "DELETE /api/accounts/{checking}/payment-plan",
+      "status": 400,
+      "body": {
+        "error": "Payment plans are for credit cards and debt accounts"
+      }
+    },
+    {
+      "id": "X03",
+      "request": "POST /api/accounts/bbbbbbbbbbbbbbbbbbbbbbbb/payment-plan",
+      "status": 404,
+      "body": {
+        "error": "Account not found"
+      }
+    },
+    {
+      "id": "X04",
+      "request": "PUT /api/accounts/bbbbbbbbbbbbbbbbbbbbbbbb/payment-plan",
+      "status": 404,
+      "body": {
+        "error": "Account not found"
+      }
+    },
+    {
+      "id": "X05",
+      "request": "POST /api/accounts/{checking}/payment-plan",
+      "status": 400,
+      "body": {
+        "error": "Payment plans are for credit cards and debt accounts"
+      }
+    },
+    {
+      "id": "X06",
+      "request": "PUT /api/accounts/{checking}/payment-plan",
+      "status": 400,
+      "body": {
+        "error": "Payment plans are for credit cards and debt accounts"
+      }
+    },
+    {
+      "id": "X07",
+      "request": "POST /api/accounts/{car}/payment-plan",
+      "status": 500,
+      "body": {
+        "error": "Failed to update payment plan"
+      }
+    },
+    {
+      "id": "X08",
+      "request": "POST /api/projections",
+      "status": 400,
+      "body": {
+        "error": "Projection window exceeds 36600 days"
+      }
+    },
+    {
+      "id": "X09",
+      "request": "POST /api/accounts",
+      "status": 500,
+      "body": {
+        "error": "Failed to create account"
+      }
+    },
+    {
+      "id": "X10",
+      "request": "PUT /api/accounts/{car}",
+      "status": 500,
+      "body": {
+        "error": "Failed to update account"
+      }
+    },
+    {
+      "id": "X11",
+      "request": "POST /api/finance-profile/merge-rent",
+      "status": 400,
+      "body": {
+        "error": "keepId and mergeId must be two different transactions"
+      }
+    },
+    {
+      "id": "X12",
+      "request": "POST /api/finance-profile/merge-rent",
+      "status": 500,
+      "body": {
+        "error": "Failed to merge rent"
+      }
+    },
+    {
+      "id": "X13",
+      "request": "PUT /api/finance-profile",
+      "status": 500,
+      "body": {
+        "error": "Failed to save profile"
+      }
+    },
+    {
+      "id": "X14",
+      "request": "POST /api/transactions",
+      "status": 201,
+      "body": {
+        "_id": "<salary2>",
+        "accountId": "<checking>",
+        "amount": 333300,
+        "balanceApplied": false,
+        "categoryTags": [
+          "salary"
+        ],
+        "date": "2026-08-12T00:00:00.000Z",
+        "description": "Parity second salary",
+        "isRecurring": true,
+        "recurrenceRule": {
+          "daysOfMonth": [],
+          "endDate": null,
+          "frequency": "biweekly",
+          "interval": 1,
+          "startDate": "2026-08-12T00:00:00.000Z"
+        },
+        "type": "credit",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X15",
+      "request": "PUT /api/finance-profile",
+      "status": 200,
+      "body": {
+        "data": {
+          "filingStatus": "single",
+          "healthSteps": [
+            {
+              "effectiveDate": "2025-09-01",
+              "perPaycheck": 85
+            }
+          ],
+          "hoursPerWeek": 40,
+          "nycResident": true,
+          "raiseRate": 0.03,
+          "rentSteps": [],
+          "rentTransactionId": "<rent>",
+          "retirementSteps": [
+            {
+              "effectiveDate": "2025-09-01",
+              "percent": 0.06
+            }
+          ],
+          "salarySteps": [
+            {
+              "annualGross": 85000,
+              "effectiveDate": "2025-09-01"
+            },
+            {
+              "annualGross": 92000,
+              "effectiveDate": "2027-02-01"
+            }
+          ],
+          "salaryTransactionId": "<salary2>",
+          "whatIfSalaries": [
+            {
+              "annualGross": 120000,
+              "label": "Stretch"
+            },
+            {
+              "annualGross": 70000
+            }
+          ]
+        },
+        "updated": {
+          "rent": false,
+          "salary": true
+        }
+      }
+    },
+    {
+      "id": "X16",
+      "request": "DELETE /api/transactions/{salary2}",
+      "status": 200,
+      "body": {
+        "message": "Transaction deleted successfully"
+      }
+    },
+    {
+      "id": "X17",
+      "request": "POST /api/transactions",
+      "status": 201,
+      "body": {
+        "_id": "<rent3>",
+        "accountId": "<checking>",
+        "amount": 155500,
+        "balanceApplied": false,
+        "categoryTags": [
+          "bills"
+        ],
+        "date": "2027-01-03T00:00:00.000Z",
+        "description": "Parity Rent (sublet)",
+        "isRecurring": true,
+        "recurrenceRule": {
+          "dayOfMonth": 3,
+          "daysOfMonth": [],
+          "endDate": null,
+          "frequency": "monthly",
+          "interval": 1,
+          "startDate": "2027-01-03T00:00:00.000Z"
+        },
+        "type": "debit",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X18",
+      "request": "POST /api/finance-profile/merge-rent",
+      "status": 409,
+      "body": {
+        "error": "Linked Salary transaction not found — pick one"
+      }
+    },
+    {
+      "id": "X19",
+      "request": "GET /api/transactions/{rent}",
+      "status": 200,
+      "body": {
+        "_id": "<rent>",
+        "accountId": "<checking>",
+        "amount": 145000,
+        "balanceApplied": false,
+        "categoryTags": [
+          "bills"
+        ],
+        "date": "2026-09-01T00:00:00.000Z",
+        "description": "Parity Rent",
+        "isRecurring": true,
+        "recurrenceRule": {
+          "dayOfMonth": 1,
+          "daysOfMonth": [],
+          "endDate": null,
+          "frequency": "monthly",
+          "interval": 1,
+          "startDate": "2026-09-01T00:00:00.000Z"
+        },
+        "type": "debit",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "X20",
+      "request": "GET /api/transactions?limit=100&sort=date&order=asc",
+      "status": 200,
+      "body": {
+        "data": [
+          {
+            "_id": "<id:15>",
+            "accountId": "<checking>",
+            "amount": 2000,
+            "balanceApplied": false,
+            "categoryTags": [
+              "other"
+            ],
+            "date": "2026-08-25T00:00:00.000Z",
+            "description": "Parity semi-monthly",
+            "isRecurring": true,
+            "recurrenceRule": {
+              "daysOfMonth": [],
+              "endDate": null,
+              "frequency": "semi_monthly",
+              "interval": 1,
+              "startDate": "2026-08-25T00:00:00.000Z"
+            },
+            "type": "debit",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<rent>",
+            "accountId": "<checking>",
+            "amount": 145000,
+            "balanceApplied": false,
+            "categoryTags": [
+              "bills"
+            ],
+            "date": "2026-09-01T00:00:00.000Z",
+            "description": "Parity Rent",
+            "isRecurring": true,
+            "recurrenceRule": {
+              "dayOfMonth": 1,
+              "daysOfMonth": [],
+              "endDate": null,
+              "frequency": "monthly",
+              "interval": 1,
+              "startDate": "2026-09-01T00:00:00.000Z"
+            },
+            "type": "debit",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<salary>",
+            "accountId": "<checking>",
+            "amount": 217429,
+            "balanceApplied": false,
+            "categoryTags": [
+              "salary"
+            ],
+            "date": "2026-10-20T00:00:00.000Z",
+            "description": "Parity Salary",
+            "isRecurring": true,
+            "recurrenceRule": {
+              "daysOfMonth": [],
+              "endDate": null,
+              "frequency": "biweekly",
+              "interval": 1,
+              "startDate": "2026-10-20T00:00:00.000Z"
+            },
+            "type": "credit",
+            "updatedAt": "<changed>"
+          },
+          {
+            "_id": "<tPay>",
+            "accountId": "<checking>",
+            "amount": 300000,
+            "balanceApplied": true,
+            "categoryTags": [
+              "salary"
+            ],
+            "date": "2026-10-28T00:00:00.000Z",
+            "description": "Parity paycheck",
+            "isRecurring": false,
+            "type": "credit",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<tSub>",
+            "accountId": "<card>",
+            "amount": 6000,
+            "balanceApplied": true,
+            "categoryTags": [
+              "subscriptions"
+            ],
+            "date": "2026-10-30T00:00:00.000Z",
+            "description": "Parity subscription",
+            "isRecurring": false,
+            "type": "debit",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<id:13>",
+            "accountId": "<card>",
+            "amount": 2500,
+            "balanceApplied": true,
+            "categoryTags": [
+              "other"
+            ],
+            "date": "2026-10-31T00:00:00.000Z",
+            "description": "Parity refund",
+            "isRecurring": false,
+            "type": "credit",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<tPayoff>",
+            "accountId": "<checking>",
+            "amount": 43500,
+            "balanceApplied": true,
+            "categoryTags": [
+              "credit",
+              "transfer"
+            ],
+            "date": "2026-11-02T00:00:00.000Z",
+            "description": "Parity card payoff",
+            "isRecurring": false,
+            "toAccountId": "<card>",
+            "type": "transfer",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<tLoan>",
+            "accountId": "<checking>",
+            "amount": 20000,
+            "balanceApplied": true,
+            "categoryTags": [
+              "loans",
+              "transfer"
+            ],
+            "date": "2026-11-04T00:00:00.000Z",
+            "description": "Parity loan payment",
+            "isRecurring": false,
+            "toAccountId": "<loan>",
+            "type": "transfer",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<id:18>",
+            "accountId": "<card>",
+            "amount": 10000,
+            "balanceApplied": true,
+            "categoryTags": [
+              "spending"
+            ],
+            "date": "2026-11-14T00:00:00.000Z",
+            "description": "Parity card charge",
+            "isRecurring": false,
+            "type": "debit",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<id:17>",
+            "accountId": "<car>",
+            "amount": 800000,
+            "balanceApplied": true,
+            "categoryTags": [
+              "transfer"
+            ],
+            "date": "<instant>",
+            "description": "Loan disbursement from Parity Car Loan",
+            "isRecurring": false,
+            "toAccountId": "<checking>",
+            "type": "transfer",
+            "updatedAt": "<same>"
+          },
+          {
+            "_id": "<tTom>",
+            "accountId": "<checking>",
+            "amount": 1000,
+            "balanceApplied": false,
+            "categoryTags": [
+              "spending"
+            ],
+            "date": "2026-11-18T00:00:00.000Z",
+            "description": "Parity tomorrow",
+            "isRecurring": true,
+            "recurrenceRule": {
+              "dayOfWeek": 3,
+              "daysOfMonth": [],
+              "endDate": null,
+              "frequency": "weekly",
+              "interval": 1,
+              "startDate": "2026-11-18T00:00:00.000Z"
+            },
+            "type": "debit",
+            "updatedAt": "<same>"
+          }
+        ],
+        "pagination": {
+          "limit": 100,
+          "page": 1,
+          "total": 11,
+          "totalPages": 1
+        }
+      }
+    },
+    {
+      "id": "X21",
+      "request": "GET /api/finance-profile",
+      "status": 200,
+      "body": {
+        "data": {
+          "filingStatus": "single",
+          "healthSteps": [
+            {
+              "effectiveDate": "2025-09-01",
+              "perPaycheck": 85
+            }
+          ],
+          "hoursPerWeek": 40,
+          "nycResident": true,
+          "raiseRate": 0.03,
+          "rentSteps": [],
+          "rentTransactionId": "<rent>",
+          "retirementSteps": [
+            {
+              "effectiveDate": "2025-09-01",
+              "percent": 0.06
+            }
+          ],
+          "salarySteps": [
+            {
+              "annualGross": 85000,
+              "effectiveDate": "2025-09-01"
+            },
+            {
+              "annualGross": 92000,
+              "effectiveDate": "2027-02-01"
+            }
+          ],
+          "salaryTransactionId": "<salary2>",
+          "whatIfSalaries": [
+            {
+              "annualGross": 120000,
+              "label": "Stretch"
+            },
+            {
+              "annualGross": 70000
+            }
+          ]
+        }
       }
     }
   ],
