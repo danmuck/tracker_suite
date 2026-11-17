@@ -6,7 +6,7 @@ import { Database } from "lucide-react";
 import { EmptyState } from "@/components/empty-state";
 import { ensureDemoSeed } from "@/lib/demo";
 import { getBrowserStore } from "@/lib/data/local";
-import { IS_DEMO, useDataSource } from "@/lib/data/mode";
+import { IS_DEMO, useResolvedDataSource } from "@/lib/data/mode";
 import { modules } from "@/lib/modules";
 
 // Shared across effect runs so React's double effect call cannot seed twice.
@@ -14,7 +14,7 @@ let demoSeed: Promise<boolean> | null = null;
 
 export function ModuleGate({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const source = useDataSource();
+  const source = useResolvedDataSource();
 
   useEffect(() => {
     if (!IS_DEMO) return;
@@ -23,6 +23,8 @@ export function ModuleGate({ children }: { children: React.ReactNode }) {
       if (seeded) window.location.reload();
     });
   }, []);
+
+  if (source === null) return null;
 
   const current = modules.find(
     (m) => pathname === m.basePath || pathname.startsWith(`${m.basePath}/`)

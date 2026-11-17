@@ -27,11 +27,11 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LinksNavItems } from "@/components/links/links-nav-items";
 import { availableModules, globalNavItems } from "@/lib/modules";
-import { useDataSource } from "@/lib/data/mode";
+import { useResolvedDataSource } from "@/lib/data/mode";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const source = useDataSource();
+  const source = useResolvedDataSource();
 
   return (
     <Sidebar collapsible="icon">
@@ -69,7 +69,7 @@ export function AppSidebar() {
         <SidebarSeparator />
 
         {/* Module groups */}
-        {availableModules(source).map((mod) => {
+        {(source === null ? [] : availableModules(source)).map((mod) => {
           const isModuleActive = pathname.startsWith(mod.basePath);
 
           return (

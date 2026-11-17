@@ -44,6 +44,13 @@ function subscribe(onChange: () => void): () => void {
   return () => window.removeEventListener("storage", listener);
 }
 
+// The real source, or null until it is known on the client (always null on the server and
+// during hydration in the owner's build). Gate anything that fetches on this, so browser
+// mode never reaches the server database. The demo is always "browser", so it resolves at once.
+export function useResolvedDataSource(): DataSource | null {
+  return useSyncExternalStore(subscribe, getDataSource, () => (IS_DEMO ? "browser" : null));
+}
+
 export function useDataSource(): DataSource {
   return useSyncExternalStore(subscribe, getDataSource, () => resolveDataSource(IS_DEMO, null));
 }
