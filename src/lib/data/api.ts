@@ -14,6 +14,7 @@ export interface HandlerContext {
   params: Record<string, string>;
   query: URLSearchParams;
   body: unknown;
+  now: Date; // the current time; handlers never read the clock themselves
 }
 
 export type Handler = (ctx: HandlerContext) => Promise<ApiResult>;

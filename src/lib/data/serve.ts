@@ -33,7 +33,7 @@ export function serve(method: Method, path: string) {
       const body = method === "GET" || method === "DELETE" ? undefined : await readBody(request);
       const params = (await ctx?.params) ?? {};
       const query = new URL(request.url).searchParams;
-      return respond(await route.handler({ store: mongoStore, params, query, body }));
+      return respond(await route.handler({ store: mongoStore, params, query, body, now: new Date() }));
     } catch (error) {
       if (error instanceof ConflictError) return respond(fail(409, "Already exists"));
       console.error(error);

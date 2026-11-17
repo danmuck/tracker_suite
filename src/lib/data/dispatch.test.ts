@@ -140,3 +140,13 @@ test("unwrap returns 2xx bodies and throws the error message otherwise", () => {
   assert.throws(() => unwrap({ status: 500, body: null }), { message: "Request failed: 500" });
   assert.throws(() => unwrap({ status: 500, body: {} }), { message: "Request failed: 500" });
 });
+
+test("dispatch hands the handler the clock it was given, and the current time by default", async () => {
+  const routes: RouteDef[] = [{ method: "GET", path: "/api/now", handler: async ({ now }) => ok(now.toISOString()) }];
+  const store = new BrowserStore(memoryStorage());
+  const fixed = new Date("2026-11-17T15:00:00.000Z");
+  assert.deepEqual(await dispatch(routes, store, "GET", "/api/now", undefined, fixed), { status: 200, body: "2026-11-17T15:00:00.000Z" });
+  const before = Date.now();
+  const body = (await dispatch(routes, store, "GET", "/api/now")).body as string;
+  assert.ok(Date.parse(body) >= before && Date.parse(body) <= Date.now());
+});

@@ -63,6 +63,7 @@ export async function dispatch(
   method: string,
   url: string,
   body?: unknown,
+  now: Date = new Date(),
 ): Promise<ApiResult> {
   const hash = url.indexOf("#");
   const target = hash === -1 ? url : url.slice(0, hash); // the fragment never reaches a server
@@ -75,7 +76,7 @@ export async function dispatch(
   const upper = method.toUpperCase();
   const sent = upper === "GET" || upper === "DELETE" ? undefined : body;
   try {
-    return await match.route.handler({ store, params: match.params, query, body: sent });
+    return await match.route.handler({ store, params: match.params, query, body: sent, now });
   } catch (error) {
     if (error instanceof ConflictError) return fail(409, "Already exists");
     console.error(error);
