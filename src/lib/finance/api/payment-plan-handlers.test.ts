@@ -4,7 +4,7 @@ import { dispatch } from "@/lib/data/dispatch";
 import type { BaseDoc, Collection, CollectionName, Store } from "@/lib/data/store";
 import { DEFAULT_PROFILE } from "@/lib/finance/finance-profile";
 import { accounts, profileToDoc, profiles, transactions, type AccountDoc } from "./docs";
-import { regenerateAllRapSchedules, type PaymentPlanDTO } from "./payment-plan";
+import { regenerateAllRapSchedules, setupPayments, type PaymentPlanDTO } from "./payment-plan";
 import { financeRoutes } from "./routes";
 import { NOW, setup } from "./test-helpers";
 
@@ -104,23 +104,61 @@ test("a refused RAP change writes nothing, not even the schedule sent with it", 
   assert.deepEqual([await tx().find(), await accounts(t.store).find()], before);
 });
 
-test("payment setup whose link write fails deletes the transfer it created and fails", async () => {
-  const before = [await tx().find(), await accounts(t.store).find()];
-  // A store whose accounts.updateById throws from now on: the transfer insert succeeds, the link write fails
-  const broken: Store = {
+/**
+ * `t.store` with accounts.updateById failing (the link write), and transactions.deleteById failing
+ * too when `deleteFails`; inserts and deletes on transactions are recorded.
+ */
+function brokenStore(deleteFails: boolean) {
+  const inserted: string[] = [];
+  const deleted: string[] = [];
+  const store: Store = {
     collection<T extends BaseDoc>(name: CollectionName): Collection<T> {
       const inner = t.store.collection<T>(name);
-      if (name !== "accounts") return inner;
+      if (name === "accounts") {
+        return Object.assign(Object.create(inner) as Collection<T>, {
+          updateById: async () => {
+            throw new Error("link write failed");
+          },
+        });
+      }
+      if (name !== "transactions") return inner;
       return Object.assign(Object.create(inner) as Collection<T>, {
-        updateById: async () => {
-          throw new Error("write failed");
+        insert: async (doc: Omit<T, keyof BaseDoc>) => {
+          const made = await inner.insert(doc);
+          inserted.push(made._id);
+          return made;
+        },
+        deleteById: async (id: string) => {
+          deleted.push(id);
+          if (deleteFails) throw new Error("cleanup failed");
+          return inner.deleteById(id);
         },
       });
     },
   };
-  const res = await dispatch(financeRoutes, broken, "POST", plan(card._id), setupBody(), NOW);
+  return { store, inserted, deleted };
+}
+
+test("payment setup whose link write fails deletes the transfer it created and fails", async () => {
+  const before = [await tx().find(), await accounts(t.store).find()];
+  const txWrites = t.writes("transactions");
+  const broken = brokenStore(false);
+  const res = await dispatch(financeRoutes, broken.store, "POST", plan(card._id), setupBody(), NOW);
   assert.deepEqual(res, { status: 500, body: { error: "Failed to update payment plan" } });
+  // The transfer was inserted, then that same id deleted (two transactions writes)
+  assert.equal(broken.inserted.length, 1);
+  assert.deepEqual(broken.deleted, broken.inserted);
+  assert.equal(t.writes("transactions"), txWrites + 2);
   assert.deepEqual([await tx().find(), await accounts(t.store).find()], before);
+});
+
+test("payment setup: a failing cleanup does not replace the link write's error", async () => {
+  const broken = brokenStore(true);
+  await assert.rejects(setupPayments(broken.store, card._id, setupBody(), NOW), { message: "link write failed" });
+  assert.equal(broken.inserted.length, 1);
+  assert.deepEqual(broken.deleted, broken.inserted);
+  // Through the route it is the 500 as before
+  assert.deepEqual(await dispatch(financeRoutes, brokenStore(true).store, "POST", plan(loan._id), setupBody(), NOW), { status: 500, body: { error: "Failed to update payment plan" } });
 });
 
 test("the plan routes post due payments first", async () => {

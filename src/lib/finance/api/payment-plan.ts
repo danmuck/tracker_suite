@@ -308,7 +308,11 @@ export async function setupPayments(
   try {
     await saveAccount(store, raw, { paymentTransactionId: created._id });
   } catch (error) {
-    await transactions(store).deleteById(created._id);
+    try {
+      await transactions(store).deleteById(created._id);
+    } catch {
+      // The link failure is the one reported; a failed cleanup must not replace it
+    }
     throw error;
   }
   await regenerateRapSchedule(store, accountId, now);

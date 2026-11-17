@@ -299,18 +299,20 @@ export const updateTransaction: Handler = async ({ store, params, body, now }) =
   const shouldApplyNew = !validated.isRecurring && !newIsFuture;
   const isTransfer = validated.type === "transfer" && !validated.isRecurring;
 
-  // Resolve and check the new state before any write: malformed ids and unusable fields throw
-  // (the route's 500), a missing transfer account is the 400. The amount is set below.
+  // Resolve and check the new state before any write, in today's precedence: malformed ids throw
+  // (the route's 500), then a missing transfer account is the 400, then unusable fields throw
+  // (500). The amount is set below.
   assertId(validated.accountId);
-  const fields = transactionFields(validated, newAmountInCents, shouldApplyNew); // asserts toAccountId when present
   const toAccountId = validated.toAccountId as string;
   let sourceAccount: AccountDoc | null = null;
   let destAccount: AccountDoc | null = null;
   if (isTransfer) {
-    // T15 (the schema requires toAccountId for a transfer, so it was asserted above)
+    assertId(toAccountId); // the schema requires toAccountId for a transfer
+    // T15
     [sourceAccount, destAccount] = await Promise.all([findAccount(acc, validated.accountId), findAccount(acc, toAccountId)]);
     if (!sourceAccount || !destAccount) return fail(400, "Source or destination account not found");
   }
+  const fields = transactionFields(validated, newAmountInCents, shouldApplyNew); // asserts toAccountId when present
 
   // The old effect is undone only if it was applied to balances
   const reversal = existing.balanceApplied ? await reversalOf(acc, existing) : [];

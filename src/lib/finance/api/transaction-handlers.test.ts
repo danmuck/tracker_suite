@@ -216,29 +216,45 @@ test("list by account: a stored debit still holding a stale toAccountId is liste
   assert.deepEqual((await ids(bank._id)).data.map((x) => x._id), [stale._id]);
 });
 
+/** Every stored document in full (updatedAt included) and the storage write counts. */
+const snapshot = async () => [await accounts(t.store).find(), await tx().find(), t.writes("accounts"), t.writes("transactions")];
+
 test("an edit refused for a missing account changes nothing", async () => {
   const move = await post({ type: "transfer", toAccountId: card._id, amount: 50 });
-  const before = [await balances(), await tx().findById(move._id)];
+  const before = await snapshot();
   const res = await t.call("PUT", `/api/transactions/${move._id}`, body({ type: "transfer", toAccountId: "a".repeat(24), amount: 50 }));
   assert.deepEqual(res, { status: 400, body: { error: "Source or destination account not found" } });
-  assert.deepEqual([await balances(), await tx().findById(move._id)], before);
+  assert.deepEqual(await snapshot(), before);
   const noSource = await t.call("PUT", `/api/transactions/${move._id}`, body({ type: "transfer", accountId: "a".repeat(24), toAccountId: card._id, amount: 50 }));
   assert.deepEqual(noSource, { status: 400, body: { error: "Source or destination account not found" } });
-  assert.deepEqual([await balances(), await tx().findById(move._id)], before);
+  assert.deepEqual(await snapshot(), before);
+});
+
+test("a missing transfer account is the 400 even when a field is also unusable (today's precedence)", async () => {
+  const move = await post({ type: "transfer", toAccountId: card._id, amount: 50 });
+  const before = await snapshot();
+  for (const bad of [{ description: "   " }, { date: "not a date" }, { recurrenceRule: { frequency: "monthly", startDate: "not a date" } }]) {
+    const res = await t.call("PUT", `/api/transactions/${move._id}`, body({ type: "transfer", toAccountId: "a".repeat(24), ...bad }));
+    assert.deepEqual(res, { status: 400, body: { error: "Source or destination account not found" } });
+    assert.deepEqual(await snapshot(), before);
+  }
+  // With both accounts present, the unusable field is the 500, still before any write
+  assert.equal((await t.call("PUT", `/api/transactions/${move._id}`, body({ type: "transfer", toAccountId: card._id, description: "   " }))).status, 500);
+  assert.deepEqual(await snapshot(), before);
 });
 
 test("an edit carrying a malformed id or an unusable field fails before any write", async () => {
   const debit = await post();                                                   // bank 99000
-  const before = [await balances(), await tx().findById(debit._id)];
+  const before = await snapshot();
   const res = await t.call("PUT", `/api/transactions/${debit._id}`, body({ amount: 30, toAccountId: "abc" }));
   assert.deepEqual(res, { status: 500, body: { error: "Failed to update transaction" } });
-  assert.deepEqual([await balances(), await tx().findById(debit._id)], before);
+  assert.deepEqual(await snapshot(), before);
   const move = await t.call("PUT", `/api/transactions/${debit._id}`, body({ type: "transfer", toAccountId: "abc" }));
   assert.deepEqual(move, { status: 500, body: { error: "Failed to update transaction" } });
-  assert.deepEqual([await balances(), await tx().findById(debit._id)], before);
+  assert.deepEqual(await snapshot(), before);
   for (const bad of [{ accountId: "abc" }, { description: "   " }, { date: "not a date" }]) {
     assert.equal((await t.call("PUT", `/api/transactions/${debit._id}`, body(bad))).status, 500);
-    assert.deepEqual([await balances(), await tx().findById(debit._id)], before);
+    assert.deepEqual(await snapshot(), before);
   }
 });
 
