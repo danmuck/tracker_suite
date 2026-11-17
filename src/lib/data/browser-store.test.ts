@@ -1,26 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { BrowserStore, DATA_VERSION, type StorageLike } from "./browser-store";
+import { BrowserStore, DATA_VERSION } from "./browser-store";
 import { ConflictError, type BaseDoc } from "./store";
-
-function memoryStorage(): StorageLike & { failWrites: boolean } {
-  const map = new Map<string, string>();
-  return {
-    failWrites: false,
-    getItem: (key) => map.get(key) ?? null,
-    setItem(key, value) {
-      if (this.failWrites) throw new Error("QuotaExceededError");
-      map.set(key, value);
-    },
-    removeItem: (key) => {
-      map.delete(key);
-    },
-    key: (index) => [...map.keys()][index] ?? null,
-    get length() {
-      return map.size;
-    },
-  };
-}
+import { memoryStorage } from "./test-helpers";
 
 type Group = BaseDoc & { name: string; slug: string; order: number };
 
