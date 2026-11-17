@@ -111,14 +111,19 @@ test("limit 0 means no limit, as in MongoDB", async () => {
   assert.ok(await groups.findOne({}, { limit: 0 }));
 });
 
-test("updates cannot overwrite _id or createdAt", async () => {
+test("updates that change _id reject; createdAt is silently kept", async () => {
   const groups = new BrowserStore(memoryStorage()).collection<Group>("linkGroups");
   const a = await groups.insert({ name: "A", slug: "a", order: 1 });
-  const viaId = await groups.updateById(a._id, { $set: { _id: "x", createdAt: "y", name: "A2" } });
+  const idChanged = { message: "_id cannot be changed" };
+  await assert.rejects(groups.updateById(a._id, { $set: { _id: "x", name: "A2" } }), idChanged);
+  await assert.rejects(groups.updateMany({}, { $unset: { _id: "" } }), idChanged);
+  await assert.rejects(groups.batchUpdate([{ filter: {}, update: { $inc: { _id: 1 } } }]), idChanged);
+  await assert.rejects(groups.updateOne({ slug: "a" }, { $set: { _id: "q" } }), idChanged);
+  assert.equal((await groups.findById(a._id))?.name, "A");
+  const viaId = await groups.updateById(a._id, { $set: { createdAt: "y", name: "A2" } });
   assert.deepEqual([viaId?._id, viaId?.createdAt, viaId?.name], [a._id, a.createdAt, "A2"]);
-  await groups.updateMany({}, { $set: { _id: "x" }, $unset: { createdAt: "" } });
+  await groups.updateMany({}, { $unset: { createdAt: "" } });
   await groups.batchUpdate([{ filter: {}, update: { $set: { createdAt: "z" } } }]);
-  await groups.updateOne({ slug: "a" }, { $set: { _id: "q" } });
   const after = await groups.findById(a._id);
   assert.deepEqual([after?._id, after?.createdAt], [a._id, a.createdAt]);
 });
@@ -127,4 +132,43 @@ test("a BrowserStore works over the in-memory storage fallback", async () => {
   const groups = new BrowserStore(createMemoryStorage()).collection<Group>("linkGroups");
   const a = await groups.insert({ name: "A", slug: "a", order: 1 });
   assert.equal((await groups.findById(a._id))?.name, "A");
+});
+
+test("a duplicate pair already in storage does not block writes to other docs", async () => {
+  const storage = memoryStorage();
+  new BrowserStore(storage); // stamps the data version so the seeded rows survive
+  const stamp = { createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z" };
+  storage.setItem(
+    "ts:data:linkGroups",
+    JSON.stringify([
+      { _id: "a".repeat(24), name: "A", slug: "dup", order: 0, ...stamp },
+      { _id: "b".repeat(24), name: "B", slug: "dup", order: 1, ...stamp },
+      { _id: "c".repeat(24), name: "C", slug: "c", order: 2, ...stamp },
+    ]),
+  );
+  const groups = new BrowserStore(storage).collection<Group>("linkGroups");
+  assert.equal((await groups.updateById("c".repeat(24), { $set: { name: "C2" } }))?.name, "C2");
+  assert.equal(await groups.updateMany({ slug: "c" }, { $inc: { order: 1 } }), 1);
+  await groups.batchUpdate([{ filter: { slug: "c" }, update: { $set: { order: 7 } } }]);
+  await assert.rejects(groups.insert({ name: "D", slug: "dup", order: 3 }), ConflictError);
+  await assert.rejects(groups.updateById("c".repeat(24), { $set: { slug: "dup" } }), ConflictError);
+  await assert.rejects(groups.insertMany([{ name: "E", slug: "e", order: 0 }, { name: "F", slug: "e", order: 0 }]), ConflictError);
+});
+
+test("reading a collection keeps only plain-object elements", async () => {
+  const storage = memoryStorage();
+  new BrowserStore(storage);
+  storage.setItem("ts:data:linkGroups", JSON.stringify([1, null, "s", [2], { _id: "x", name: "X", slug: "x", order: 0 }]));
+  const groups = new BrowserStore(storage).collection<Group>("linkGroups");
+  assert.deepEqual((await groups.find()).map((g) => g._id), ["x"]);
+});
+
+test("upsert with a 24-hex _id filter inserts with that _id", async () => {
+  const groups = new BrowserStore(memoryStorage()).collection<Group>("linkGroups");
+  const id = "0123456789abcdef01234567";
+  const created = await groups.updateOne({ _id: id }, { $set: { name: "U", slug: "u", order: 0 } }, { upsert: true });
+  assert.equal(created?._id, id);
+  assert.equal((await groups.findById(id))?.name, "U");
+  const other = await groups.updateOne({ _id: "not-an-object-id" }, { $set: { name: "V", slug: "v", order: 0 } }, { upsert: true });
+  assert.match(other?._id ?? "", /^[0-9a-f]{24}$/);
 });

@@ -37,7 +37,7 @@ export function serve(method: Method, path: string) {
     } catch (error) {
       if (error instanceof ConflictError) return respond(fail(409, "Already exists"));
       console.error(error);
-      return respond(fail(500, "Request failed"));
+      return respond(fail(500, route.failure ?? "Request failed"));
     }
   };
 }

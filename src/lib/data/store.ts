@@ -58,3 +58,10 @@ export class ConflictError extends Error {
     this.field = field;
   }
 }
+
+// MongoDB refuses to change _id; both stores reject it up front with the same message.
+export function assertIdUnchanged(update: Update): void {
+  for (const part of [update.$set, update.$unset, update.$inc]) {
+    if (part && Object.hasOwn(part, "_id")) throw new Error("_id cannot be changed");
+  }
+}

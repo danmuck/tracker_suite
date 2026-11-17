@@ -13,16 +13,26 @@ export function resolveDataSource(isDemo: boolean, saved: string | null): DataSo
   return saved === "browser" ? "browser" : "server";
 }
 
-export function getDataSource(): DataSource {
-  let saved: string | null = null;
-  if (typeof window !== "undefined") {
-    try {
-      saved = window.localStorage.getItem(DATA_SOURCE_KEY);
-    } catch {
-      saved = null;
-    }
+/**
+ * Whether another tab's change to the saved choice (`savedNow`) moves this tab to a
+ * different source than the one it loaded with. Never in the demo, which is always "browser".
+ */
+export function sourceChanged(isDemo: boolean, before: DataSource, savedNow: string | null): boolean {
+  if (isDemo) return false;
+  return resolveDataSource(false, savedNow) !== before;
+}
+
+function readSaved(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(DATA_SOURCE_KEY);
+  } catch {
+    return null;
   }
-  return resolveDataSource(IS_DEMO, saved);
+}
+
+export function getDataSource(): DataSource {
+  return resolveDataSource(IS_DEMO, readSaved());
 }
 
 export function setDataSource(source: DataSource): void {
@@ -33,6 +43,17 @@ export function setDataSource(source: DataSource): void {
     return;
   }
   window.location.reload();
+}
+
+// SWR has cached data from the source this page loaded with, so when another tab switches
+// the source, reload rather than show that data under the new badge. Storage events fire only
+// in other tabs; this tab's own setDataSource already reloads.
+if (typeof window !== "undefined" && !IS_DEMO) {
+  const loadedWith = getDataSource();
+  window.addEventListener("storage", (event) => {
+    if (event.key !== DATA_SOURCE_KEY && event.key !== null) return;
+    if (sourceChanged(IS_DEMO, loadedWith, readSaved())) window.location.reload();
+  });
 }
 
 // The page reloads when the source changes here, so only another tab's change needs listening for.

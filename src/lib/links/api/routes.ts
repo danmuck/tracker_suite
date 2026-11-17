@@ -16,14 +16,14 @@ import {
 } from "./handlers";
 
 export const linksRoutes: RouteDef[] = [
-  { method: "GET", path: "/api/link-groups", handler: listGroups },
-  { method: "POST", path: "/api/link-groups", handler: createGroup },
-  { method: "GET", path: "/api/link-groups/:groupId", handler: getGroup },
-  { method: "PUT", path: "/api/link-groups/:groupId", handler: updateGroup },
-  { method: "DELETE", path: "/api/link-groups/:groupId", handler: deleteGroup },
-  { method: "GET", path: "/api/links", handler: listLinks },
-  { method: "POST", path: "/api/links", handler: createLink },
-  { method: "GET", path: "/api/links/:linkId", handler: getLink },
-  { method: "PUT", path: "/api/links/:linkId", handler: updateLink },
-  { method: "DELETE", path: "/api/links/:linkId", handler: deleteLink },
+  { method: "GET", path: "/api/link-groups", handler: listGroups, failure: "Failed to fetch link groups" },
+  { method: "POST", path: "/api/link-groups", handler: createGroup, failure: "Failed to create link group" },
+  { method: "GET", path: "/api/link-groups/:groupId", handler: getGroup, failure: "Failed to fetch link group" },
+  { method: "PUT", path: "/api/link-groups/:groupId", handler: updateGroup, failure: "Failed to update link group" },
+  { method: "DELETE", path: "/api/link-groups/:groupId", handler: deleteGroup, failure: "Failed to delete link group" },
+  { method: "GET", path: "/api/links", handler: listLinks, failure: "Failed to fetch links" },
+  { method: "POST", path: "/api/links", handler: createLink, failure: "Failed to create link" },
+  { method: "GET", path: "/api/links/:linkId", handler: getLink, failure: "Failed to fetch link" },
+  { method: "PUT", path: "/api/links/:linkId", handler: updateLink, failure: "Failed to update link" },
+  { method: "DELETE", path: "/api/links/:linkId", handler: deleteLink, failure: "Failed to delete link" },
 ];

@@ -23,6 +23,7 @@ export interface RouteDef {
   method: Method;
   path: string; // e.g. "/api/links/:linkId"
   handler: Handler;
+  failure?: string; // the error message returned when the handler throws unexpectedly
 }
 
 export const ok = (body: unknown, status = 200): ApiResult => ({ status, body });
@@ -37,7 +38,8 @@ export const notFound = (what: string): ApiResult => fail(404, `${what} not foun
 export const invalid = (error: ZodError): ApiResult =>
   fail(400, "Validation failed", error.flatten());
 
-export const isId = (value: string): boolean => /^[0-9a-f]{24}$/i.test(value);
+// Lowercase only: generated and stored ids are always lowercase.
+export const isId = (value: string): boolean => /^[0-9a-f]{24}$/.test(value);
 
 /** Escape a string for literal use inside a RegExp */
 export function escapeRegex(s: string): string {

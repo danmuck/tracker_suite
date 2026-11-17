@@ -7,7 +7,7 @@ import Listing from "@/models/future/Listing";
 import Tour from "@/models/future/Tour";
 import FutureSettings from "@/models/future/FutureSettings";
 import type { Filter, Update } from "./query";
-import { ConflictError } from "./store";
+import { assertIdUnchanged, ConflictError } from "./store";
 import type { BaseDoc, Collection, CollectionName, FindOptions, Store } from "./store";
 
 type Doc = Record<string, unknown>;
@@ -29,10 +29,28 @@ function plain<T>(doc: unknown): T {
   return JSON.parse(JSON.stringify(doc)) as T;
 }
 
+type DuplicateKeyError = {
+  keyPattern?: Record<string, unknown>;
+  writeErrors?: { errmsg?: unknown }[];
+};
+
+/**
+ * The field behind a duplicate-key error. Single-document writes carry `keyPattern`.
+ * A bulkWrite throws MongoBulkWriteError (mongodb 7.0.0, lib/bulk/common.js), whose
+ * WriteError entries keep only code, index, errmsg, errInfo and op: the server's keyPattern
+ * is dropped, so the field is read from the errmsg ("... dup key: { slug: \"a\" }").
+ */
+export function duplicateKeyField(error: DuplicateKeyError): string {
+  const fromPattern = Object.keys(error.keyPattern ?? {})[0];
+  if (fromPattern) return fromPattern;
+  const message = error.writeErrors?.[0]?.errmsg;
+  const fromMessage = typeof message === "string" ? /dup key: \{ "?([\w$]+)"?:/.exec(message)?.[1] : undefined;
+  return fromMessage ?? "unknown";
+}
+
 function rethrow(error: unknown, collection: string): never {
   if (typeof error === "object" && error !== null && (error as { code?: unknown }).code === 11000) {
-    const pattern = (error as { keyPattern?: Record<string, unknown> }).keyPattern ?? {};
-    throw new ConflictError(collection, Object.keys(pattern)[0] ?? "unknown");
+    throw new ConflictError(collection, duplicateKeyField(error as DuplicateKeyError));
   }
   throw error;
 }
@@ -101,18 +119,20 @@ class MongoCollection<T extends BaseDoc> implements Collection<T> {
   }
 
   async updateById(id: string, update: Update): Promise<T | null> {
+    assertIdUnchanged(update);
     if (!OBJECT_ID.test(id)) return null;
     const doc = await this.guard(() =>
-      this.model.findByIdAndUpdate(id, update, { new: true, runValidators: true }).lean(),
+      this.model.findByIdAndUpdate(id, update, { returnDocument: "after", runValidators: true }).lean(),
     );
     return doc ? plain<T>(doc) : null;
   }
 
   async updateOne(filter: Filter, update: Update, options?: { upsert?: boolean }): Promise<T | null> {
+    assertIdUnchanged(update);
     const doc = await this.guard(() =>
       this.model
         .findOneAndUpdate(filter, update, {
-          new: true,
+          returnDocument: "after",
           runValidators: true,
           upsert: options?.upsert ?? false,
           setDefaultsOnInsert: true,
@@ -123,12 +143,15 @@ class MongoCollection<T extends BaseDoc> implements Collection<T> {
   }
 
   async updateMany(filter: Filter, update: Update): Promise<number> {
+    assertIdUnchanged(update);
     const result = await this.guard(() => this.model.updateMany(filter, update, { runValidators: true }));
     return result.matchedCount;
   }
 
   async batchUpdate(ops: { filter: Filter; update: Update }[]): Promise<void> {
+    for (const { update } of ops) assertIdUnchanged(update);
     if (ops.length === 0) return;
+    // Mongoose 9.2.1 has no update-validator option for bulkWrite updateOne (castBulkWrite.js never runs them).
     await this.guard(() =>
       this.model.bulkWrite(ops.map(({ filter, update }) => ({ updateOne: { filter, update: update as never } }))),
     );

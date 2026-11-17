@@ -59,7 +59,8 @@ function matchesOperators(actual: unknown, ops: Record<string, unknown>): boolea
         if (valueEquals(actual, arg)) return false;
         break;
       case "$in":
-        if (!(arg as unknown[]).some((candidate) => valueEquals(actual, candidate))) return false;
+        if (!Array.isArray(arg)) throw new Error("$in needs an array");
+        if (!arg.some((candidate) => valueEquals(actual, candidate))) return false;
         break;
       case "$exists":
         if ((actual !== undefined) !== Boolean(arg)) return false;
@@ -85,9 +86,14 @@ function assertFlat(key: string): void {
 // Checked up front so a dotted key fails even when an earlier condition already decided the match.
 function assertFilterFlat(filter: Filter): void {
   for (const [key, condition] of Object.entries(filter)) {
-    if (key === "$or") for (const sub of condition as Filter[]) assertFilterFlat(sub);
+    if (key === "$or") for (const sub of orBranches(condition)) assertFilterFlat(sub);
     else if (!key.startsWith("$")) assertFlat(key);
   }
+}
+
+function orBranches(condition: unknown): Filter[] {
+  if (!Array.isArray(condition)) throw new Error("$or needs an array");
+  return condition as Filter[];
 }
 
 export function matches(doc: Doc, filter: Filter): boolean {
@@ -98,7 +104,7 @@ export function matches(doc: Doc, filter: Filter): boolean {
 function matchesFlat(doc: Doc, filter: Filter): boolean {
   for (const [key, condition] of Object.entries(filter)) {
     if (key === "$or") {
-      if (!(condition as Filter[]).some((sub) => matchesFlat(doc, sub))) return false;
+      if (!orBranches(condition).some((sub) => matchesFlat(doc, sub))) return false;
     } else if (key.startsWith("$")) {
       throw new Error(`Unsupported filter operator: ${key}`);
     } else if (isOperatorObject(condition)) {
@@ -134,10 +140,12 @@ export function sortDocs<T extends Doc>(docs: T[], sort: Sort): T[] {
     for (const [key, dir] of keys) {
       const x = normalize(a[key]) as string | number | null | undefined;
       const y = normalize(b[key]) as string | number | null | undefined;
-      if (x === y) continue;
-      // Missing values sort first ascending, as in Mongo.
-      if (x === undefined || x === null) return -dir;
-      if (y === undefined || y === null) return dir;
+      // null and missing are the same value, and sort first ascending, as in Mongo.
+      const xMissing = x === undefined || x === null;
+      const yMissing = y === undefined || y === null;
+      if (x === y || (xMissing && yMissing)) continue;
+      if (xMissing) return -dir;
+      if (yMissing) return dir;
       return (x < y ? -1 : 1) * dir;
     }
     return 0;

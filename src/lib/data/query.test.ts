@@ -51,3 +51,15 @@ test("dotted paths fail loudly in filters and updates", () => {
   assert.throws(() => applyUpdate(doc, { $inc: { "a.b": 1 } }), /Dotted paths are not supported: a\.b/);
   assert.throws(() => applyUpdate(doc, { $setOnInsert: { "a.b": 1 } }, true), /Dotted paths are not supported: a\.b/);
 });
+
+test("sortDocs treats null and missing as the same value, first when ascending", () => {
+  const rows: Record<string, unknown>[] = [{ _id: "1", t: null }, { _id: "2" }, { _id: "3", t: "a" }];
+  assert.deepEqual(sortDocs(rows, { t: 1, _id: 1 }).map((r) => r._id), ["1", "2", "3"]);
+  assert.deepEqual(sortDocs(rows, { t: -1, _id: 1 }).map((r) => r._id), ["3", "1", "2"]);
+});
+
+test("$in and $or need arrays and say so", () => {
+  assert.throws(() => matches(doc, { _id: { $in: "a" } }), { message: "$in needs an array" });
+  assert.throws(() => matches(doc, { $or: { name: "Rent" } }), { message: "$or needs an array" });
+  assert.throws(() => matches(doc, { $or: 1 }), { message: "$or needs an array" });
+});

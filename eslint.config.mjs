@@ -14,31 +14,58 @@ const MODULE_API_DIRS = {
 };
 const MODULE_IDS = Object.keys(MODULE_API_DIRS);
 
+const modulePattern = (id) => ({
+  regex: `^@/(models|hooks|components|lib|types)/(${MODULE_IDS.filter((m) => m !== id).join("|")})/`,
+  message: `The ${id} module may not import from another module. Cross-module code belongs in the dashboard.`,
+});
+
+// Code that can run in the browser (browser data mode, the demo) must not pull in server-only code.
+const BROWSER_REACHABLE = [
+  "src/lib/data/**",
+  "src/lib/*/api/**",
+  "src/lib/demo/**",
+  "src/hooks/**",
+  "src/components/**",
+];
+const SERVER_ONLY_DATA = ["src/lib/data/mongo-store.ts", "src/lib/data/serve.ts"];
+const browserPatterns = [
+  {
+    regex: "^(mongoose|next/server|@/lib/db|@/lib/api-helpers|@/lib/data/mongo-store|@/lib/data/serve)$",
+    message: "Browser-reachable code may not import server-only code.",
+  },
+  { regex: "^@/models/", message: "Browser-reachable code may not import Mongoose models." },
+];
+
+const restrict = (patterns) => ({ "no-restricted-imports": ["error", { patterns }] });
+
+const browserBoundary = {
+  files: BROWSER_REACHABLE,
+  ignores: SERVER_ONLY_DATA,
+  rules: restrict(browserPatterns),
+};
+
 const moduleBoundaries = MODULE_IDS.map((id) => ({
   files: [
     `src/{models,hooks,components,lib,types}/${id}/**`,
     `src/app/(app)/${id}/**`,
     ...MODULE_API_DIRS[id].map((dir) => `src/app/api/${dir}/**`),
   ],
-  rules: {
-    "no-restricted-imports": [
-      "error",
-      {
-        patterns: [
-          {
-            regex: `^@/(models|hooks|components|lib|types)/(${MODULE_IDS.filter((m) => m !== id).join("|")})/`,
-            message: `The ${id} module may not import from another module. Cross-module code belongs in the dashboard.`,
-          },
-        ],
-      },
-    ],
-  },
+  rules: restrict([modulePattern(id)]),
+}));
+
+// Flat config does not merge rule options: a later block's no-restricted-imports replaces an
+// earlier one. Files under both a module and a browser-reachable folder get both lists here, last.
+const moduleBrowserBoundaries = MODULE_IDS.map((id) => ({
+  files: [`src/{hooks,components}/${id}/**`, `src/lib/${id}/api/**`],
+  rules: restrict([modulePattern(id), ...browserPatterns]),
 }));
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  browserBoundary,
   ...moduleBoundaries,
+  ...moduleBrowserBoundaries,
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:
@@ -46,6 +73,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Separate Next build folders (e.g. NEXT_DIST_DIR=.next-scratch).
+    ".next-*/**",
   ]),
 ]);
 

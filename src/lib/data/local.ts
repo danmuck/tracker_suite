@@ -2,7 +2,7 @@
 
 import { allRoutes } from "./all-routes";
 import { BrowserStore, type StorageLike } from "./browser-store";
-import { dispatch } from "./dispatch";
+import { dispatch, unwrap } from "./dispatch";
 import { createStorageResolver } from "./storage";
 import { COLLECTIONS, type CollectionName } from "./store";
 
@@ -21,18 +21,20 @@ export function getBrowserStore(): BrowserStore {
   if (store) return store;
   const created = new BrowserStore(getBrowserStorage());
   // Another tab wrote to a collection: drop this tab's cached copy of it.
+  // A null key means another tab cleared storage: drop every collection.
   window.addEventListener("storage", (event) => {
-    if (!event.key?.startsWith(PREFIX)) return;
+    if (event.key === null) {
+      created.invalidate();
+      return;
+    }
+    if (!event.key.startsWith(PREFIX)) return;
     const name = event.key.slice(PREFIX.length);
-    if (name in COLLECTIONS) created.invalidate(name as CollectionName);
+    if (Object.hasOwn(COLLECTIONS, name)) created.invalidate(name as CollectionName);
   });
   store = created;
   return created;
 }
 
 export async function localRequest<T>(method: string, url: string, body?: unknown): Promise<T> {
-  const result = await dispatch(allRoutes, getBrowserStore(), method, url, body);
-  if (result.status >= 200 && result.status < 300) return result.body as T;
-  const error = (result.body as { error?: string } | null)?.error;
-  throw new Error(error ?? `Request failed: ${result.status}`);
+  return unwrap<T>(await dispatch(allRoutes, getBrowserStore(), method, url, body));
 }
