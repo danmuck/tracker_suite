@@ -1,0 +1,1206 @@
+{
+  "meta": {
+    "capturedAt": "2026-11-18T00:45:44.275Z",
+    "commit": "6f5dca15e44ad2734ca566573b79ff324d20d285"
+  },
+  "steps": [
+    {
+      "id": "P01",
+      "request": "POST /api/projects",
+      "status": 201,
+      "body": {
+        "_id": "<p1>",
+        "color": "#10b981",
+        "description": "first project",
+        "name": "Parity Alpha",
+        "repositoryUrl": "https://example.com/alpha",
+        "status": "active",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "P02",
+      "request": "POST /api/projects",
+      "status": 201,
+      "body": {
+        "_id": "<p2>",
+        "color": "#3b82f6",
+        "name": "Parity Beta",
+        "status": "active",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "P03",
+      "request": "POST /api/projects",
+      "status": 201,
+      "body": {
+        "_id": "<p3>",
+        "color": "#3b82f6",
+        "description": "to be deleted",
+        "name": "Parity Gamma",
+        "status": "archived",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "P04",
+      "request": "POST /api/projects",
+      "status": 400,
+      "body": {
+        "details": {
+          "fieldErrors": {
+            "color": [
+              "Must be a valid hex color"
+            ],
+            "description": [
+              "Too big: expected string to have <=500 characters"
+            ],
+            "name": [
+              "Name is required"
+            ],
+            "repositoryUrl": [
+              "Must be a valid URL"
+            ],
+            "status": [
+              "Invalid option: expected one of \"active\"|\"archived\"|\"completed\""
+            ]
+          },
+          "formErrors": []
+        },
+        "error": "Validation failed"
+      }
+    },
+    {
+      "id": "P05",
+      "request": "POST /api/projects",
+      "status": 500,
+      "body": {
+        "error": "Failed to create project"
+      }
+    },
+    {
+      "id": "P06",
+      "request": "POST /api/projects",
+      "status": 500,
+      "body": {
+        "error": "Failed to create project"
+      }
+    },
+    {
+      "id": "P07",
+      "request": "GET /api/projects?status=archived",
+      "status": 200,
+      "body": [
+        {
+          "_id": "<p3>",
+          "color": "#3b82f6",
+          "description": "to be deleted",
+          "name": "Parity Gamma",
+          "status": "archived",
+          "taskCounts": {
+            "done": 0,
+            "total": 0
+          },
+          "updatedAt": "<same>"
+        }
+      ]
+    },
+    {
+      "id": "P08",
+      "request": "GET /api/projects/{unknown}",
+      "status": 404,
+      "body": {
+        "error": "Project not found"
+      }
+    },
+    {
+      "id": "P09",
+      "request": "GET /api/projects/abc",
+      "status": 500,
+      "body": {
+        "error": "Failed to fetch project"
+      }
+    },
+    {
+      "id": "P10",
+      "request": "PUT /api/projects/{p1}",
+      "status": 200,
+      "body": {
+        "_id": "<p1>",
+        "color": "#ef4444",
+        "description": "updated",
+        "name": "Parity Alpha",
+        "repositoryUrl": "https://example.com/alpha-2",
+        "status": "completed",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "P11",
+      "request": "PUT /api/projects/{p1}",
+      "status": 200,
+      "body": {
+        "_id": "<p1>",
+        "color": "#3b82f6",
+        "description": "updated",
+        "name": "Parity Alpha",
+        "repositoryUrl": "https://example.com/alpha-2",
+        "status": "active",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "P12",
+      "request": "PUT /api/projects/{p1}",
+      "status": 400,
+      "body": {
+        "details": {
+          "fieldErrors": {
+            "color": [
+              "Must be a valid hex color"
+            ],
+            "name": [
+              "Name is required"
+            ]
+          },
+          "formErrors": []
+        },
+        "error": "Validation failed"
+      }
+    },
+    {
+      "id": "P13",
+      "request": "PUT /api/projects/abc",
+      "status": 500,
+      "body": {
+        "error": "Failed to update project"
+      }
+    },
+    {
+      "id": "P14",
+      "request": "PUT /api/projects/{unknown}",
+      "status": 404,
+      "body": {
+        "error": "Project not found"
+      }
+    },
+    {
+      "id": "T01",
+      "request": "GET /api/tasks",
+      "status": 400,
+      "body": {
+        "error": "projectId query parameter is required"
+      }
+    },
+    {
+      "id": "T02",
+      "request": "GET /api/tasks?projectId=abc",
+      "status": 500,
+      "body": {
+        "error": "Failed to fetch tasks"
+      }
+    },
+    {
+      "id": "T03",
+      "request": "POST /api/tasks",
+      "status": 201,
+      "body": {
+        "_id": "<tA>",
+        "dueDate": null,
+        "order": 0,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity write spec",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "T04",
+      "request": "POST /api/tasks",
+      "status": 201,
+      "body": {
+        "_id": "<tB>",
+        "dueDate": "2026-12-01T00:00:00.000Z",
+        "order": 1,
+        "priority": "high",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [
+          "ui",
+          "board",
+          ""
+        ],
+        "title": "Parity build board",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "T05",
+      "request": "POST /api/tasks",
+      "status": 201,
+      "body": {
+        "_id": "<tC>",
+        "description": "REST",
+        "dueDate": "2026-12-24T15:30:00.000Z",
+        "order": 2,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity wire API",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "T06",
+      "request": "POST /api/tasks",
+      "status": 201,
+      "body": {
+        "_id": "<tD>",
+        "order": 3,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity polish",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "T07",
+      "request": "POST /api/tasks",
+      "status": 201,
+      "body": {
+        "_id": "<tE>",
+        "order": 0,
+        "priority": "low",
+        "projectId": "<p1>",
+        "status": "backlog",
+        "tags": [],
+        "title": "Parity backlog idea",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "T08",
+      "request": "POST /api/tasks",
+      "status": 201,
+      "body": {
+        "_id": "<tG>",
+        "order": 0,
+        "priority": "urgent",
+        "projectId": "<p1>",
+        "status": "in_progress",
+        "tags": [],
+        "title": "Parity in progress",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "T09",
+      "request": "POST /api/tasks",
+      "status": 201,
+      "body": {
+        "_id": "<tI>",
+        "order": 0,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "done",
+        "tags": [],
+        "title": "Parity shipped",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "T10",
+      "request": "POST /api/tasks",
+      "status": 201,
+      "body": {
+        "_id": "<tK>",
+        "order": 0,
+        "priority": "medium",
+        "projectId": "<p2>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity beta task",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "T11",
+      "request": "POST /api/tasks",
+      "status": 201,
+      "body": {
+        "_id": "<tM>",
+        "order": 0,
+        "priority": "medium",
+        "projectId": "<p3>",
+        "status": "in_review",
+        "tags": [],
+        "title": "Parity gamma task",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "T12",
+      "request": "POST /api/tasks",
+      "status": 400,
+      "body": {
+        "details": {
+          "fieldErrors": {
+            "description": [
+              "Invalid input: expected string, received number"
+            ],
+            "priority": [
+              "Invalid option: expected one of \"low\"|\"medium\"|\"high\"|\"urgent\""
+            ],
+            "projectId": [
+              "Project is required"
+            ],
+            "status": [
+              "Invalid option: expected one of \"backlog\"|\"todo\"|\"in_progress\"|\"in_review\"|\"done\""
+            ],
+            "tags": [
+              "Invalid input: expected array, received string"
+            ],
+            "title": [
+              "Title is required"
+            ]
+          },
+          "formErrors": []
+        },
+        "error": "Validation failed"
+      }
+    },
+    {
+      "id": "T13",
+      "request": "POST /api/tasks",
+      "status": 500,
+      "body": {
+        "error": "Failed to create task"
+      }
+    },
+    {
+      "id": "T14",
+      "request": "POST /api/tasks",
+      "status": 500,
+      "body": {
+        "error": "Failed to create task"
+      }
+    },
+    {
+      "id": "T15",
+      "request": "POST /api/tasks",
+      "status": 201,
+      "body": {
+        "_id": "<tOrphan>",
+        "order": 0,
+        "priority": "medium",
+        "projectId": "<unknown>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity orphan",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "T16",
+      "request": "GET /api/tasks?projectId={p1}",
+      "status": 200,
+      "body": [
+        {
+          "_id": "<tE>",
+          "order": 0,
+          "priority": "low",
+          "projectId": "<p1>",
+          "status": "backlog",
+          "tags": [],
+          "title": "Parity backlog idea",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tI>",
+          "order": 0,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "done",
+          "tags": [],
+          "title": "Parity shipped",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tG>",
+          "order": 0,
+          "priority": "urgent",
+          "projectId": "<p1>",
+          "status": "in_progress",
+          "tags": [],
+          "title": "Parity in progress",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tA>",
+          "dueDate": null,
+          "order": 0,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity write spec",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tB>",
+          "dueDate": "2026-12-01T00:00:00.000Z",
+          "order": 1,
+          "priority": "high",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [
+            "ui",
+            "board",
+            ""
+          ],
+          "title": "Parity build board",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tC>",
+          "description": "REST",
+          "dueDate": "2026-12-24T15:30:00.000Z",
+          "order": 2,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity wire API",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tD>",
+          "order": 3,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity polish",
+          "updatedAt": "<same>"
+        }
+      ]
+    },
+    {
+      "id": "T17",
+      "request": "GET /api/tasks?projectId={unknown}",
+      "status": 200,
+      "body": [
+        {
+          "_id": "<tOrphan>",
+          "order": 0,
+          "priority": "medium",
+          "projectId": "<unknown>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity orphan",
+          "updatedAt": "<same>"
+        }
+      ]
+    },
+    {
+      "id": "T18",
+      "request": "GET /api/projects",
+      "status": 200,
+      "body": [
+        {
+          "_id": "<p3>",
+          "color": "#3b82f6",
+          "description": "to be deleted",
+          "name": "Parity Gamma",
+          "status": "archived",
+          "taskCounts": {
+            "done": 0,
+            "total": 1
+          },
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<p2>",
+          "color": "#3b82f6",
+          "name": "Parity Beta",
+          "status": "active",
+          "taskCounts": {
+            "done": 0,
+            "total": 1
+          },
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<p1>",
+          "color": "#3b82f6",
+          "description": "updated",
+          "name": "Parity Alpha",
+          "repositoryUrl": "https://example.com/alpha-2",
+          "status": "active",
+          "taskCounts": {
+            "done": 1,
+            "total": 7
+          },
+          "updatedAt": "<same>"
+        }
+      ]
+    },
+    {
+      "id": "U01",
+      "request": "PUT /api/tasks/{tB}",
+      "status": 200,
+      "body": {
+        "_id": "<tB>",
+        "description": "board",
+        "dueDate": "2026-12-05T00:00:00.000Z",
+        "order": 1,
+        "priority": "urgent",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [
+          "kanban",
+          "ui"
+        ],
+        "title": "Parity build board v2",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "U02",
+      "request": "PUT /api/tasks/{tC}",
+      "status": 200,
+      "body": {
+        "_id": "<tC>",
+        "description": "REST",
+        "dueDate": null,
+        "order": 2,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity wire API",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "U03",
+      "request": "PUT /api/tasks/{tB}",
+      "status": 200,
+      "body": {
+        "_id": "<tB>",
+        "description": "board",
+        "dueDate": "2026-12-05T00:00:00.000Z",
+        "order": 1,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity build board v2",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "U04",
+      "request": "PUT /api/tasks/{tA}",
+      "status": 200,
+      "body": {
+        "_id": "<tA>",
+        "dueDate": null,
+        "order": 0,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "backlog",
+        "tags": [],
+        "title": "Parity write spec",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "U05",
+      "request": "GET /api/tasks?projectId={p1}",
+      "status": 200,
+      "body": [
+        {
+          "_id": "<tE>",
+          "order": 0,
+          "priority": "low",
+          "projectId": "<p1>",
+          "status": "backlog",
+          "tags": [],
+          "title": "Parity backlog idea",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tA>",
+          "dueDate": null,
+          "order": 0,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "backlog",
+          "tags": [],
+          "title": "Parity write spec",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tI>",
+          "order": 0,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "done",
+          "tags": [],
+          "title": "Parity shipped",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tG>",
+          "order": 0,
+          "priority": "urgent",
+          "projectId": "<p1>",
+          "status": "in_progress",
+          "tags": [],
+          "title": "Parity in progress",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tB>",
+          "description": "board",
+          "dueDate": "2026-12-05T00:00:00.000Z",
+          "order": 1,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity build board v2",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tC>",
+          "description": "REST",
+          "dueDate": null,
+          "order": 2,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity wire API",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tD>",
+          "order": 3,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity polish",
+          "updatedAt": "<same>"
+        }
+      ]
+    },
+    {
+      "id": "U06",
+      "request": "PUT /api/tasks/{tA}",
+      "status": 200,
+      "body": {
+        "_id": "<tA>",
+        "dueDate": null,
+        "order": 0,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity write spec",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "U07",
+      "request": "PUT /api/tasks/{unknown}",
+      "status": 404,
+      "body": {
+        "error": "Task not found"
+      }
+    },
+    {
+      "id": "U08",
+      "request": "PUT /api/tasks/abc",
+      "status": 500,
+      "body": {
+        "error": "Failed to update task"
+      }
+    },
+    {
+      "id": "U09",
+      "request": "PUT /api/tasks/{tA}",
+      "status": 500,
+      "body": {
+        "error": "Failed to update task"
+      }
+    },
+    {
+      "id": "D01",
+      "request": "DELETE /api/tasks/{tB}",
+      "status": 200,
+      "body": {
+        "message": "Task deleted"
+      }
+    },
+    {
+      "id": "D02",
+      "request": "DELETE /api/tasks/{tB}",
+      "status": 404,
+      "body": {
+        "error": "Task not found"
+      }
+    },
+    {
+      "id": "D03",
+      "request": "DELETE /api/tasks/abc",
+      "status": 500,
+      "body": {
+        "error": "Failed to delete task"
+      }
+    },
+    {
+      "id": "D04",
+      "request": "GET /api/tasks?projectId={p1}",
+      "status": 200,
+      "body": [
+        {
+          "_id": "<tE>",
+          "order": 0,
+          "priority": "low",
+          "projectId": "<p1>",
+          "status": "backlog",
+          "tags": [],
+          "title": "Parity backlog idea",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tI>",
+          "order": 0,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "done",
+          "tags": [],
+          "title": "Parity shipped",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tG>",
+          "order": 0,
+          "priority": "urgent",
+          "projectId": "<p1>",
+          "status": "in_progress",
+          "tags": [],
+          "title": "Parity in progress",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tA>",
+          "dueDate": null,
+          "order": 0,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity write spec",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tC>",
+          "description": "REST",
+          "dueDate": null,
+          "order": 2,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity wire API",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tD>",
+          "order": 3,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity polish",
+          "updatedAt": "<same>"
+        }
+      ]
+    },
+    {
+      "id": "R01",
+      "request": "PATCH /api/tasks/{tA}/reorder",
+      "status": 200,
+      "body": {
+        "_id": "<tA>",
+        "dueDate": null,
+        "order": 2,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity write spec",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "R02",
+      "request": "PATCH /api/tasks/{tD}/reorder",
+      "status": 200,
+      "body": {
+        "_id": "<tD>",
+        "order": 1,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity polish",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "R03",
+      "request": "PATCH /api/tasks/{tC}/reorder",
+      "status": 200,
+      "body": {
+        "_id": "<tC>",
+        "description": "REST",
+        "dueDate": null,
+        "order": 2,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity wire API",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "R04",
+      "request": "PATCH /api/tasks/{tG}/reorder",
+      "status": 200,
+      "body": {
+        "_id": "<tG>",
+        "order": 0,
+        "priority": "urgent",
+        "projectId": "<p1>",
+        "status": "done",
+        "tags": [],
+        "title": "Parity in progress",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "R05",
+      "request": "PATCH /api/tasks/{tA}/reorder",
+      "status": 200,
+      "body": {
+        "_id": "<tA>",
+        "dueDate": null,
+        "order": 7,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "in_progress",
+        "tags": [],
+        "title": "Parity write spec",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "R06",
+      "request": "GET /api/tasks?projectId={p1}",
+      "status": 200,
+      "body": [
+        {
+          "_id": "<tE>",
+          "order": 0,
+          "priority": "low",
+          "projectId": "<p1>",
+          "status": "backlog",
+          "tags": [],
+          "title": "Parity backlog idea",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tG>",
+          "order": 0,
+          "priority": "urgent",
+          "projectId": "<p1>",
+          "status": "done",
+          "tags": [],
+          "title": "Parity in progress",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tI>",
+          "order": 1,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "done",
+          "tags": [],
+          "title": "Parity shipped",
+          "updatedAt": "<changed>"
+        },
+        {
+          "_id": "<tA>",
+          "dueDate": null,
+          "order": 7,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "in_progress",
+          "tags": [],
+          "title": "Parity write spec",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tD>",
+          "order": 1,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity polish",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<tC>",
+          "description": "REST",
+          "dueDate": null,
+          "order": 2,
+          "priority": "medium",
+          "projectId": "<p1>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity wire API",
+          "updatedAt": "<same>"
+        }
+      ]
+    },
+    {
+      "id": "R07",
+      "request": "PATCH /api/tasks/{tA}/reorder",
+      "status": 400,
+      "body": {
+        "details": {
+          "fieldErrors": {
+            "order": [
+              "Too small: expected number to be >=0"
+            ],
+            "status": [
+              "Invalid option: expected one of \"backlog\"|\"todo\"|\"in_progress\"|\"in_review\"|\"done\""
+            ]
+          },
+          "formErrors": []
+        },
+        "error": "Validation failed"
+      }
+    },
+    {
+      "id": "R08",
+      "request": "PATCH /api/tasks/{unknown}/reorder",
+      "status": 404,
+      "body": {
+        "error": "Task not found"
+      }
+    },
+    {
+      "id": "R09",
+      "request": "PATCH /api/tasks/abc/reorder",
+      "status": 500,
+      "body": {
+        "error": "Failed to reorder task"
+      }
+    },
+    {
+      "id": "R10",
+      "request": "PATCH /api/tasks/{tA}/reorder",
+      "status": 500,
+      "body": {
+        "error": "Failed to reorder task"
+      }
+    },
+    {
+      "id": "S01",
+      "request": "GET /api/projects/{p1}/scratchpad",
+      "status": 200,
+      "body": {
+        "_id": "<s1>",
+        "content": "",
+        "projectId": "<p1>",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "S02",
+      "request": "PUT /api/projects/{p1}/scratchpad",
+      "status": 200,
+      "body": {
+        "_id": "<s1>",
+        "content": "# Notes\n\n- parity  ",
+        "projectId": "<p1>",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "S03",
+      "request": "PUT /api/projects/{p1}/scratchpad",
+      "status": 400,
+      "body": {
+        "details": {
+          "fieldErrors": {
+            "content": [
+              "Too big: expected string to have <=50000 characters"
+            ]
+          },
+          "formErrors": []
+        },
+        "error": "Validation failed"
+      }
+    },
+    {
+      "id": "S04",
+      "request": "PUT /api/projects/{p2}/scratchpad",
+      "status": 200,
+      "body": {
+        "_id": "<s2>",
+        "content": "beta notes",
+        "projectId": "<p2>",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "S05",
+      "request": "GET /api/projects/{unknown}/scratchpad",
+      "status": 404,
+      "body": {
+        "error": "Project not found"
+      }
+    },
+    {
+      "id": "S06",
+      "request": "GET /api/projects/abc/scratchpad",
+      "status": 500,
+      "body": {
+        "error": "Failed to fetch scratchpad"
+      }
+    },
+    {
+      "id": "S07",
+      "request": "PUT /api/projects/abc/scratchpad",
+      "status": 500,
+      "body": {
+        "error": "Failed to update scratchpad"
+      }
+    },
+    {
+      "id": "X01",
+      "request": "DELETE /api/projects/{p3}",
+      "status": 200,
+      "body": {
+        "message": "Project and associated data deleted"
+      }
+    },
+    {
+      "id": "X02",
+      "request": "GET /api/tasks?projectId={p3}",
+      "status": 200,
+      "body": []
+    },
+    {
+      "id": "X03",
+      "request": "DELETE /api/projects/{p3}",
+      "status": 404,
+      "body": {
+        "error": "Project not found"
+      }
+    },
+    {
+      "id": "X04",
+      "request": "DELETE /api/projects/abc",
+      "status": 500,
+      "body": {
+        "error": "Failed to delete project"
+      }
+    },
+    {
+      "id": "X05",
+      "request": "GET /api/tasks?projectId={p2}",
+      "status": 200,
+      "body": [
+        {
+          "_id": "<tK>",
+          "order": 0,
+          "priority": "medium",
+          "projectId": "<p2>",
+          "status": "todo",
+          "tags": [],
+          "title": "Parity beta task",
+          "updatedAt": "<same>"
+        }
+      ]
+    },
+    {
+      "id": "X06",
+      "request": "GET /api/projects/{p2}/scratchpad",
+      "status": 200,
+      "body": {
+        "_id": "<s2>",
+        "content": "beta notes",
+        "projectId": "<p2>",
+        "updatedAt": "<same>"
+      }
+    },
+    {
+      "id": "X07",
+      "request": "GET /api/projects/{p1}/scratchpad",
+      "status": 200,
+      "body": {
+        "_id": "<s1>",
+        "content": "# Notes\n\n- parity  ",
+        "projectId": "<p1>",
+        "updatedAt": "<same>"
+      }
+    },
+    {
+      "id": "X08",
+      "request": "GET /api/projects",
+      "status": 200,
+      "body": [
+        {
+          "_id": "<p2>",
+          "color": "#3b82f6",
+          "name": "Parity Beta",
+          "status": "active",
+          "taskCounts": {
+            "done": 0,
+            "total": 1
+          },
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<p1>",
+          "color": "#3b82f6",
+          "description": "updated",
+          "name": "Parity Alpha",
+          "repositoryUrl": "https://example.com/alpha-2",
+          "status": "active",
+          "taskCounts": {
+            "done": 2,
+            "total": 6
+          },
+          "updatedAt": "<same>"
+        }
+      ]
+    }
+  ]
+}
