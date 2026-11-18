@@ -58,7 +58,14 @@ export const shoppingItemSchema = z.object({
   checked: z.boolean().default(false),
 });
 
-export const shoppingItemUpdateSchema = shoppingItemSchema.partial();
+// A partial update applies no defaults (Zod 4's `.partial()` would still fill `checked: false`):
+// a field absent from the body is left unchanged. `quantity: null` and an empty `unit` remove the field.
+export const shoppingItemUpdateSchema = z.object({
+  name: shoppingItemSchema.shape.name.optional(),
+  quantity: z.number().nonnegative().nullable().optional(),
+  unit: shoppingItemSchema.shape.unit,
+  checked: z.boolean().optional(),
+});
 
 export type WorkoutInput = z.infer<typeof workoutSchema>;
 export type WorkoutLogInput = z.infer<typeof workoutLogSchema>;

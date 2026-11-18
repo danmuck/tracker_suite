@@ -65,6 +65,16 @@ function withTrimmed<T extends Record<string, unknown>>(data: T, key: string): T
   return (typeof value === "string" ? { ...data, [key]: value.trim() } : data) as T;
 }
 
+/**
+ * A full-document update that removes `notes` when the body leaves it out or it trims to "", as the
+ * run and recipe updates do for their optional fields. The forms send no `notes` when the field is
+ * emptied, so emptying it in the UI clears it.
+ */
+function replacingNotes(fields: Record<string, unknown>): { $set: Record<string, unknown>; $unset?: Record<string, 1> } {
+  const { notes, ...rest } = fields;
+  return typeof notes === "string" && notes !== "" ? { $set: { ...rest, notes } } : { $set: rest, $unset: { notes: 1 } };
+}
+
 /** Drops undefined values, as a JSON body or Mongoose's $set would. */
 function defined(data: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
@@ -108,12 +118,13 @@ export const getWorkout: Handler = async ({ store, params }) => {
   return workout ? ok(workout) : notFound("Workout");
 };
 
-// Edits the definition only; past logs keep their snapshot. Omitted notes are kept.
+// Edits the definition only; past logs keep their snapshot. Omitted, empty or blank notes are removed;
+// the exercise list is replaced whole, so an exercise's omitted notes or targetWeight are gone too.
 export const updateWorkout: Handler = async ({ store, params, body }) => {
   if (!isId(params.workoutId)) return notFound("Workout");
   const parsed = workoutSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
-  const updated = await workouts(store).updateById(params.workoutId, { $set: workoutFields(parsed.data) });
+  const updated = await workouts(store).updateById(params.workoutId, replacingNotes(workoutFields(parsed.data)));
   return updated ? ok(updated) : notFound("Workout");
 };
 
@@ -162,14 +173,16 @@ export const getWorkoutLog: Handler = async ({ store, params }) => {
   return log ? ok(log) : notFound("Workout log");
 };
 
-// A missing or malformed workoutId is removed. current behavior: omitted notes are kept (Task 4).
+// A missing or malformed workoutId is removed, and so are omitted, empty or blank notes.
 export const updateWorkoutLog: Handler = async ({ store, params, body }) => {
   if (!isId(params.logId)) return notFound("Workout log");
   const parsed = workoutLogSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
   const workoutId = keptWorkoutId(parsed.data.workoutId);
-  const fields = logFields(parsed.data);
-  const update = workoutId ? { $set: { ...fields, workoutId } } : { $set: fields, $unset: { workoutId: 1 } };
+  const { $set, $unset } = replacingNotes(logFields(parsed.data));
+  const update = workoutId
+    ? { $set: { ...$set, workoutId }, ...($unset ? { $unset } : {}) }
+    : { $set, $unset: { ...$unset, workoutId: 1 } };
   const updated = await workoutLogs(store).updateById(params.logId, update);
   return updated ? ok(updated) : notFound("Workout log");
 };
@@ -391,6 +404,9 @@ const noUnit = (unit: unknown): boolean => unit === undefined || unit === null |
  * Ingredients are handled in order, so a later one can merge into an item an earlier one added.
  * When several items match, the one with the lowest `order` (then createdAt, then _id) is merged
  * into: today's findOne had no sort and MongoDB read the `{ checked: 1, order: 1 }` index.
+ * Each ingredient is a read then a write. In browser data mode the whole handler is one step of the
+ * request queue (`localRequest`), so two overlapping calls cannot interleave; on MongoDB two truly
+ * concurrent calls still can (known limit).
  */
 export const addRecipeToList: Handler = async ({ store, params }) => {
   const recipe = await recipes(store).findById(params.recipeId);
@@ -455,15 +471,24 @@ export const createShoppingItem: Handler = async ({ store, body }) => {
 };
 
 /**
- * PUT /api/figure/shopping-items/:itemId — partial update (e.g. { checked: true }).
- * current behavior: the partial schema keeps `checked`'s default, so an update without `checked`
- * unchecks the item (Task 4).
+ * PUT /api/figure/shopping-items/:itemId — partial update (e.g. { checked: true }). A field absent
+ * from the body is left unchanged; `quantity: null` and an empty or blank `unit` remove the field.
  */
 export const updateShoppingItem: Handler = async ({ store, params, body }) => {
   if (!isId(params.itemId)) return notFound("Shopping item");
   const parsed = shoppingItemUpdateSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
-  const updated = await shoppingItems(store).updateById(params.itemId, { $set: defined(parsed.data) });
+  const { quantity, unit, ...rest } = parsed.data;
+  const $unset: Record<string, 1> = {};
+  if (quantity === null) $unset.quantity = 1;
+  if (unit === "") $unset.unit = 1;
+  const $set = defined({
+    ...rest,
+    ...(quantity !== null ? { quantity } : {}),
+    ...(unit !== "" ? { unit } : {}),
+  });
+  const update = Object.keys($unset).length ? { $set, $unset } : { $set };
+  const updated = await shoppingItems(store).updateById(params.itemId, update);
   return updated ? ok(updated) : notFound("Shopping item");
 };
 

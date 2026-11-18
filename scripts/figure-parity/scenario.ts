@@ -132,7 +132,8 @@ export function buildScenario(): Step[] {
       },
       200,
     ),
-    // notes omitted: kept. The exercise list is replaced, so the omitted targetWeight is gone
+    // notes omitted: removed (Task 4; before, the old notes were kept). The exercise list is replaced,
+    // so the omitted targetWeight and exercise notes are gone
     send(
       "W11",
       "PUT",
@@ -301,7 +302,7 @@ export function buildScenario(): Step[] {
     get("S04", `${S}&weeks=junk`, 200),
 
     // ── Workout logs: update and delete ──
-    // workoutId and notes omitted: workoutId removed. current behavior: notes kept
+    // workoutId and notes omitted: both removed (Task 4; before, the old notes were kept)
     send("L17", "PUT", `${L}/{l2}`, { date: "2026-03-17", name: "Leg Day", exercises: [{ name: "1.5 rep squat", sets: [set(6, 100, true)] }] }, 200),
     // A valid workoutId on update is set; exercises omitted → []
     send("L18", "PUT", `${L}/{l3}`, { date: "2026-03-11", workoutId: "{w1}", name: "  Push Day  ", notes: "  moved  " }, 200),
@@ -374,8 +375,8 @@ export function buildScenario(): Step[] {
     send("H04", "POST", SH, { name: "onion", quantity: 1 }, 201, save("iOnion2")),
     send("H05", "POST", SH, { name: "Oats", quantity: 2, unit: "CUP" }, 201, save("iOats")),
     send("H06", "POST", SH, { name: "salt (Kosher)", unit: "Pinch" }, 201, save("iSalt")),
-    // Partial updates: checked alone, then name alone on the checked item. current behavior: the
-    // partial schema keeps `checked`'s default, so a name-only update unchecks the item
+    // Partial updates: checked alone, then name alone on the checked item, which stays checked
+    // (Task 4; before, the partial schema kept `checked`'s default and the name-only update unchecked it)
     send("H07", "PUT", `${SH}/{iEggs}`, { checked: true }, 200),
     send("H08", "PUT", `${SH}/{iEggs}`, { name: "  eggs  " }, 200),
     send("H09", "PUT", `${SH}/{iEggs}`, { quantity: -2 }, 400),

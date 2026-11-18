@@ -1,7 +1,7 @@
 {
   "meta": {
-    "capturedAt": "2026-11-18T02:24:50.585Z",
-    "commit": "6ba76cd4bc10bac349aedbb2d0ede5fd51221218"
+    "capturedAt": "2026-11-18T02:51:50.587Z",
+    "commit": "48c5f5d3942f588e772f94ea23c7c77fcca72d6f"
   },
   "steps": [
     {
@@ -202,7 +202,6 @@
           }
         ],
         "name": "Push Day",
-        "notes": "chest focus",
         "order": 0,
         "updatedAt": "<changed>"
       }
@@ -262,7 +261,6 @@
             }
           ],
           "name": "Push Day",
-          "notes": "chest focus",
           "order": 0,
           "updatedAt": "<same>"
         },
@@ -8180,7 +8178,6 @@
           }
         ],
         "name": "Leg Day",
-        "notes": "legs",
         "updatedAt": "<changed>"
       }
     },
@@ -8702,7 +8699,7 @@
       "status": 200,
       "body": {
         "_id": "<iEggs>",
-        "checked": false,
+        "checked": true,
         "createdAt": "<same>",
         "name": "eggs",
         "order": 1,
@@ -8754,15 +8751,6 @@
       "status": 200,
       "body": [
         {
-          "_id": "<iEggs>",
-          "checked": false,
-          "createdAt": "<same>",
-          "name": "eggs",
-          "order": 1,
-          "quantity": 12,
-          "updatedAt": "<same>"
-        },
-        {
           "_id": "<iOnion>",
           "checked": false,
           "createdAt": "<same>",
@@ -8807,6 +8795,15 @@
           "order": 0,
           "quantity": 1,
           "unit": "cup",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<iEggs>",
+          "checked": true,
+          "createdAt": "<same>",
+          "name": "eggs",
+          "order": 1,
+          "quantity": 12,
           "updatedAt": "<same>"
         }
       ]
@@ -8851,15 +8848,6 @@
       "status": 200,
       "body": [
         {
-          "_id": "<iEggs>",
-          "checked": false,
-          "createdAt": "<same>",
-          "name": "eggs",
-          "order": 1,
-          "quantity": 12,
-          "updatedAt": "<same>"
-        },
-        {
           "_id": "<iOnion>",
           "checked": false,
           "createdAt": "<same>",
@@ -8939,6 +8927,15 @@
           "order": 0,
           "quantity": 1,
           "unit": "cup",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<iEggs>",
+          "checked": true,
+          "createdAt": "<same>",
+          "name": "eggs",
+          "order": 1,
+          "quantity": 12,
           "updatedAt": "<same>"
         }
       ]
@@ -8957,15 +8954,6 @@
       "status": 200,
       "body": [
         {
-          "_id": "<iEggs>",
-          "checked": false,
-          "createdAt": "<same>",
-          "name": "eggs",
-          "order": 1,
-          "quantity": 12,
-          "updatedAt": "<same>"
-        },
-        {
           "_id": "<iOnion>",
           "checked": false,
           "createdAt": "<same>",
@@ -9043,6 +9031,15 @@
           "order": 0,
           "quantity": 1,
           "unit": "cup",
+          "updatedAt": "<same>"
+        },
+        {
+          "_id": "<iEggs>",
+          "checked": true,
+          "createdAt": "<same>",
+          "name": "eggs",
+          "order": 1,
+          "quantity": 12,
           "updatedAt": "<same>"
         }
       ]

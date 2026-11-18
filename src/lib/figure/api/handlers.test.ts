@@ -137,14 +137,24 @@ test("get workout: found; unknown, malformed and uppercase ids are 404", async (
   }
 });
 
-test("update workout: replaces exercises, keeps omitted notes, omitted exercises → []", async () => {
-  const a = await workout({ name: "A", notes: "keep", exercises: [{ name: "Bench", targetSets: 3, targetReps: 8, targetWeight: 100 }] });
-  const res = await call("PUT", `${F}/workouts/${a._id}`, { name: " A2 ", exercises: [{ name: "Bench", targetSets: 3, targetReps: 8, notes: " n " }] });
+test("update workout: replaces exercises, omitted exercises → []; notes set trimmed", async () => {
+  const a = await workout({ name: "A", notes: "old", exercises: [{ name: "Bench", targetSets: 3, targetReps: 8, targetWeight: 100 }] });
+  const res = await call("PUT", `${F}/workouts/${a._id}`, { name: " A2 ", notes: "keep", exercises: [{ name: "Bench", targetSets: 3, targetReps: 8, notes: " n " }] });
   assert.equal(res.status, 200);
   assert.deepEqual(strip(res.body as Workout), { name: "A2", notes: "keep", order: 0, exercises: [{ name: "Bench", targetSets: 3, targetReps: 8, notes: "n" }] });
   const cleared = await call("PUT", `${F}/workouts/${a._id}`, { name: "A3", notes: "  new  " });
   assert.deepEqual((cleared.body as Workout).exercises, []);
   assert.equal((cleared.body as Workout).notes, "new");
+});
+
+test("update workout: omitted, empty or blank notes are removed (the form sends none when the field is emptied)", async () => {
+  for (const notes of [undefined, "", "   "]) {
+    const a = await workout({ name: "A", notes: "old" });
+    const res = await call("PUT", `${F}/workouts/${a._id}`, { name: "A", notes });
+    assert.equal(res.status, 200);
+    assert.deepEqual(strip(res.body as Workout), { name: "A", order: a.order, exercises: [] }, `notes ${JSON.stringify(notes)}`);
+    assert.deepEqual(await workouts(store).findById(a._id), res.body);
+  }
 });
 
 test("update / delete workout: unknown and malformed ids 404; invalid body 400 leaves it unchanged", async () => {
@@ -239,10 +249,18 @@ test("update log: a valid workoutId is set lowercased, a missing or malformed on
   assert.equal((set.body as WorkoutLog).notes, "n");
 });
 
-test("current behavior: a log update without notes keeps the old notes", async () => {
-  const a = await log({ date: "2026-03-18", notes: "old" });
-  const res = await call("PUT", `${F}/workout-logs/${a._id}`, { date: "2026-03-18", name: "Lift" });
-  assert.equal((res.body as WorkoutLog).notes, "old");
+test("update log: omitted, empty or blank notes are removed (the editor sends none when the field is emptied)", async () => {
+  const w = await workout({ name: "W" });
+  for (const notes of [undefined, "", "   "]) {
+    const a = await log({ date: "2026-03-18", notes: "old", workoutId: w._id });
+    const res = await call("PUT", `${F}/workout-logs/${a._id}`, { date: "2026-03-18", name: "Lift", notes, workoutId: w._id });
+    assert.equal(res.status, 200);
+    assert.deepEqual(strip(res.body as WorkoutLog), { date: "2026-03-18", name: "Lift", exercises: [], workoutId: w._id }, `notes ${JSON.stringify(notes)}`);
+    // Without a workoutId both fields go
+    const both = await call("PUT", `${F}/workout-logs/${a._id}`, { date: "2026-03-18", name: "Lift", notes });
+    assert.deepEqual(strip(both.body as WorkoutLog), { date: "2026-03-18", name: "Lift", exercises: [] });
+    assert.deepEqual(await workoutLogs(store).findById(a._id), both.body);
+  }
 });
 
 test("update / delete log: unknown and malformed ids 404; invalid body 400 leaves it unchanged", async () => {
@@ -499,10 +517,35 @@ test("update shopping item: checked alone; 404s and 400s", async () => {
   assert.ok(isValidation(await call("PUT", `${F}/shopping-items/${a._id}`, undefined)));
 });
 
-test("current behavior: a shopping item update without checked unchecks the item", async () => {
-  const a = await item({ name: "Eggs", checked: true });
+test("update shopping item: a field absent from the body is left unchanged (a renamed checked item stays checked)", async () => {
+  const a = await item({ name: "Eggs", quantity: 12, unit: "pcs", checked: true });
   const res = await call("PUT", `${F}/shopping-items/${a._id}`, { name: "  eggs  " });
-  assert.deepEqual(strip(res.body as ShoppingItem), { name: "eggs", checked: false, order: 0 });
+  assert.equal(res.status, 200);
+  assert.deepEqual(strip(res.body as ShoppingItem), { name: "eggs", quantity: 12, unit: "pcs", checked: true, order: 0 });
+  const empty = await call("PUT", `${F}/shopping-items/${a._id}`, {});
+  assert.deepEqual(strip(empty.body as ShoppingItem), { name: "eggs", quantity: 12, unit: "pcs", checked: true, order: 0 });
+  // POST still defaults checked to false
+  assert.equal((await item({ name: "Milk" })).checked, false);
+});
+
+test("update shopping item: quantity null and an empty or blank unit remove the field; other values set", async () => {
+  const a = await item({ name: "Flour", quantity: 2, unit: "cups" });
+  const cleared = await call("PUT", `${F}/shopping-items/${a._id}`, { quantity: null, unit: "" });
+  assert.equal(cleared.status, 200);
+  assert.deepEqual(strip(cleared.body as ShoppingItem), { name: "Flour", checked: false, order: 0 });
+  assert.deepEqual(await shoppingItems(store).findById(a._id), cleared.body);
+  const set = await call("PUT", `${F}/shopping-items/${a._id}`, { quantity: 3, unit: " kg " });
+  assert.deepEqual(strip(set.body as ShoppingItem), { name: "Flour", quantity: 3, unit: "kg", checked: false, order: 0 });
+  const blank = await call("PUT", `${F}/shopping-items/${a._id}`, { unit: "   " });
+  assert.deepEqual(strip(blank.body as ShoppingItem), { name: "Flour", quantity: 3, checked: false, order: 0 });
+});
+
+test("update shopping item: an invalid field is 400 and nothing is written, the clearing fields included", async () => {
+  const a = await item({ name: "Flour", quantity: 2, unit: "cups", checked: true });
+  for (const body of [{ quantity: null, unit: "", name: "" }, { unit: null }, { checked: null }, { name: null }, { quantity: -1, unit: "" }]) {
+    assert.ok(isValidation(await call("PUT", `${F}/shopping-items/${a._id}`, body)), JSON.stringify(body));
+  }
+  assert.deepEqual(await shoppingItems(store).findById(a._id), a);
 });
 
 test("delete shopping item and clear-checked", async () => {

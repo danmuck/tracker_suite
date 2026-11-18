@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { BrowserStore } from "./browser-store";
 import { dispatch } from "./dispatch";
 import { allRoutes } from "./all-routes";
-import { dispatchFresh } from "./local";
+import { dispatchFresh, localRequest } from "./local";
 import type { BaseDoc } from "./store";
 import { memoryStorage } from "./test-helpers";
 
@@ -63,3 +63,47 @@ test("a pending transaction and a due plan payment are applied once across two t
   assert.equal(await fresh.collection<Row>("transactions").count({ balanceApplied: false, isRecurring: false }), 0);
 });
 
+
+// ── Overlapping requests on the queue (Figure add-to-list) ──
+
+type Item = BaseDoc & { name: string; quantity?: number; unit?: string; order: number };
+
+async function addToListTwice(post: (url: string, body?: unknown) => Promise<unknown>, store: () => BrowserStore) {
+  const recipe = (await post("/api/figure/recipes", {
+    name: "Pancakes",
+    ingredients: [{ name: "Flour", quantity: 2, unit: "cups" }, { name: "Eggs", quantity: 2 }, { name: "Salt" }],
+  })) as { _id: string };
+  const url = `/api/figure/recipes/${recipe._id}/add-to-list`;
+  const results = await Promise.all([post(url), post(url)]);
+  const items = await store().collection<Item>("shoppingItems").find({}, { sort: { order: 1 } });
+  return { results, items: items.map((i) => [i.name, i.quantity, i.unit, i.order]) };
+}
+
+test("two overlapping add-to-list calls through localRequest: quantities summed, no duplicate items", async () => {
+  const storage = memoryStorage();
+  const g = globalThis as { window?: unknown };
+  const before = g.window;
+  g.window = { localStorage: storage, addEventListener() {} };
+  try {
+    const { results, items } = await addToListTwice(
+      (url, body) => localRequest("POST", url, body),
+      () => new BrowserStore(storage),
+    );
+    // The first call adds all three, the second merges into them
+    assert.deepEqual(results, [{ added: 3, merged: 0 }, { added: 0, merged: 3 }]);
+    assert.deepEqual(items, [
+      ["Flour", 4, "cups", 0],
+      ["Eggs", 4, undefined, 1],
+      ["Salt", undefined, undefined, 2],
+    ]);
+  } finally {
+    g.window = before;
+  }
+});
+
+test("without the queue the same two calls interleave and add every ingredient twice (what localRequest prevents)", async () => {
+  const store = new BrowserStore(memoryStorage());
+  const post = async (url: string, body?: unknown) => (await dispatch(allRoutes, store, "POST", url, body)).body;
+  const { items } = await addToListTwice(post, () => store);
+  assert.equal(items.length, 6);
+});
