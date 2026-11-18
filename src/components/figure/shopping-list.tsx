@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Loader2, Plus, ShoppingCart, X } from "lucide-react";
+import { CircleAlert, Loader2, Plus, ShoppingCart, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,12 +15,12 @@ import {
   updateShoppingItem,
   useShoppingItems,
 } from "@/hooks/figure/use-shopping-items";
-import { formatQuantity, parseOptionalNumber } from "@/lib/figure/format";
+import { failureMessage, formatQuantity, parseOptionalNumber } from "@/lib/figure/format";
 import { cn } from "@/lib/utils";
 import type { ShoppingItem } from "@/types/figure/diet";
 
 export function ShoppingList() {
-  const { items, isLoading, mutate } = useShoppingItems();
+  const { items, hasData, isLoading, isError, mutate } = useShoppingItems();
   const [name, setName] = useState("");
   const [quantity, setQuantity] = useState("");
   const [unit, setUnit] = useState("");
@@ -44,7 +44,7 @@ export function ShoppingList() {
       setUnit("");
       mutate();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add item");
+      toast.error(failureMessage(err, "Failed to add item"));
     } finally {
       setAdding(false);
     }
@@ -58,8 +58,8 @@ export function ShoppingList() {
     );
     try {
       await updateShoppingItem(item._id, { checked: value });
-    } catch {
-      toast.error("Failed to update item");
+    } catch (err) {
+      toast.error(failureMessage(err, "Failed to update item"));
     } finally {
       mutate();
     }
@@ -69,17 +69,22 @@ export function ShoppingList() {
     mutate(items.filter((i) => i._id !== item._id), { revalidate: false });
     try {
       await deleteShoppingItem(item._id);
-    } catch {
-      toast.error("Failed to remove item");
+    } catch (err) {
+      toast.error(failureMessage(err, "Failed to remove item"));
     } finally {
       mutate();
     }
   }
 
   async function clearChecked() {
-    const { deleted } = await clearCheckedShoppingItems();
-    toast.success(`Cleared ${deleted} item${deleted !== 1 ? "s" : ""}`);
-    mutate();
+    try {
+      const { deleted } = await clearCheckedShoppingItems();
+      toast.success(`Cleared ${deleted} item${deleted !== 1 ? "s" : ""}`);
+    } catch (err) {
+      toast.error(failureMessage(err, "Failed to clear checked items"));
+    } finally {
+      mutate();
+    }
   }
 
   return (
@@ -104,6 +109,13 @@ export function ShoppingList() {
 
       {isLoading ? (
         <LoadingState variant="table" />
+      ) : isError && !hasData ? (
+        // Only with nothing to show: a failed background refresh keeps the last list on screen
+        <EmptyState
+          icon={CircleAlert}
+          title="Could not load your shopping list"
+          description="Something went wrong reading your list. Reload the page to try again."
+        />
       ) : items.length === 0 ? (
         <EmptyState
           icon={ShoppingCart}

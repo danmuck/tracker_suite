@@ -1,6 +1,6 @@
 "use client";
 
-import { Footprints, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { CircleAlert, Footprints, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { endOfWeek, startOfMonth, startOfWeek } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,8 @@ import type { RunLog } from "@/types/figure/fitness";
 interface RunsPanelProps {
   runs: RunLog[];
   isLoading: boolean;
+  /** The runs could not be read and there are none to show */
+  isError?: boolean;
   onNew: () => void;
   onEdit: (r: RunLog) => void;
   onDelete: (r: RunLog) => void;
@@ -30,8 +32,17 @@ function sumMiles(runs: RunLog[]) {
   return runs.reduce((n, r) => n + r.distance, 0);
 }
 
-export function RunsPanel({ runs, isLoading, onNew, onEdit, onDelete }: RunsPanelProps) {
+export function RunsPanel({ runs, isLoading, isError = false, onNew, onEdit, onDelete }: RunsPanelProps) {
   if (isLoading) return <LoadingState variant="table" />;
+  if (isError) {
+    return (
+      <EmptyState
+        icon={CircleAlert}
+        title="Could not load runs"
+        description="Something went wrong reading your runs. Reload the page to try again."
+      />
+    );
+  }
   if (runs.length === 0) {
     return (
       <EmptyState

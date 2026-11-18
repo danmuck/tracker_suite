@@ -1,4 +1,5 @@
 import test from "node:test";
+import { format } from "date-fns";
 import assert from "node:assert/strict";
 import type { BaseDoc, Collection, CollectionName, Store } from "@/lib/data/store";
 import { BrowserStore } from "@/lib/data/browser-store";
@@ -29,6 +30,18 @@ import type { Scratchpad } from "@/types/projects/scratchpad";
 import { TASK_STATUSES } from "@/lib/projects/constants";
 import { formatDueDay } from "@/lib/projects/due-date";
 import { projectRollup } from "@/lib/dashboard/stats";
+import { figureSample } from "./figure";
+import { figureRoutes } from "@/lib/figure/api/routes";
+import {
+  recipeSchema,
+  runLogSchema,
+  shoppingItemSchema,
+  workoutLogSchema,
+  workoutSchema,
+} from "@/lib/figure/validators";
+import type { ExerciseProgressPoint, FitnessStats } from "@/lib/figure/stats";
+import type { Recipe, ShoppingItem } from "@/types/figure/diet";
+import type { RunLog, Workout, WorkoutLog } from "@/types/figure/fitness";
 
 test("loadSampleData fills groups and links, and running it twice does not duplicate", async () => {
   const store = new BrowserStore(memoryStorage());
@@ -77,8 +90,8 @@ test("after a reset (store.clear) the demo seeds again", async () => {
   assert.equal(await store.collection("scratchpads").count(), projectsSample().projects.filter((p) => p.notes !== undefined).length);
 });
 
-test("availableModules hides modules without browser data in browser mode", () => {
-  assert.deepEqual(availableModules("browser").map((m) => m.id), ["finance", "future", "projects", "links"]);
+test("every module has browser data: none is hidden in browser mode", () => {
+  assert.deepEqual(availableModules("browser").map((m) => m.id), ["finance", "figure", "future", "projects", "links"]);
   assert.equal(availableModules("server").length, modules.length);
 });
 
@@ -294,6 +307,151 @@ test("loading the Projects sample fails loudly, naming the step, when a handler 
   };
   await assert.rejects(loadSampleData(failing, new Date(2026, 10, 17, 10)), (error: Error) => {
     assert.match(error.message, /^Loading the Projects sample failed at POST \/api\/tasks \(Watering log chart\): 500/);
+    return true;
+  });
+});
+
+const FIGURE_TODAY = new Date(2026, 10, 17, 10); // a Tuesday
+const figureGet = (store: Store, url: string) => dispatch(figureRoutes, store, "GET", url, undefined, FIGURE_TODAY);
+
+test("loadSampleData fills Figure through the real handlers, relative to today, and twice does not duplicate", async () => {
+  const store = new BrowserStore(memoryStorage());
+  await loadSampleData(store, FIGURE_TODAY);
+  await loadSampleData(store, FIGURE_TODAY);
+  const workouts = await store.collection<Workout>("workouts").find({}, { sort: { order: 1 } });
+  const logs = await store.collection<WorkoutLog>("workoutLogs").find({}, { sort: { date: 1 } });
+  const runs = await store.collection<RunLog>("runLogs").find({}, { sort: { date: 1 } });
+  const recipes = await store.collection<Recipe>("recipes").find();
+  assert.deepEqual(workouts.map((w) => [w.name, w.order]), [["Push Day", 0], ["Pull Day", 1], ["Leg Day", 2]]);
+  assert.ok(workouts.every((w) => w.exercises.length === 4));
+  // About 30 logs over the last 12 weeks, each from one of the sample workouts
+  assert.equal(logs.length, 30);
+  assert.ok(logs[0].date >= "2026-08-25" && logs[logs.length - 1].date === "2026-11-17", `${logs[0].date}..${logs[logs.length - 1].date}`);
+  assert.ok(logs.every((l) => workouts.some((w) => w._id === l.workoutId && w.name === l.name)));
+  assert.ok(logs.every((l) => l.exercises.every((e) => e.sets.length > 0 && e.sets.every((s) => s.done))));
+  const benchNote = logs.find((l) => l.notes === "New best on bench");
+  assert.equal(benchNote?.name, "Push Day");
+  assert.equal(benchNote?.exercises[0].name, "Bench Press");
+  // About 20 runs of mixed types
+  assert.equal(runs.length, 20);
+  assert.equal(new Set(runs.map((r) => r.type)).size, 6);
+  assert.ok(runs[0].date >= "2026-08-25" && runs[runs.length - 1].date === "2026-11-17");
+  // 5 recipes, each with tags and ingredients
+  assert.equal(recipes.length, 5);
+  assert.ok(recipes.every((r) => r.tags.length > 0 && r.ingredients.length > 0 && r.instructions.length > 0));
+  // 8-10 shopping items, some checked, some from a recipe
+  const items = (await figureGet(store, "/api/figure/shopping-items")).body as ShoppingItem[];
+  assert.ok(items.length >= 8 && items.length <= 10, String(items.length));
+  assert.deepEqual(items.filter((i) => i.checked).map((i) => i.name).sort(), ["Bananas", "Coffee beans", "Limes"]);
+  const fromRecipe = items.filter((i) => i.recipeName === "Chicken Burrito Bowl");
+  assert.equal(fromRecipe.length, 5);
+  assert.ok(fromRecipe.some((i) => i.checked) && fromRecipe.some((i) => !i.checked));
+  assert.ok(items.some((i) => i.recipeId === undefined));
+});
+
+test("the Figure sample has a current streak and visible progress on the main lifts", async () => {
+  const store = new BrowserStore(memoryStorage());
+  await loadSampleData(store, FIGURE_TODAY);
+  const stats = (await figureGet(store, "/api/figure/stats?weeks=12&today=2026-11-17")).body as FitnessStats;
+  assert.equal(stats.streak.current, 10);
+  assert.ok(stats.streak.longest >= 10);
+  assert.ok(stats.weeks.every((w) => w.sessions > 0 || w.runs > 0), "every week of the 12 has activity");
+  assert.ok(stats.paces.length === 20);
+  for (const name of ["Bench Press", "Back Squat", "Deadlift"]) {
+    const points = (await figureGet(store, `/api/figure/exercises/progress?name=${encodeURIComponent(name)}`))
+      .body as ExerciseProgressPoint[];
+    assert.ok(points.length >= 9, name);
+    assert.ok(points[points.length - 1].e1rm > points[0].e1rm + 30, `${name}: ${points[0].e1rm} -> ${points[points.length - 1].e1rm}`);
+    assert.ok(points.every((p, i) => i === 0 || p.topWeight >= points[i - 1].topWeight), name);
+  }
+  // Workout definitions carry the latest session's weight
+  const history = (await figureGet(store, "/api/figure/exercises/history?name=Bench%20Press")).body as Record<string, { sets: { weight: number }[] }>;
+  const push = ((await figureGet(store, "/api/figure/workouts")).body as Workout[])[0];
+  assert.equal(push.exercises[0].targetWeight, history["bench press"].sets[0].weight);
+  const names = (await figureGet(store, "/api/figure/exercises/names")).body as string[];
+  assert.equal(names.length, 12);
+});
+
+test("the Figure sample gives the dashboard's Figure card non-zero numbers", async () => {
+  // Monday: "this week" is only today, which has a lift and a run
+  for (const today of [FIGURE_TODAY, new Date(2026, 10, 16, 10)]) {
+    const store = new BrowserStore(memoryStorage());
+    await loadSampleData(store, today);
+    const day = format(today, "yyyy-MM-dd");
+    const get = (url: string) => dispatch(figureRoutes, store, "GET", url, undefined, today);
+    // The card's three reads: useFitnessStats(12), useWorkoutLogs({ limit: 1 }), useShoppingItems()
+    const stats = (await get(`/api/figure/stats?weeks=12&today=${day}`)).body as FitnessStats;
+    assert.ok(stats.thisWeek.sessions > 0 && stats.lastWeek.sessions > 0, day);
+    assert.ok(stats.thisWeek.miles > 0 && stats.lastWeek.miles > 0, day);
+    assert.ok(stats.thisWeek.volume > 0 && stats.lastWeek.volume > 0, day);
+    assert.ok(stats.streak.current > 0 && stats.streak.longest > 0, day);
+    const last = (await get("/api/figure/workout-logs?limit=1")).body as WorkoutLog[];
+    assert.deepEqual([last.length, last[0].date], [1, day]);
+    const items = (await get("/api/figure/shopping-items")).body as ShoppingItem[];
+    assert.ok(items.filter((i) => !i.checked).length > 0);
+  }
+});
+
+test("every stored Figure document passes its Zod schema", async () => {
+  const store = new BrowserStore(memoryStorage());
+  await loadSampleData(store, FIGURE_TODAY);
+  const check = async (name: CollectionName, schema: { safeParse: (v: unknown) => { success: boolean } }) => {
+    const docs = await store.collection(name).find();
+    assert.ok(docs.length > 0, name);
+    for (const doc of docs) assert.equal(schema.safeParse(doc).success, true, `${name} ${JSON.stringify(doc)}`);
+  };
+  await check("workouts", workoutSchema);
+  await check("workoutLogs", workoutLogSchema);
+  await check("runLogs", runLogSchema);
+  await check("recipes", recipeSchema);
+  await check("shoppingItems", shoppingItemSchema);
+  // Sub-documents carry no _id
+  for (const w of await store.collection<Workout>("workouts").find()) assert.ok(w.exercises.every((e) => !("_id" in e)));
+  for (const l of await store.collection<WorkoutLog>("workoutLogs").find()) assert.ok(l.exercises.every((e) => !("_id" in e)));
+});
+
+test("sample Figure bodies pass the module's own validation", () => {
+  const sample = figureSample(FIGURE_TODAY);
+  for (const { key, ...data } of sample.workouts) assert.equal(workoutSchema.safeParse(data).success, true, key);
+  for (const { workout, ...data } of sample.logs) {
+    assert.equal(workoutLogSchema.safeParse({ ...data, workoutId: "a".repeat(24) }).success, true, data.date);
+    assert.ok(sample.workouts.some((w) => w.key === workout));
+  }
+  for (const run of sample.runs) assert.equal(runLogSchema.safeParse(run).success, true, run.date);
+  for (const recipe of sample.recipes) assert.equal(recipeSchema.safeParse(recipe).success, true, recipe.name);
+  for (const item of sample.shopping.items) assert.equal(shoppingItemSchema.safeParse(item).success, true, item.name);
+  assert.ok(sample.recipes.some((r) => r.name === sample.shopping.fromRecipe));
+});
+
+test("after a reset (store.clear) the Figure sample loads again", async () => {
+  const storage = memoryStorage();
+  const store = new BrowserStore(storage);
+  assert.equal(await ensureDemoSeed(store, storage), true);
+  assert.equal(await store.collection("workoutLogs").count(), 30);
+  store.clear();
+  for (const name of ["workouts", "workoutLogs", "runLogs", "recipes", "shoppingItems"] as const) {
+    assert.equal(await store.collection(name).count(), 0, name);
+  }
+  assert.equal(await ensureDemoSeed(store, storage), true);
+  assert.equal(await store.collection("workoutLogs").count(), 30);
+  assert.equal(await store.collection("runLogs").count(), 20);
+});
+
+test("loading the Figure sample fails loudly, naming the step, when a handler refuses a request", async () => {
+  const store = new BrowserStore(memoryStorage());
+  let writes = 0;
+  const failing: Store = {
+    collection<T extends BaseDoc>(name: CollectionName): Collection<T> {
+      const collection = store.collection<T>(name);
+      if (name === "recipes") {
+        const insert = collection.insert.bind(collection);
+        collection.insert = (doc) => (++writes > 1 ? Promise.reject(new Error("disk full")) : insert(doc));
+      }
+      return collection;
+    },
+  };
+  await assert.rejects(loadSampleData(failing, FIGURE_TODAY), (error: Error) => {
+    assert.match(error.message, /^Loading the Figure sample failed at POST \/api\/figure\/recipes \(Overnight Oats\): 500/);
     return true;
   });
 });

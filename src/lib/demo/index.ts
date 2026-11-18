@@ -13,11 +13,14 @@ import { accounts, categories, profiles, transactions } from "@/lib/finance/api/
 import { financeRoutes } from "@/lib/finance/api/routes";
 import { projects, scratchpads, tasks } from "@/lib/projects/api/handlers";
 import { projectsRoutes } from "@/lib/projects/api/routes";
+import { recipes, runLogs, shoppingItems, workoutLogs, workouts } from "@/lib/figure/api/handlers";
+import { figureRoutes } from "@/lib/figure/api/routes";
 import type { RouteDef } from "@/lib/data/api";
 import { financeSample } from "./finance";
 import { futureSample } from "./future";
 import { linksSample } from "./links";
 import { projectsSample } from "./projects";
+import { figureSample } from "./figure";
 
 export const SEEDED_KEY = "ts:data:seeded";
 
@@ -26,6 +29,7 @@ export async function loadSampleData(store: Store, today: Date = new Date()): Pr
   await loadFuture(store, today);
   await loadFinance(store, today);
   await loadProjects(store, today);
+  await loadFigure(store, today);
 }
 
 /** A request through a module's own handlers that throws, naming the step, on any non-2xx answer. */
@@ -153,6 +157,43 @@ async function loadProjects(store: Store, today: Date): Promise<void> {
     if (notes !== undefined) {
       await request("PUT", `/api/projects/${project._id}/scratchpad`, { content: notes });
     }
+  }
+}
+
+// Figure is created through its own handlers too: workouts first, so logs carry their workoutId;
+// the shopping list gets typed items, then one recipe's ingredients, then a few checked off.
+async function loadFigure(store: Store, today: Date): Promise<void> {
+  await shoppingItems(store).deleteMany({});
+  await recipes(store).deleteMany({});
+  await runLogs(store).deleteMany({});
+  await workoutLogs(store).deleteMany({});
+  await workouts(store).deleteMany({});
+
+  const request = sampleRequester("Figure", figureRoutes, store, today);
+  const sample = figureSample(today);
+
+  const workoutIds = new Map<string, string>();
+  for (const { key, ...data } of sample.workouts) {
+    workoutIds.set(key, (await request<{ _id: string }>("POST", "/api/figure/workouts", data))._id);
+  }
+  for (const { workout, ...data } of sample.logs) {
+    await request("POST", "/api/figure/workout-logs", { ...data, workoutId: workoutIds.get(workout) });
+  }
+  for (const run of sample.runs) await request("POST", "/api/figure/runs", run);
+
+  const recipeIds = new Map<string, string>();
+  for (const recipe of sample.recipes) {
+    recipeIds.set(recipe.name, (await request<{ _id: string }>("POST", "/api/figure/recipes", recipe))._id);
+  }
+  for (const item of sample.shopping.items) await request("POST", "/api/figure/shopping-items", item);
+  const recipeId = recipeIds.get(sample.shopping.fromRecipe);
+  if (!recipeId) throw new Error(`Loading the Figure sample failed: unknown sample recipe "${sample.shopping.fromRecipe}"`);
+  await request("POST", `/api/figure/recipes/${recipeId}/add-to-list`);
+  const items = await request<{ _id: string; name: string }[]>("GET", "/api/figure/shopping-items");
+  for (const name of sample.shopping.checked) {
+    const item = items.find((i) => i.name === name);
+    if (!item) throw new Error(`Loading the Figure sample failed: no shopping item "${name}"`);
+    await request("PUT", `/api/figure/shopping-items/${item._id}`, { checked: true });
   }
 }
 
