@@ -15,7 +15,10 @@ const FORBIDDEN_FILES = new Set(
     join(ROOT, ...f.split("/")),
   ),
 );
-const FORBIDDEN_DIRS = [join(SRC, "models") + sep];
+// Models are server-only; test-support holds node-only helpers for tests (node:fs).
+const FORBIDDEN_DIRS = [join(SRC, "models") + sep, join(SRC, "lib", "data", "test-support") + sep];
+
+const isForbiddenFile = (file: string) => FORBIDDEN_FILES.has(file) || FORBIDDEN_DIRS.some((d) => file.startsWith(d));
 
 const rel = (file: string) => relative(ROOT, file).split(sep).join("/");
 
@@ -33,7 +36,7 @@ function walk(dir: string): string[] {
 function entryPoints(): string[] {
   const entries = [
     ...["hooks", "components", "app/(app)", "lib/demo"].flatMap((d) => walk(join(SRC, ...d.split("/")))),
-    ...walk(join(SRC, "lib", "data")).filter((f) => !FORBIDDEN_FILES.has(f)),
+    ...walk(join(SRC, "lib", "data")).filter((f) => !isForbiddenFile(f)),
   ];
   for (const m of readdirSync(join(SRC, "lib"), { withFileTypes: true })) {
     if (m.isDirectory()) entries.push(...walk(join(SRC, "lib", m.name, "api")));
@@ -82,7 +85,6 @@ function importsOf(file: string) {
   return found;
 }
 
-const isForbiddenFile = (file: string) => FORBIDDEN_FILES.has(file) || FORBIDDEN_DIRS.some((d) => file.startsWith(d));
 
 /** Returns the import chain from `entry` to the first forbidden import, or null. */
 export function findViolation(entry: string, clean: Set<string>): string[] | null {
@@ -118,6 +120,13 @@ test("import scanner reads static imports and re-exports, skips type-only statem
     export const x = 1;
   `;
   assert.deepEqual(specifiersOf(source), ["./a", "./b", "./star", "./c", "./side-effect", "./after-url"]);
+});
+
+test("test-support helpers count as forbidden for browser-reachable code", () => {
+  const helper = join(SRC, "lib", "data", "test-support", "direct-access.ts");
+  assert.ok(existsSync(helper));
+  assert.equal(isForbiddenFile(helper), true);
+  assert.ok(!entryPoints().includes(helper));
 });
 
 test("no server-only code is reachable from browser-reachable code", () => {

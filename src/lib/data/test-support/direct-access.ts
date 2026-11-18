@@ -1,5 +1,6 @@
 // Guard helpers for "client code reaches data only through src/hooks/request.ts" tests.
-// Used only by tests; pure, node-only (reads files).
+// TEST-ONLY: node-only (reads files with node:fs). Nothing outside a *.test.ts file may import from
+// src/lib/data/test-support/; browser-safe-imports.test.ts fails if browser-reachable code does.
 
 import { readdirSync } from "node:fs";
 import { join } from "node:path";

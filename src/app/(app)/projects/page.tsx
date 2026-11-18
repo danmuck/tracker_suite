@@ -26,7 +26,7 @@ import {
 import type { Project, ProjectFormData } from "@/types/projects/project";
 
 export default function ProjectsPage() {
-  const { projects, isLoading, isError, mutate } = useProjects();
+  const { projects, hasData, isLoading, isError, mutate } = useProjects();
   const [formOpen, setFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
@@ -86,7 +86,8 @@ export default function ProjectsPage() {
 
       {isLoading ? (
         <LoadingState variant="cards" />
-      ) : isError ? (
+      ) : isError && !hasData ? (
+        // Only with nothing to show: a failed background refresh keeps the last list on screen
         <EmptyState
           icon={CircleAlert}
           title="Could not load projects"

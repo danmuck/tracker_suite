@@ -27,6 +27,7 @@ import type { Project } from "@/types/projects/project";
 import type { Task } from "@/types/projects/task";
 import type { Scratchpad } from "@/types/projects/scratchpad";
 import { TASK_STATUSES } from "@/lib/projects/constants";
+import { formatDueDay } from "@/lib/projects/due-date";
 import { projectRollup } from "@/lib/dashboard/stats";
 
 test("loadSampleData fills groups and links, and running it twice does not duplicate", async () => {
@@ -70,6 +71,10 @@ test("after a reset (store.clear) the demo seeds again", async () => {
   assert.equal(await ensureDemoSeed(store, storage), true);
   store.clear();
   assert.equal(await ensureDemoSeed(store, storage), true);
+  const projectCount = projectsSample().projects.length;
+  assert.equal(await store.collection("projects").count(), projectCount);
+  assert.equal(await store.collection("tasks").count(), projectsSample().projects.reduce((n, p) => n + p.tasks.length, 0));
+  assert.equal(await store.collection("scratchpads").count(), projectsSample().projects.filter((p) => p.notes !== undefined).length);
 });
 
 test("availableModules hides modules without browser data in browser mode", () => {
@@ -238,6 +243,8 @@ test("loadSampleData fills Projects through the real handlers, relative to today
   assert.ok(due.every((d) => /^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/.test(d)), due.join());
   assert.ok(due[0] < "2026-11-17" && due[due.length - 1] > "2026-11-18");
   assert.equal(tasks.find((t) => t.title === "Frost date lookup")?.dueDate, "2026-11-18T00:00:00.000Z");
+  // …and shown on the intended calendar day (today + 1), whatever the time zone
+  assert.equal(formatDueDay(tasks.find((t) => t.title === "Frost date lookup")?.dueDate), "Nov 18");
   assert.equal(pads.length, 1);
   assert.match(pads[0].content, /^# Garden Planner/);
   assert.equal(projects.find((p) => p._id === pads[0].projectId)?.status, "active");

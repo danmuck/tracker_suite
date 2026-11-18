@@ -12,6 +12,8 @@ export function useProjects(status?: string) {
   const { data, error, isLoading, mutate } = useSWR<Project[]>(`${PROJECTS_KEY}${params}`, fetcher, NO_RETRY_ON_STATUS);
   return {
     projects: data ?? [],
+    // SWR keeps the last list when a background refresh fails: isError can be true with data to show
+    hasData: data !== undefined,
     isLoading,
     isError: !!error,
     mutate,

@@ -28,6 +28,7 @@ import {
   reorderTask,
 } from "@/hooks/projects/use-tasks";
 import { RequestError } from "@/lib/data/request-error";
+import { dueDay } from "@/lib/projects/due-date";
 import type { ProjectFormData } from "@/types/projects/project";
 import type { Task, TaskFormData, TaskStatus } from "@/types/projects/task";
 
@@ -38,7 +39,7 @@ export default function ProjectDetailPage({
 }) {
   const { projectId } = use(params);
   const { project, isLoading: projectLoading, error: projectError, mutate: mutateProject } = useProject(projectId);
-  const { tasks, isLoading: tasksLoading, isError: tasksError, mutate: mutateTasks } = useTasks(projectId);
+  const { tasks, hasData: hasTasks, isLoading: tasksLoading, isError: tasksError, mutate: mutateTasks } = useTasks(projectId);
 
   const [editProjectOpen, setEditProjectOpen] = useState(false);
   const [taskFormOpen, setTaskFormOpen] = useState(false);
@@ -59,7 +60,7 @@ export default function ProjectDetailPage({
       description: task.description,
       status: task.status,
       priority: task.priority,
-      dueDate: task.dueDate ? task.dueDate.split("T")[0] : undefined,
+      dueDate: dueDay(task.dueDate) || undefined,
       tags: task.tags,
     });
     setTaskFormOpen(true);
@@ -204,7 +205,8 @@ export default function ProjectDetailPage({
         </TabsList>
 
         <TabsContent value="board" className="mt-4">
-          {tasksError ? (
+          {/* Only with no tasks to show: a failed background refresh keeps the last board */}
+          {tasksError && !hasTasks ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
               Could not load this project&apos;s tasks. Reload the page to try again.
             </p>

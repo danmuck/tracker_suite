@@ -15,6 +15,8 @@ export function useTasks(projectId: string) {
   );
   return {
     tasks: data ?? [],
+    // SWR keeps the last list when a background refresh fails: isError can be true with data to show
+    hasData: data !== undefined,
     isLoading,
     isError: !!error,
     mutate,
