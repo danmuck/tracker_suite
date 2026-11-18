@@ -1,5 +1,5 @@
 import type { SWRConfiguration } from "swr";
-import { RequestError } from "@/lib/data/request-error";
+import { NO_RETRY_ON_STATUS } from "@/hooks/swr-options";
 
 /**
  * SWR options for every Finance read. An error status (400 for an out-of-range window, 404 for
@@ -7,6 +7,4 @@ import { RequestError } from "@/lib/data/request-error";
  * of a projection or summary read would also re-run due-payment posting). A network failure
  * keeps SWR's default retry.
  */
-export const FINANCE_SWR: SWRConfiguration = {
-  shouldRetryOnError: (error: unknown) => !(error instanceof RequestError),
-};
+export const FINANCE_SWR: SWRConfiguration = NO_RETRY_ON_STATUS;

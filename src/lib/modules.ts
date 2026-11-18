@@ -78,7 +78,7 @@ export const modules: ModuleConfig[] = [
     navItems: [
       { href: "/projects", label: "Projects", icon: FolderKanban },
     ],
-    browserData: false,
+    browserData: true,
   },
   {
     id: "links",

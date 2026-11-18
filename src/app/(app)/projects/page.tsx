@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { FolderKanban, Plus } from "lucide-react";
+import { toast } from "sonner";
+import { CircleAlert, FolderKanban, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -25,7 +26,7 @@ import {
 import type { Project, ProjectFormData } from "@/types/projects/project";
 
 export default function ProjectsPage() {
-  const { projects, isLoading, mutate } = useProjects();
+  const { projects, isLoading, isError, mutate } = useProjects();
   const [formOpen, setFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deletingProject, setDeletingProject] = useState<Project | null>(null);
@@ -35,21 +36,37 @@ export default function ProjectsPage() {
     tab === "all" ? projects : projects.filter((p) => p.status === tab);
 
   async function handleCreate(data: ProjectFormData) {
-    await createProject(data);
+    try {
+      await createProject(data);
+    } catch (err) {
+      toast.error(failure(err, "Failed to create project"));
+      return;
+    }
     mutate();
     setFormOpen(false);
   }
 
   async function handleUpdate(data: ProjectFormData) {
     if (!editingProject) return;
-    await updateProject(editingProject._id, data);
+    try {
+      await updateProject(editingProject._id, data);
+    } catch (err) {
+      toast.error(failure(err, "Failed to update project"));
+      return;
+    }
     mutate();
     setEditingProject(null);
   }
 
   async function handleDelete() {
     if (!deletingProject) return;
-    await deleteProject(deletingProject._id);
+    try {
+      await deleteProject(deletingProject._id);
+    } catch (err) {
+      toast.error(failure(err, "Failed to delete project"));
+      mutate();
+      return;
+    }
     mutate();
     setDeletingProject(null);
   }
@@ -69,6 +86,12 @@ export default function ProjectsPage() {
 
       {isLoading ? (
         <LoadingState variant="cards" />
+      ) : isError ? (
+        <EmptyState
+          icon={CircleAlert}
+          title="Could not load projects"
+          description="Something went wrong reading your projects. Reload the page to try again."
+        />
       ) : projects.length === 0 ? (
         <EmptyState
           icon={FolderKanban}
@@ -148,4 +171,8 @@ export default function ProjectsPage() {
       />
     </div>
   );
+}
+
+function failure(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
 }

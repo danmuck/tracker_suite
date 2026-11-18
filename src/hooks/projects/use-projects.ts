@@ -1,15 +1,17 @@
 "use client";
 
 import useSWR from "swr";
+import { fetcher, send } from "@/hooks/request";
+import { NO_RETRY_ON_STATUS } from "@/hooks/swr-options";
 import type { Project, ProjectFormData } from "@/types/projects/project";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+export const PROJECTS_KEY = "/api/projects";
 
 export function useProjects(status?: string) {
   const params = status ? `?status=${status}` : "";
-  const { data, error, isLoading, mutate } = useSWR(`/api/projects${params}`, fetcher);
+  const { data, error, isLoading, mutate } = useSWR<Project[]>(`${PROJECTS_KEY}${params}`, fetcher, NO_RETRY_ON_STATUS);
   return {
-    projects: (data || []) as Project[],
+    projects: data ?? [],
     isLoading,
     isError: !!error,
     mutate,
@@ -17,49 +19,21 @@ export function useProjects(status?: string) {
 }
 
 export function useProject(id: string) {
-  const { data, error, isLoading, mutate } = useSWR(
-    id ? `/api/projects/${id}` : null,
-    fetcher
+  const { data, error, isLoading, mutate } = useSWR<Project>(
+    id ? `${PROJECTS_KEY}/${id}` : null,
+    fetcher,
+    NO_RETRY_ON_STATUS
   );
   return {
-    project: data as Project | undefined,
+    project: data,
     isLoading,
     isError: !!error,
+    error: error as unknown,
     mutate,
   };
 }
 
-export async function createProject(data: ProjectFormData) {
-  const res = await fetch("/api/projects", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to create project");
-  }
-  return res.json();
-}
-
-export async function updateProject(id: string, data: Partial<ProjectFormData>) {
-  const res = await fetch(`/api/projects/${id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to update project");
-  }
-  return res.json();
-}
-
-export async function deleteProject(id: string) {
-  const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
-  if (!res.ok) {
-    const err = await res.json();
-    throw new Error(err.error || "Failed to delete project");
-  }
-  return res.json();
-}
+export const createProject = (data: ProjectFormData) => send<Project>(PROJECTS_KEY, "POST", data);
+export const updateProject = (id: string, data: Partial<ProjectFormData>) =>
+  send<Project>(`${PROJECTS_KEY}/${id}`, "PUT", data);
+export const deleteProject = (id: string) => send(`${PROJECTS_KEY}/${id}`, "DELETE");

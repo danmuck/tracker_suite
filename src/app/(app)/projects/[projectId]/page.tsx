@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { use } from "react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +27,7 @@ import {
   deleteTask,
   reorderTask,
 } from "@/hooks/projects/use-tasks";
+import { RequestError } from "@/lib/data/request-error";
 import type { ProjectFormData } from "@/types/projects/project";
 import type { Task, TaskFormData, TaskStatus } from "@/types/projects/task";
 
@@ -35,8 +37,8 @@ export default function ProjectDetailPage({
   params: Promise<{ projectId: string }>;
 }) {
   const { projectId } = use(params);
-  const { project, isLoading: projectLoading, mutate: mutateProject } = useProject(projectId);
-  const { tasks, isLoading: tasksLoading, mutate: mutateTasks } = useTasks(projectId);
+  const { project, isLoading: projectLoading, error: projectError, mutate: mutateProject } = useProject(projectId);
+  const { tasks, isLoading: tasksLoading, isError: tasksError, mutate: mutateTasks } = useTasks(projectId);
 
   const [editProjectOpen, setEditProjectOpen] = useState(false);
   const [taskFormOpen, setTaskFormOpen] = useState(false);
@@ -64,14 +66,24 @@ export default function ProjectDetailPage({
   }, []);
 
   async function handleCreateTask(data: TaskFormData) {
-    await createTask(data);
+    try {
+      await createTask(data);
+    } catch (err) {
+      toast.error(failure(err, "Failed to create task"));
+      return;
+    }
     mutateTasks();
     setTaskFormOpen(false);
   }
 
   async function handleUpdateTask(data: TaskFormData) {
     if (!editingTask) return;
-    await updateTask(editingTask._id, data);
+    try {
+      await updateTask(editingTask._id, data);
+    } catch (err) {
+      toast.error(failure(err, "Failed to update task"));
+      return;
+    }
     mutateTasks();
     setTaskFormOpen(false);
     setEditingTask(null);
@@ -79,13 +91,24 @@ export default function ProjectDetailPage({
 
   async function handleDeleteTask() {
     if (!deletingTask) return;
-    await deleteTask(deletingTask._id);
+    try {
+      await deleteTask(deletingTask._id);
+    } catch (err) {
+      toast.error(failure(err, "Failed to delete task"));
+      mutateTasks();
+      return;
+    }
     mutateTasks();
     setDeletingTask(null);
   }
 
   async function handleUpdateProject(data: ProjectFormData) {
-    await updateProject(projectId, data);
+    try {
+      await updateProject(projectId, data);
+    } catch (err) {
+      toast.error(failure(err, "Failed to update project"));
+      return;
+    }
     mutateProject();
     setEditProjectOpen(false);
   }
@@ -102,7 +125,8 @@ export default function ProjectDetailPage({
       try {
         await reorderTask(taskId, { status: newStatus, order: newOrder });
         mutateTasks();
-      } catch {
+      } catch (err) {
+        toast.error(failure(err, "Failed to move task"));
         mutateTasks(); // revert on error
       }
     },
@@ -111,9 +135,13 @@ export default function ProjectDetailPage({
 
   if (projectLoading || tasksLoading) return <LoadingState />;
   if (!project) {
+    // No project: a 404 (unknown or malformed id), or the read failed.
+    const missing = !projectError || (projectError instanceof RequestError && projectError.status === 404);
     return (
       <div className="text-center py-16">
-        <p className="text-muted-foreground">Project not found.</p>
+        <p className="text-muted-foreground">
+          {missing ? "Project not found." : "Could not load this project. Reload the page to try again."}
+        </p>
         <Button variant="link" asChild className="mt-2">
           <Link href="/projects">Back to Projects</Link>
         </Button>
@@ -176,13 +204,19 @@ export default function ProjectDetailPage({
         </TabsList>
 
         <TabsContent value="board" className="mt-4">
-          <KanbanBoard
-            tasks={tasks}
-            onAddTask={handleAddTask}
-            onEditTask={handleEditTask}
-            onDeleteTask={setDeletingTask}
-            onReorderTask={handleReorderTask}
-          />
+          {tasksError ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              Could not load this project&apos;s tasks. Reload the page to try again.
+            </p>
+          ) : (
+            <KanbanBoard
+              tasks={tasks}
+              onAddTask={handleAddTask}
+              onEditTask={handleEditTask}
+              onDeleteTask={setDeletingTask}
+              onReorderTask={handleReorderTask}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="notes" className="mt-4">
@@ -240,4 +274,8 @@ export default function ProjectDetailPage({
       />
     </div>
   );
+}
+
+function failure(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useRef } from "react";
 import Markdown from "react-markdown";
 import { Eye, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,19 +13,17 @@ interface ScratchpadEditorProps {
 }
 
 export function ScratchpadEditor({ projectId }: ScratchpadEditorProps) {
-  const { scratchpad, isLoading, mutate } = useScratchpad(projectId);
+  const { scratchpad, isLoading, isError, mutate } = useScratchpad(projectId);
   const [mode, setMode] = useState<"edit" | "preview">("edit");
   const [content, setContent] = useState("");
   const [initialized, setInitialized] = useState(false);
   const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Initialize content from scratchpad data
-  useEffect(() => {
-    if (scratchpad && !initialized) {
-      setContent(scratchpad.content);
-      setInitialized(true);
-    }
-  }, [scratchpad, initialized]);
+  // Initialize content from scratchpad data, once (adjusting state while rendering, not in an effect)
+  if (scratchpad && !initialized) {
+    setContent(scratchpad.content);
+    setInitialized(true);
+  }
 
   const save = useCallback(
     async (value: string) => {
@@ -54,6 +52,14 @@ export function ScratchpadEditor({ projectId }: ScratchpadEditorProps) {
   }, [content, save]);
 
   if (isLoading) return <LoadingState />;
+  // No editor without the saved notes: typing here would auto-save over them.
+  if (isError && !initialized) {
+    return (
+      <p className="text-sm text-muted-foreground py-8 text-center">
+        Could not load the notes. Reload the page to try again.
+      </p>
+    );
+  }
 
   return (
     <div className="space-y-3">
