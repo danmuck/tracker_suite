@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import type { ApiResult } from "@/lib/data/api";
 import { BrowserStore } from "@/lib/data/browser-store";
 import { dispatch } from "@/lib/data/dispatch";
-import type { BaseDoc, Collection, CollectionName, Store } from "@/lib/data/store";
+import { ConflictError, type BaseDoc, type Collection, type CollectionName, type Store } from "@/lib/data/store";
 import { memoryStorage } from "@/lib/data/test-helpers";
 import { castDate, castId, type ProjectDoc, type ScratchpadDoc, type TaskDoc } from "./handlers";
 import { projectsRoutes } from "./routes";
@@ -81,7 +81,6 @@ test("list projects: newest first, ?status= filter (any value, exact), task coun
   await task(a._id, { status: "done" });
   await task(a._id, { status: "done" });
   await task(b._id, { status: "in_review" });
-  await task(UNKNOWN); // current behavior: an orphan, counted in no project
   const rows = (await call("GET", "/api/projects")).body as ProjectRow[];
   assert.deepEqual(rows.map((p) => [p.name, p.taskCounts]), [
     ["C", { total: 0, done: 0 }],
@@ -104,14 +103,22 @@ test("get project: found, unknown and malformed ids are 404", async () => {
   }
 });
 
-test("update project: current behavior: omitted status and color reset, omitted description kept, empty repositoryUrl keeps the URL", async () => {
+test("update project: an empty repositoryUrl removes it; current behavior: omitted status and color reset, omitted description and URL kept", async () => {
   const a = await project({ description: "keep", repositoryUrl: "https://example.com/a", color: "#10b981", status: "archived" });
+  // Omitted: the URL is kept
+  const kept = (await call("PUT", `/api/projects/${a._id}`, { name: "Alpha" })).body as ProjectDoc;
+  assert.equal(kept.repositoryUrl, "https://example.com/a");
   const res = await call("PUT", `/api/projects/${a._id}`, { name: " Alpha 2 ", repositoryUrl: "" });
   assert.equal(res.status, 200);
   const p = res.body as ProjectDoc;
-  assert.deepEqual([p.name, p.description, p.repositoryUrl, p.status, p.color], ["Alpha 2", "keep", "https://example.com/a", "active", "#3b82f6"]);
+  assert.deepEqual([p.name, p.description, p.status, p.color], ["Alpha 2", "keep", "active", "#3b82f6"]);
+  assert.equal("repositoryUrl" in p, false);
+  assert.deepEqual(await call("GET", `/api/projects/${a._id}`), { status: 200, body: p });
   assert.notEqual(p.updatedAt, a.updatedAt);
   assert.equal(p.createdAt, a.createdAt);
+  // Clearing what is already gone is fine; a new URL comes back
+  assert.equal("repositoryUrl" in ((await call("PUT", `/api/projects/${a._id}`, { name: "Alpha", repositoryUrl: "" })).body as ProjectDoc), false);
+  assert.equal(((await call("PUT", `/api/projects/${a._id}`, { name: "Alpha", repositoryUrl: " https://example.com/b " })).body as ProjectDoc).repositoryUrl, "https://example.com/b");
   // "" clears the description (it is a value, not left out)
   const cleared = (await call("PUT", `/api/projects/${a._id}`, { name: "Alpha", description: "  " })).body as ProjectDoc;
   assert.equal(cleared.description, "");
@@ -128,7 +135,10 @@ test("update project: lookup before body; validation 400; blank name 500", async
   assert.equal((await call("PUT", `/api/projects/${a._id}`, { name: "", color: "#12345" })).status, 400);
   assert.equal((await call("PUT", `/api/projects/${a._id}`, undefined)).status, 400);
   assert.deepEqual(await call("PUT", `/api/projects/${a._id}`, { name: "   " }), { status: 500, body: { error: "Failed to update project" } });
-  assert.equal(((await call("GET", `/api/projects/${a._id}`)).body as ProjectDoc).name, "Alpha");
+  // A refused clear writes nothing either
+  const withUrl = (await call("PUT", `/api/projects/${a._id}`, { name: "Alpha", repositoryUrl: "https://example.com/a" })).body as ProjectDoc;
+  assert.deepEqual(await call("PUT", `/api/projects/${a._id}`, { name: "   ", repositoryUrl: "" }), { status: 500, body: { error: "Failed to update project" } });
+  assert.deepEqual((await call("GET", `/api/projects/${a._id}`)).body, withUrl);
 });
 
 test("delete project: removes its tasks and its scratchpad; another project's tasks and scratchpad survive", async () => {
@@ -223,7 +233,7 @@ test("create task: dueDate absent, \"\", date-only, ISO, local time without an o
   assert.equal((await task(a._id, { dueDate: "2026-12-01T10:00" })).dueDate, "2026-12-01T15:00:00.000Z");
 });
 
-test("create task: 400 on validation and broken JSON; current behavior: bad date, malformed projectId, blank title are 500; unknown project accepted", async (t) => {
+test("create task: 400 on validation and broken JSON; 404 for an unknown project; current behavior: bad date, malformed projectId, blank title are 500", async (t) => {
   quiet(t);
   const a = await project();
   const bad = await call("POST", "/api/tasks", { projectId: "", title: "", status: "nope", priority: "x", tags: "a", description: 5 });
@@ -234,9 +244,18 @@ test("create task: 400 on validation and broken JSON; current behavior: bad date
   assert.deepEqual(await call("POST", "/api/tasks", { projectId: BAD, title: "x" }), failed);
   assert.deepEqual(await call("POST", "/api/tasks", { projectId: a._id, title: "   " }), failed);
   assert.equal(await store.collection("tasks").count(), 0);
-  // current behavior (Task 4): a well-formed id that matches no project creates an orphan task
-  const orphan = await task(UNKNOWN, { title: "orphan" });
-  assert.deepEqual((await list(UNKNOWN)).map((x) => x._id), [orphan._id]);
+  // A well-formed id that matches no project (in either case, or a deleted project): 404, nothing written
+  const notFound = { status: 404, body: { error: "Project not found" } };
+  assert.deepEqual(await call("POST", "/api/tasks", { projectId: UNKNOWN, title: "orphan" }), notFound);
+  assert.deepEqual(await call("POST", "/api/tasks", { projectId: UNKNOWN.toUpperCase(), title: "orphan", status: "done" }), notFound);
+  const gone = await project({ name: "Gone" });
+  await call("DELETE", `/api/projects/${gone._id}`);
+  assert.deepEqual(await call("POST", "/api/tasks", { projectId: gone._id, title: "late" }), notFound);
+  assert.equal(await store.collection("tasks").count(), 0);
+  assert.deepEqual(await list(UNKNOWN), []);
+  // A malformed body is still 400 and a bad cast still 500 when the project is unknown
+  assert.equal((await call("POST", "/api/tasks", { projectId: UNKNOWN, title: "" })).status, 400);
+  assert.deepEqual(await call("POST", "/api/tasks", { projectId: UNKNOWN, title: "x", dueDate: "not a date" }), failed);
 });
 
 // ── Tasks: update ──
@@ -256,6 +275,8 @@ test("update task: sets the body; current behavior: omitted priority/tags/status
   assert.equal(((await call("PUT", `/api/tasks/${x._id}`, { projectId: a._id, title: "R", dueDate: "" })).body as TaskDoc).dueDate, null);
   assert.equal(((await call("PUT", `/api/tasks/${x._id}`, { projectId: a._id, title: "R" })).body as TaskDoc).dueDate, null);
   assert.equal(((await call("PUT", `/api/tasks/${x._id}`, { projectId: a._id, title: "R", dueDate: "2026-12-05T08:00:00Z" })).body as TaskDoc).dueDate, "2026-12-05T08:00:00.000Z");
+  // description "" clears it (what the task form sends when the field is emptied)
+  assert.equal(((await call("PUT", `/api/tasks/${x._id}`, { projectId: a._id, title: "R", description: " " })).body as TaskDoc).description, "");
 });
 
 test("update task: current behavior: a status change keeps the order and can tie; ties list in insertion order", async () => {
@@ -443,15 +464,38 @@ function interleaving(inner: Store): Store {
   };
 }
 
-test("current behavior (Task 4): two overlapping first scratchpad reads; the second fails on the unique index with 500", async (t) => {
-  quiet(t);
+test("two overlapping first scratchpad reads both answer 200 with the same scratchpad", async () => {
   const a = await project();
   const racing = interleaving(store);
   const read = () => dispatch(projectsRoutes, racing, "GET", `/api/projects/${a._id}/scratchpad`);
   const results = await Promise.all([read(), read()]);
-  assert.deepEqual(results.map((r) => r.status).sort(), [200, 500]);
-  assert.deepEqual(results.find((r) => r.status === 500)!.body, { error: "Failed to fetch scratchpad" });
+  assert.deepEqual(results.map((r) => r.status), [200, 200]);
+  assert.deepEqual(results[0].body, results[1].body);
+  assert.deepEqual([(results[0].body as ScratchpadDoc).projectId, (results[0].body as ScratchpadDoc).content], [a._id, ""]);
   assert.equal(await store.collection("scratchpads").count(), 1);
+});
+
+test("first scratchpad read: only a ConflictError is taken as already created; other insert errors stay 500", async (t) => {
+  quiet(t);
+  const a = await project();
+  const failing = (error: Error): Store => ({
+    collection<T extends BaseDoc>(name: CollectionName): Collection<T> {
+      const real = store.collection<T>(name);
+      if (name !== "scratchpads") return real;
+      return new Proxy(real, {
+        get(target, prop) {
+          if (prop === "insert") return async () => { throw error; };
+          const value = Reflect.get(target, prop, target);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+    },
+  });
+  const read = (s: Store) => dispatch(projectsRoutes, s, "GET", `/api/projects/${a._id}/scratchpad`);
+  assert.deepEqual(await read(failing(new Error("disk full"))), { status: 500, body: { error: "Failed to fetch scratchpad" } });
+  // A conflict with nothing to read back (deleted in between) is still the route's 500
+  assert.deepEqual(await read(failing(new ConflictError("scratchpads", "projectId"))), { status: 500, body: { error: "Failed to fetch scratchpad" } });
+  assert.equal(await store.collection("scratchpads").count(), 0);
 });
 
 // ── Casting helpers ──

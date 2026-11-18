@@ -1,7 +1,7 @@
 {
   "meta": {
-    "capturedAt": "2026-11-18T01:12:41.837Z",
-    "commit": "22d619cb5cb00b228c74e19376fc728dfb706e26"
+    "capturedAt": "2026-11-18T01:18:00.882Z",
+    "commit": "e8275cff15d23c0ae72ba67d65725587a2aebfc8"
   },
   "steps": [
     {
@@ -157,7 +157,6 @@
         "createdAt": "<same>",
         "description": "updated",
         "name": "Parity Alpha",
-        "repositoryUrl": "https://example.com/alpha-2",
         "status": "active",
         "updatedAt": "<changed>"
       }
@@ -207,9 +206,23 @@
         "createdAt": "<same>",
         "description": "updated",
         "name": "Parity Alpha",
-        "repositoryUrl": "https://example.com/alpha-2",
         "status": "active",
         "updatedAt": "<same>"
+      }
+    },
+    {
+      "id": "P16",
+      "request": "PUT /api/projects/{p1}",
+      "status": 200,
+      "body": {
+        "_id": "<p1>",
+        "color": "#3b82f6",
+        "createdAt": "<same>",
+        "description": "",
+        "name": "Parity Alpha",
+        "repositoryUrl": "https://example.com/alpha-3",
+        "status": "active",
+        "updatedAt": "<changed>"
       }
     },
     {
@@ -430,17 +443,9 @@
     {
       "id": "T15",
       "request": "POST /api/tasks",
-      "status": 201,
+      "status": 404,
       "body": {
-        "_id": "<tOrphan>",
-        "createdAt": "<new>",
-        "order": 0,
-        "priority": "medium",
-        "projectId": "<unknown>",
-        "status": "todo",
-        "tags": [],
-        "title": "Parity orphan",
-        "updatedAt": "<new>"
+        "error": "Project not found"
       }
     },
     {
@@ -539,19 +544,7 @@
       "id": "T17",
       "request": "GET /api/tasks?projectId={unknown}",
       "status": 200,
-      "body": [
-        {
-          "_id": "<tOrphan>",
-          "createdAt": "<same>",
-          "order": 0,
-          "priority": "medium",
-          "projectId": "<unknown>",
-          "status": "todo",
-          "tags": [],
-          "title": "Parity orphan",
-          "updatedAt": "<same>"
-        }
-      ]
+      "body": []
     },
     {
       "id": "T18",
@@ -587,9 +580,9 @@
           "_id": "<p1>",
           "color": "#3b82f6",
           "createdAt": "<same>",
-          "description": "updated",
+          "description": "",
           "name": "Parity Alpha",
-          "repositoryUrl": "https://example.com/alpha-2",
+          "repositoryUrl": "https://example.com/alpha-3",
           "status": "active",
           "taskCounts": {
             "done": 1,
@@ -810,6 +803,24 @@
       }
     },
     {
+      "id": "U10",
+      "request": "PUT /api/tasks/{tC}",
+      "status": 200,
+      "body": {
+        "_id": "<tC>",
+        "createdAt": "<same>",
+        "description": "",
+        "dueDate": null,
+        "order": 2,
+        "priority": "medium",
+        "projectId": "<p1>",
+        "status": "todo",
+        "tags": [],
+        "title": "Parity wire API",
+        "updatedAt": "<changed>"
+      }
+    },
+    {
       "id": "D01",
       "request": "DELETE /api/tasks/{tB}",
       "status": 200,
@@ -886,7 +897,7 @@
         {
           "_id": "<tC>",
           "createdAt": "<same>",
-          "description": "REST",
+          "description": "",
           "dueDate": null,
           "order": 2,
           "priority": "medium",
@@ -949,7 +960,7 @@
       "body": {
         "_id": "<tC>",
         "createdAt": "<same>",
-        "description": "REST",
+        "description": "",
         "dueDate": null,
         "order": 2,
         "priority": "medium",
@@ -1057,7 +1068,7 @@
         {
           "_id": "<tC>",
           "createdAt": "<same>",
-          "description": "REST",
+          "description": "",
           "dueDate": null,
           "order": 2,
           "priority": "medium",
@@ -1299,9 +1310,9 @@
           "_id": "<p1>",
           "color": "#3b82f6",
           "createdAt": "<same>",
-          "description": "updated",
+          "description": "",
           "name": "Parity Alpha",
-          "repositoryUrl": "https://example.com/alpha-2",
+          "repositoryUrl": "https://example.com/alpha-3",
           "status": "active",
           "taskCounts": {
             "done": 2,
@@ -1310,6 +1321,20 @@
           "updatedAt": "<same>"
         }
       ]
+    },
+    {
+      "id": "X09",
+      "request": "POST /api/tasks",
+      "status": 404,
+      "body": {
+        "error": "Project not found"
+      }
+    },
+    {
+      "id": "X10",
+      "request": "GET /api/tasks?projectId={p3}",
+      "status": 200,
+      "body": []
     }
   ]
 }

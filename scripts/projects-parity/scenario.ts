@@ -91,15 +91,17 @@ export function buildScenario(): Step[] {
       { name: "Parity Alpha", description: "  updated  ", repositoryUrl: "https://example.com/alpha-2", color: "#ef4444", status: "completed" },
       200,
     ),
-    // current behavior: "" cannot clear repositoryUrl (it is dropped from the update, the old URL stays);
-    // omitted status and color are reset to Zod's defaults; omitted description is left as it was
+    // "" removes repositoryUrl (Task 4; before, the old URL stayed). current behavior: omitted status
+    // and color are reset to Zod's defaults; omitted description is left as it was
     send("P11", "PUT", "/api/projects/{p1}", { name: "Parity Alpha", repositoryUrl: "" }, 200),
     send("P12", "PUT", "/api/projects/{p1}", { name: "", color: "#12345" }, 400),
     send("P13", "PUT", `/api/projects/${BAD}`, { name: "x" }, 500, { allow: d1a(PROJECT_NOT_FOUND) }),
     // The project is looked up before the body is read: an unknown id with a broken body is a 404
     raw("P14", "PUT", "/api/projects/{unknown}", 404),
-    // A successful read after the updates: optional fields kept, defaults reset by P11
+    // A successful read after the updates: no URL, description kept, defaults reset by P11
     get("P15", "/api/projects/{p1}", 200),
+    // What the project form sends when the description is emptied ("" stores "") and a URL is set again
+    send("P16", "PUT", "/api/projects/{p1}", { name: "Parity Alpha", description: "", repositoryUrl: "https://example.com/alpha-3" }, 200),
 
     // ── Tasks: create and list ──
     get("T01", "/api/tasks", 400),
@@ -122,12 +124,12 @@ export function buildScenario(): Step[] {
     // current behavior: Zod accepts any dueDate string; the schema cannot cast this one → 500
     send("T13", "POST", "/api/tasks", task("p1", "Parity bad date", { dueDate: "not a date" }), 500),
     send("T14", "POST", "/api/tasks", { projectId: BAD, title: "x" }, 500),
-    // current behavior (Task 4 defect): a well-formed projectId that matches no project creates an orphan task
-    send("T15", "POST", "/api/tasks", { projectId: "{unknown}", title: "Parity orphan" }, 201, { save: { name: "tOrphan", from: "_id" } }),
+    // A well-formed projectId that matches no project: 404, nothing written (Task 4; before, an orphan task)
+    send("T15", "POST", "/api/tasks", { projectId: "{unknown}", title: "Parity orphan" }, 404),
     // Sorted by status as a string (backlog, done, in_progress, in_review, todo), then order
     get("T16", "/api/tasks?projectId={p1}", 200),
     get("T17", "/api/tasks?projectId={unknown}", 200),
-    // Task counts: some done; the orphan counts nowhere
+    // Task counts: some done
     get("T18", "/api/projects", 200),
 
     // ── Tasks: update ──
@@ -151,6 +153,8 @@ export function buildScenario(): Step[] {
     send("U07", "PUT", "/api/tasks/{unknown}", task("p1", "x"), 404),
     send("U08", "PUT", `/api/tasks/${BAD}`, task("p1", "x"), 500, { allow: d1a(TASK_NOT_FOUND) }),
     raw("U09", "PUT", "/api/tasks/{tA}", 500, { allow: d1c() }),
+    // What the task form sends when the description is emptied: "" stores ""
+    send("U10", "PUT", "/api/tasks/{tC}", task("p1", "Parity wire API", { description: "" }), 200),
 
     // ── Tasks: delete ──
     // tB (todo 1) goes; todo keeps tA 0, tC 2, tD 3: a gap, not renumbered
@@ -200,5 +204,8 @@ export function buildScenario(): Step[] {
     get("X06", "/api/projects/{p2}/scratchpad", 200),
     get("X07", "/api/projects/{p1}/scratchpad", 200),
     get("X08", "/api/projects", 200),
+    // A task for a project deleted meanwhile (another tab): 404, nothing written (Task 4)
+    send("X09", "POST", "/api/tasks", task("p3", "Parity too late"), 404),
+    get("X10", "/api/tasks?projectId={p3}", 200),
   ];
 }

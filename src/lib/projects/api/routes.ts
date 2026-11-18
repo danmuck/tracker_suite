@@ -19,8 +19,10 @@ import {
 } from "./handlers";
 
 /**
- * A unique-index race on the scratchpad (two overlapping first reads or upserts) stays a plain
- * error, the route's 500 failure string as today, instead of the adapter's 409 for ConflictError.
+ * A unique-index race on the scratchpad that the handler does not resolve (two overlapping upserts,
+ * or a first read whose winner is gone again) stays a plain error, the route's 500 failure string as
+ * today, instead of the adapter's 409 for ConflictError. getScratchpad answers the usual first-read
+ * race itself.
  */
 const noConflict =
   (handler: Handler): Handler =>

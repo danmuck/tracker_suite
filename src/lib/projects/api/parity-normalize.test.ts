@@ -94,10 +94,10 @@ test("compareTranscripts: exact match, or an allowed step answering exactly its 
   assert.equal(compareTranscripts({ meta, steps: [today.steps[0]] }, today, steps).diffs.length, 1);
 });
 
-test("scenario: 45–72 unique steps; allowed differences only on malformed path ids and broken JSON", () => {
+test("scenario: 45–80 unique steps; allowed differences only on malformed path ids and broken JSON", () => {
   const steps = buildScenario();
   assert.equal(new Set(steps.map((s) => s.id)).size, steps.length);
-  assert.ok(steps.length >= 45 && steps.length <= 72, `${steps.length} steps`);
+  assert.ok(steps.length >= 45 && steps.length <= 80, `${steps.length} steps`);
   for (const s of steps.filter((s) => s.allow)) {
     assert.equal(s.expect, 500, s.id);
     if (s.allow!.rule === "D1a") assert.match(s.path, /\/abc(\/|$)/, s.id);

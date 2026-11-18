@@ -7,7 +7,7 @@
 // `required` after trimming), the handler throws, which the adapter answers with the route's 500.
 
 import { fail, invalid, notFound, ok, type Handler } from "@/lib/data/api";
-import type { BaseDoc, Collection, Store } from "@/lib/data/store";
+import { ConflictError, type BaseDoc, type Collection, type Store } from "@/lib/data/store";
 import { projectSchema, scratchpadSchema, taskReorderSchema, taskSchema } from "@/lib/projects/validators";
 import type { Project } from "@/types/projects/project";
 import type { Scratchpad } from "@/types/projects/scratchpad";
@@ -55,7 +55,10 @@ export function castDate(value: string): string | null {
   return date.toISOString();
 }
 
-/** The project fields a create or full update writes; an empty repositoryUrl is left out (today's behaviour). */
+/**
+ * The project fields a create or full update sets. An empty repositoryUrl is not set: a create leaves
+ * it out, an update removes it (`projectUnset`).
+ */
 function projectFields(data: ReturnType<typeof projectSchema.parse>): Record<string, unknown> {
   const out: Record<string, unknown> = {
     name: requiredText(data.name, "name"),
@@ -112,16 +115,20 @@ export const getProject: Handler = async ({ store, params }) => {
 };
 
 /**
- * Sets what the body holds. current behavior: an omitted status or color is reset to its default
- * (Zod fills it), an omitted description is kept, and an empty repositoryUrl keeps the old URL.
- * The project is looked up before the body is read.
+ * Sets what the body holds; an empty repositoryUrl removes the URL, an empty description stores "".
+ * current behavior: an omitted status or color is reset to its default (Zod fills it), an omitted
+ * description or repositoryUrl is kept. The project is looked up before the body is read.
  */
 export const updateProject: Handler = async ({ store, params, body }) => {
   if (!(await projects(store).findById(params.projectId))) return notFound(PROJECT);
   const parsed = projectSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
+  // Built before the write, so a blank name (500) writes nothing. An empty repositoryUrl is never
+  // in $set, so the two parts never share a path.
+  const $set = projectFields(parsed.data);
+  const update = parsed.data.repositoryUrl === "" ? { $set, $unset: { repositoryUrl: 1 as const } } : { $set };
   // Deleted between the read and the write: today's findByIdAndUpdate answered 200 null.
-  return ok(await projects(store).updateById(params.projectId, { $set: projectFields(parsed.data) }));
+  return ok(await projects(store).updateById(params.projectId, update));
 };
 
 /** Deletes the project, its tasks and its scratchpad. */
@@ -136,13 +143,24 @@ export const deleteProject: Handler = async ({ store, params }) => {
 
 // ── Scratchpad ──
 
-/** The project's scratchpad, created empty on first read. */
+/**
+ * The project's scratchpad, created empty on first read. Two overlapping first reads can both try
+ * to create it: the one that loses on the unique projectId index answers the one that won.
+ */
 export const getScratchpad: Handler = async ({ store, params }) => {
   const project = await projects(store).findById(params.projectId);
   if (!project) return notFound(PROJECT);
-  const existing = await scratchpads(store).findOne({ projectId: project._id });
+  const pads = scratchpads(store);
+  const existing = await pads.findOne({ projectId: project._id });
   if (existing) return ok(existing);
-  return ok(await scratchpads(store).insert({ projectId: project._id, content: "" }));
+  try {
+    return ok(await pads.insert({ projectId: project._id, content: "" }));
+  } catch (error) {
+    if (!(error instanceof ConflictError)) throw error;
+    const created = await pads.findOne({ projectId: project._id });
+    if (!created) throw error;
+    return ok(created);
+  }
 };
 
 /** Upsert: sets the content, creating the scratchpad if the project has none. */
@@ -171,12 +189,13 @@ export const listTasks: Handler = async ({ store, query }) => {
 
 /**
  * Appends the task to the end of its column (max order + 1, else 0); a client `order` is ignored.
- * current behavior: a well-formed projectId that matches no project is accepted.
+ * A well-formed projectId that matches no project is a 404 (checked after the body's casts).
  */
 export const createTask: Handler = async ({ store, body }) => {
   const parsed = taskSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
   const fields = taskFields(parsed.data);
+  if (!(await projects(store).findById(fields.projectId as string))) return notFound(PROJECT);
   const last = await tasks(store).findOne(
     { projectId: fields.projectId, status: fields.status },
     { sort: { order: -1 } },

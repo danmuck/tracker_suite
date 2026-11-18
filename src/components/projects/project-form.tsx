@@ -16,6 +16,14 @@ import {
 import { PROJECT_STATUS_LABELS, DEFAULT_PROJECT_COLORS } from "@/lib/projects/constants";
 import type { ProjectFormData, ProjectStatus } from "@/types/projects/project";
 
+/**
+ * An empty field is left out of the request, which the API reads as "keep". When the field had a
+ * value (editing), "" is sent instead so the API clears it.
+ */
+function emptied(value: string, before: string | undefined): string | undefined {
+  return value || (before ? "" : undefined);
+}
+
 interface ProjectFormProps {
   defaultValues?: Partial<ProjectFormData>;
   onSubmit: (data: ProjectFormData) => Promise<void>;
@@ -48,9 +56,9 @@ export function ProjectForm({ defaultValues, onSubmit, onCancel }: ProjectFormPr
     try {
       await onSubmit({
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: emptied(description.trim(), defaultValues?.description),
         status,
-        repositoryUrl: repositoryUrl.trim() || undefined,
+        repositoryUrl: emptied(repositoryUrl.trim(), defaultValues?.repositoryUrl),
         color,
       });
     } finally {

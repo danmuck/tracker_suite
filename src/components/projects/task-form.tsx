@@ -17,6 +17,14 @@ import {
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/projects/constants";
 import type { TaskFormData, TaskStatus, TaskPriority } from "@/types/projects/task";
 
+/**
+ * An empty field is left out of the request, which the API reads as "keep". When the field had a
+ * value (editing), "" is sent instead so the API clears it (description "", dueDate null).
+ */
+function emptied(value: string, before: string | undefined): string | undefined {
+  return value || (before ? "" : undefined);
+}
+
 interface TaskFormProps {
   projectId: string;
   defaultValues?: Partial<TaskFormData>;
@@ -62,10 +70,10 @@ export function TaskForm({ projectId, defaultValues, onSubmit, onCancel }: TaskF
       await onSubmit({
         projectId,
         title: title.trim(),
-        description: description.trim() || undefined,
+        description: emptied(description.trim(), defaultValues?.description),
         status,
         priority,
-        dueDate: dueDate || undefined,
+        dueDate: emptied(dueDate, defaultValues?.dueDate),
         tags,
       });
     } finally {
