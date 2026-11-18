@@ -30,6 +30,11 @@ export const COLLECTIONS = {
   projects: { unique: [] },
   tasks: { unique: [] },
   scratchpads: { unique: ["projectId"] },
+  workouts: { unique: [] },
+  workoutLogs: { unique: [] },
+  runLogs: { unique: [] },
+  recipes: { unique: [] },
+  shoppingItems: { unique: [] },
 } as const;
 
 export type CollectionName = keyof typeof COLLECTIONS;

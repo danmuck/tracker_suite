@@ -19,11 +19,11 @@
 // Exercise names are chosen so that answers do not depend on order MongoDB leaves undefined, except
 // where noted (`not guaranteed:` comments; listed in the Task 1 report):
 //   - workouts hold "bench press" (lowercase), logs hold "Bench Press": GET names shows which wins;
-//   - logs alone hold "Deadlift" (L4, inserted first) and "DEADLIFT" (L5): the log index on
+//   - logs alone hold "Deadlift" (L04, inserted first) and "DEADLIFT" (L05): the log index on
 //     `exercises.name` lists "DEADLIFT" first, insertion order would list "Deadlift" first;
 //   - "1x5 rep squat" and "Curl EZ bar" are decoys that an unescaped regex for "1.5 rep squat" or
 //     "Curl (EZ bar)" would match;
-//   - L5 (2023) lies outside every stats window, so stats never see two casings of one exercise.
+//   - L05 (2023) lies outside every stats window, so stats never see two casings of one exercise.
 
 export interface Step {
   id: string;
@@ -311,7 +311,7 @@ export function buildScenario(): Step[] {
     del("L22", `${L}/${BAD}`, 404),
 
     // ── Recipes ──
-    // Names are sorted by byte: "Banana Oats", "Zucchini Bread", "apple crumble"; tags trimmed
+    // Names are sorted by byte: "Banana Oats", "Onion Soup", "Zucchini Bread", "apple crumble"; tags trimmed
     send(
       "C01",
       "POST",

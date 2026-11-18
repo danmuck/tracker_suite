@@ -1,7 +1,7 @@
 {
   "meta": {
-    "capturedAt": "2026-11-18T02:13:19.778Z",
-    "commit": "e0277547a2bb9f6c3bf9edaae907f37f825f4587"
+    "capturedAt": "2026-11-18T02:24:50.585Z",
+    "commit": "6ba76cd4bc10bac349aedbb2d0ede5fd51221218"
   },
   "steps": [
     {
@@ -92,9 +92,15 @@
     {
       "id": "W05",
       "request": "POST /api/figure/workouts",
-      "status": 500,
+      "status": 400,
       "body": {
-        "error": "Failed to create workout"
+        "details": {
+          "fieldErrors": {},
+          "formErrors": [
+            "Invalid input: expected object, received undefined"
+          ]
+        },
+        "error": "Validation failed"
       }
     },
     {
@@ -143,28 +149,9 @@
     {
       "id": "W09",
       "request": "GET /api/figure/workouts/{w1Upper}",
-      "status": 200,
+      "status": 404,
       "body": {
-        "_id": "<w1>",
-        "createdAt": "<same>",
-        "exercises": [
-          {
-            "name": "bench press",
-            "notes": "pause",
-            "targetReps": 8,
-            "targetSets": 3,
-            "targetWeight": 135
-          },
-          {
-            "name": "Overhead Press",
-            "targetReps": 10,
-            "targetSets": 3
-          }
-        ],
-        "name": "Push Day",
-        "notes": "chest focus",
-        "order": 0,
-        "updatedAt": "<same>"
+        "error": "Workout not found"
       }
     },
     {
@@ -8223,9 +8210,15 @@
     {
       "id": "L20",
       "request": "PUT /api/figure/workout-logs/{l3}",
-      "status": 500,
+      "status": 400,
       "body": {
-        "error": "Failed to update workout log"
+        "details": {
+          "fieldErrors": {},
+          "formErrors": [
+            "Invalid input: expected object, received undefined"
+          ]
+        },
+        "error": "Validation failed"
       }
     },
     {
@@ -8744,9 +8737,15 @@
     {
       "id": "H11",
       "request": "PUT /api/figure/shopping-items/{iEggs}",
-      "status": 500,
+      "status": 400,
       "body": {
-        "error": "Failed to update shopping item"
+        "details": {
+          "fieldErrors": {},
+          "formErrors": [
+            "Invalid input: expected object, received undefined"
+          ]
+        },
+        "error": "Validation failed"
       }
     },
     {

@@ -13,6 +13,11 @@ import FinanceProfile from "@/models/finance/FinanceProfile";
 import Project from "@/models/projects/Project";
 import Task from "@/models/projects/Task";
 import Scratchpad from "@/models/projects/Scratchpad";
+import Workout from "@/models/figure/Workout";
+import WorkoutLog from "@/models/figure/WorkoutLog";
+import RunLog from "@/models/figure/RunLog";
+import Recipe from "@/models/figure/Recipe";
+import ShoppingItem from "@/models/figure/ShoppingItem";
 import { isId } from "./api";
 import type { Filter, Update } from "./query";
 import { assertIdUnchanged, assertUpsertFilter, ConflictError } from "./store";
@@ -35,6 +40,11 @@ const MODELS: Record<CollectionName, AnyModel> = {
   projects: Project as unknown as AnyModel,
   tasks: Task as unknown as AnyModel,
   scratchpads: Scratchpad as unknown as AnyModel,
+  workouts: Workout as unknown as AnyModel,
+  workoutLogs: WorkoutLog as unknown as AnyModel,
+  runLogs: RunLog as unknown as AnyModel,
+  recipes: Recipe as unknown as AnyModel,
+  shoppingItems: ShoppingItem as unknown as AnyModel,
 };
 
 // Plain JSON: string ids, ISO date strings, no undefined values.
