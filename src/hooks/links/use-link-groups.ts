@@ -19,9 +19,9 @@ export async function createLinkGroup(data: LinkGroupFormData) {
 }
 
 export async function updateLinkGroup(id: string, data: LinkGroupFormData) {
-  return send(`/api/link-groups/${id}`, "PUT", data);
+  return send(`/api/link-groups/${encodeURIComponent(id)}`, "PUT", data);
 }
 
 export async function deleteLinkGroup(id: string) {
-  return send(`/api/link-groups/${id}`, "DELETE");
+  return send(`/api/link-groups/${encodeURIComponent(id)}`, "DELETE");
 }

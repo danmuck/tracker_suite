@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { PROJECT_STATUS_LABELS, DEFAULT_PROJECT_COLORS } from "@/lib/projects/constants";
 import { optionalField } from "@/lib/projects/form-fields";
+import { isWebUrl } from "@/lib/safe-url";
 import type { ProjectFormData, ProjectStatus } from "@/types/projects/project";
 
 interface ProjectFormProps {
@@ -35,7 +36,7 @@ export function ProjectForm({ defaultValues, onSubmit, onCancel }: ProjectFormPr
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = "Name is required";
-    if (repositoryUrl && !/^https?:\/\/.+/.test(repositoryUrl)) {
+    if (repositoryUrl.trim() && !isWebUrl(repositoryUrl)) {
       errs.repositoryUrl = "Must be a valid URL";
     }
     setErrors(errs);

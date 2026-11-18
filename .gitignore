@@ -67,3 +67,4 @@ ehthumbs.db
 *.dump
 *.bson
 CLAUDE.md
+.wrangler/

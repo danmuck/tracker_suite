@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Link2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +26,15 @@ import {
 import type { LinkItem, LinkFormData } from "@/types/links/link";
 
 export default function LinkGroupPage() {
-  const { slug } = useParams<{ slug: string }>();
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <LinkGroupView />
+    </Suspense>
+  );
+}
+
+function LinkGroupView() {
+  const slug = useSearchParams().get("slug") ?? "";
   const router = useRouter();
   const { groups, isLoading: groupsLoading } = useLinkGroups();
 

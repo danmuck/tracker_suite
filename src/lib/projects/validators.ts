@@ -1,10 +1,11 @@
 import { z } from "zod";
+import { webUrl } from "@/lib/safe-url";
 
 export const projectSchema = z.object({
   name: z.string().min(1, "Name is required").max(100),
   description: z.string().max(500).optional(),
   status: z.enum(["active", "archived", "completed"]).default("active"),
-  repositoryUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
+  repositoryUrl: webUrl("Must be a valid URL").optional().or(z.literal("")),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Must be a valid hex color").default("#3b82f6"),
 });
 

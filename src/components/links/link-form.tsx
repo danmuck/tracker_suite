@@ -5,7 +5,8 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getFaviconUrl } from "@/lib/links/favicon";
+import { LinkFavicon } from "@/components/links/link-favicon";
+import { isWebUrl } from "@/lib/safe-url";
 import type { LinkFormData } from "@/types/links/link";
 
 interface LinkFormProps {
@@ -21,20 +22,13 @@ export function LinkForm({ groupId, defaultValues, onSubmit, onCancel }: LinkFor
   const [url, setUrl] = useState(defaultValues?.url ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const isValidUrl = (() => {
-    try {
-      new URL(url);
-      return true;
-    } catch {
-      return false;
-    }
-  })();
+  const isValidUrl = isWebUrl(url);
 
   function validate(): boolean {
     const errs: Record<string, string> = {};
     if (!name.trim()) errs.name = "Name is required";
     if (!url.trim()) errs.url = "URL is required";
-    else if (!isValidUrl) errs.url = "Must be a valid URL";
+    else if (!isValidUrl) errs.url = "Link must start with http:// or https://";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   }
@@ -71,12 +65,7 @@ export function LinkForm({ groupId, defaultValues, onSubmit, onCancel }: LinkFor
         <Label htmlFor="url">URL</Label>
         <div className="flex items-center gap-2">
           {isValidUrl && (
-            /* eslint-disable-next-line @next/next/no-img-element */
-            <img
-              src={getFaviconUrl(url)}
-              alt=""
-              className="h-5 w-5 shrink-0"
-            />
+            <LinkFavicon url={url} className="h-5 w-5 shrink-0" />
           )}
           <Input
             id="url"

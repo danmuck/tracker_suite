@@ -22,7 +22,7 @@ export function useProjects(status?: string) {
 
 export function useProject(id: string) {
   const { data, error, isLoading, mutate } = useSWR<Project>(
-    id ? `${PROJECTS_KEY}/${id}` : null,
+    id ? `${PROJECTS_KEY}/${encodeURIComponent(id)}` : null,
     fetcher,
     NO_RETRY_ON_STATUS
   );
@@ -37,5 +37,5 @@ export function useProject(id: string) {
 
 export const createProject = (data: ProjectFormData) => send<Project>(PROJECTS_KEY, "POST", data);
 export const updateProject = (id: string, data: Partial<ProjectFormData>) =>
-  send<Project>(`${PROJECTS_KEY}/${id}`, "PUT", data);
-export const deleteProject = (id: string) => send(`${PROJECTS_KEY}/${id}`, "DELETE");
+  send<Project>(`${PROJECTS_KEY}/${encodeURIComponent(id)}`, "PUT", data);
+export const deleteProject = (id: string) => send(`${PROJECTS_KEY}/${encodeURIComponent(id)}`, "DELETE");

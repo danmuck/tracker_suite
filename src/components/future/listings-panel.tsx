@@ -19,6 +19,7 @@ import { formatBeds, formatPercent, formatRent } from "@/lib/future/format";
 import { cityKey, cityNames, rentShare } from "@/lib/future/stats";
 import { LISTING_STATUSES, STATUS_LABELS } from "@/lib/future/validators";
 import { cn } from "@/lib/utils";
+import { safeHref } from "@/lib/safe-url";
 import type { Listing, ListingStatus } from "@/types/future/apartments";
 
 interface ListingsPanelProps {
@@ -111,9 +112,9 @@ export function ListingsPanel({
               return (
                 <TableRow key={l._id} className={cn(l.status === "rejected" && "text-muted-foreground")}>
                   <TableCell className="max-w-64">
-                    {l.url ? (
+                    {safeHref(l.url) ? (
                       <a
-                        href={l.url}
+                        href={safeHref(l.url)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex max-w-full items-center gap-1 font-medium underline-offset-4 hover:underline"

@@ -5,6 +5,7 @@ import { ChartBlock, Headline, ModuleCard, StatRow, StatRows } from "@/component
 import { HBarList } from "@/components/dashboard/spark";
 import { useLinkGroups } from "@/hooks/links/use-link-groups";
 import { modules } from "@/lib/modules";
+import { linkGroupHref } from "@/lib/links/paths";
 
 const MAX_GROUPS = 5;
 const color = modules.find((m) => m.id === "links")!.accentColor;
@@ -37,7 +38,7 @@ export function LinksCard() {
               label: g.name,
               fraction: count(g) / maxCount,
               value: String(count(g)),
-              href: `/links/${g.slug}`,
+              href: linkGroupHref(g.slug),
             }))}
           />
         </ChartBlock>
@@ -45,7 +46,7 @@ export function LinksCard() {
 
       <StatRows>
         {top[0] && count(top[0]) > 0 && (
-          <StatRow label="Largest group" value={`${top[0].name} · ${count(top[0])}`} href={`/links/${top[0].slug}`} />
+          <StatRow label="Largest group" value={`${top[0].name} · ${count(top[0])}`} href={linkGroupHref(top[0].slug)} />
         )}
         <StatRow
           label="Average per group"
@@ -55,7 +56,7 @@ export function LinksCard() {
         {rest.length > 0 && (
           <div className="flex flex-wrap gap-x-3 gap-y-1 pt-1 text-xs text-muted-foreground">
             {rest.map((g) => (
-              <Link key={g._id} href={`/links/${g.slug}`} className="hover:underline">
+              <Link key={g._id} href={linkGroupHref(g.slug)} className="hover:underline">
                 {g.name}
               </Link>
             ))}

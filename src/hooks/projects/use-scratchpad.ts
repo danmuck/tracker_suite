@@ -5,7 +5,7 @@ import { fetcher, send } from "@/hooks/request";
 import { NO_RETRY_ON_STATUS } from "@/hooks/swr-options";
 import type { Scratchpad } from "@/types/projects/scratchpad";
 
-const scratchpadUrl = (projectId: string) => `/api/projects/${projectId}/scratchpad`;
+const scratchpadUrl = (projectId: string) => `/api/projects/${encodeURIComponent(projectId)}/scratchpad`;
 
 export function useScratchpad(projectId: string) {
   const { data, error, isLoading, mutate } = useSWR<Scratchpad>(

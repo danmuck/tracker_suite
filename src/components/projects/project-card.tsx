@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { PROJECT_STATUS_LABELS } from "@/lib/projects/constants";
 import type { Project } from "@/types/projects/project";
+import { projectHref } from "@/lib/projects/paths";
 
 interface ProjectCardProps {
   project: Project;
@@ -34,7 +35,7 @@ export function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
       />
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <Link href={`/projects/${project._id}`} className="flex-1 min-w-0">
+          <Link href={projectHref(project._id)} className="flex-1 min-w-0">
             <CardTitle className="text-base truncate hover:underline">
               {project.name}
             </CardTitle>
