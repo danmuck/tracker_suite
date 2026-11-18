@@ -32,7 +32,7 @@ import {
   transactions,
   type AccountDoc,
 } from "./docs";
-import { postDuePayments } from "./post-payments";
+import { catchUp } from "./catch-up";
 
 interface ProjectionParams {
   startDate: string;
@@ -144,10 +144,10 @@ async function guarded(run: () => Promise<ApiResult>, zod: boolean): Promise<Api
   }
 }
 
-/** GET — projection over a date range; due payments are posted before the parameter check. */
+/** GET — projection over a date range; the catch-up (pending transactions, due payments) runs before the parameter check. */
 export const getProjection: Handler = ({ store, query, now }) =>
   guarded(async () => {
-    await postDuePayments(store, now);
+    await catchUp(store, now);
 
     const startDate = query.get("startDate");
     const endDate = query.get("endDate");
@@ -170,7 +170,7 @@ const sandboxRequestSchema = z.object({
 /** POST — the same projection with what-if changes applied; the sandbox is never saved. */
 export const postProjection: Handler = ({ store, body, now }) =>
   guarded(async () => {
-    await postDuePayments(store, now);
+    await catchUp(store, now);
     const { sandbox, ...params } = sandboxRequestSchema.parse(body);
     return ok(await project(store, now, params, sandbox));
   }, true);
@@ -181,10 +181,10 @@ const SUMMARY_VIEWS: readonly string[] = ["weekly", "monthly", "annual"] satisfi
 export const getSummary: Handler = ({ store, query: params, now }) =>
   guarded(async () => {
     const view = (params.get("view") || "monthly") as SummaryView;
-    // Checked before due payments are posted: a 400 writes nothing
+    // Checked before the catch-up: a 400 writes nothing
     if (!SUMMARY_VIEWS.includes(view)) return fail(400, "Invalid view");
 
-    await postDuePayments(store, now);
+    await catchUp(store, now);
 
     const dateParam = params.get("date");
     const accountId = params.get("accountId") || undefined;

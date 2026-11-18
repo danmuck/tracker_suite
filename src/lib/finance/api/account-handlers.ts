@@ -4,40 +4,13 @@
 
 import { fail, invalid, isId, notFound, ok, type Handler } from "@/lib/data/api";
 import { planFieldsToDb } from "@/lib/finance/account-plan-fields";
-import { firstFutureInstant, todayStoredDate } from "@/lib/finance/dates";
+import { todayStoredDate } from "@/lib/finance/dates";
 import { accountArchiveSchema, accountSchema } from "@/lib/finance/validators";
-import type { Store } from "@/lib/data/store";
-import { accounts, assertId, isDebtType, requiredText, shapeAccount, shapeTransaction, transactions, type AccountDoc, type TransactionDoc } from "./docs";
+import { accounts, assertId, requiredText, shapeAccount, transactions, type AccountDoc } from "./docs";
+import { catchUp } from "./catch-up";
 import { clearAccountLinks, clearTransactionLinks } from "./links";
-import { postDuePayments } from "./post-payments";
 
 const ACCOUNT = "Account";
-
-
-/** One pending transaction's effect on its account balances (A3–A6). */
-async function applyBalance(store: Store, tx: TransactionDoc): Promise<void> {
-  const acc = accounts(store);
-  if (tx.type === "transfer" && tx.toAccountId) {
-    const [sourceRaw, destRaw] = await Promise.all([acc.findById(tx.accountId), acc.findById(tx.toAccountId)]); // A3
-    const isDebtSource = isDebtType(sourceRaw ? shapeAccount(sourceRaw).type : undefined);
-    const isDebtDest = isDebtType(destRaw ? shapeAccount(destRaw).type : undefined);
-    // A4
-    await acc.batchUpdate([
-      { filter: { _id: tx.accountId }, update: { $inc: { balance: isDebtSource ? tx.amount : -tx.amount } } },
-      { filter: { _id: tx.toAccountId }, update: { $inc: { balance: isDebtDest ? -tx.amount : tx.amount } } },
-    ]);
-    return;
-  }
-  const raw = await acc.findById(tx.accountId); // A5
-  const isDebt = isDebtType(raw ? shapeAccount(raw).type : undefined);
-  let balanceChange: number;
-  if (isDebt) {
-    balanceChange = tx.type === "credit" ? -tx.amount : tx.amount;
-  } else {
-    balanceChange = tx.type === "credit" ? tx.amount : -tx.amount;
-  }
-  await acc.updateById(tx.accountId, { $inc: { balance: balanceChange } }); // A6
-}
 
 /** GET /api/accounts — apply pending transactions, post due payments, then list. */
 export const listAccounts: Handler = async ({ store, query, now }) => {
@@ -48,35 +21,8 @@ export const listAccounts: Handler = async ({ store, query, now }) => {
   if (!includeArchived) filter.isArchived = { $ne: true };
 
   const acc = accounts(store);
-  const txs = transactions(store);
-
-  // Apply any pending transactions whose date has arrived (A1)
-  const due = { balanceApplied: false, isRecurring: { $ne: true }, date: { $lt: firstFutureInstant(now) } };
-  const pending = await txs.find(due);
-
-  for (const { _id } of pending) {
-    // A2: claim it before touching a balance (bug 9). Only the request whose conditional update
-    // matched applies it; the claimed document is the one applied.
-    const claimed = await txs.updateOne({ ...due, _id }, { $set: { balanceApplied: true } });
-    if (!claimed) continue;
-    const tx = shapeTransaction(claimed);
-    if (tx.amount === 0) continue;
-
-    try {
-      await applyBalance(store, tx);
-    } catch (error) {
-      // Release the claim so a later request applies it (A7)
-      try {
-        await txs.updateOne({ _id, balanceApplied: true }, { $set: { balanceApplied: false } });
-      } catch {
-        // The balance failure is the one reported; a failed release must not replace it
-      }
-      throw error;
-    }
-  }
-
-  // Then post due plan payments: a charge dated today or earlier counts toward what is owed
-  await postDuePayments(store, now);
+  // Apply pending transactions whose day has arrived, then post due plan payments (A1–A7)
+  await catchUp(store, now);
 
   const list = await acc.find(filter, { sort: { createdAt: -1 } }); // A8
   return ok(list.map(shapeAccount));
@@ -139,9 +85,9 @@ export const createAccount: Handler = async ({ store, body, now }) => {
   return ok(shapeAccount(account), 201);
 };
 
-/** GET /api/accounts/:accountId — post due payments first, then look up. */
+/** GET /api/accounts/:accountId — catch up (pending transactions, due payments) first, then look up. */
 export const getAccount: Handler = async ({ store, params, now }) => {
-  await postDuePayments(store, now);
+  await catchUp(store, now);
   if (!isId(params.accountId)) return notFound(ACCOUNT);
   const account = await accounts(store).findById(params.accountId); // A13
   return account ? ok(shapeAccount(account)) : notFound(ACCOUNT);

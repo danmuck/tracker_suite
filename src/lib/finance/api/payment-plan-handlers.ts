@@ -11,7 +11,7 @@ import {
   unlinkPaymentPlan,
   updatePaymentPlan,
 } from "./payment-plan";
-import { postDuePayments } from "./post-payments";
+import { catchUp } from "./catch-up";
 
 /** A PaymentPlanError becomes its status and message; anything else is the route's 500. */
 const planErrors =
@@ -30,13 +30,13 @@ const validationError = (issues: { message: string }[]): ApiResult =>
 
 /** GET — plan fields, linked payment, schedule, next RAP payment and payoff estimate. */
 export const getPlan: Handler = planErrors(async ({ store, params, now }) => {
-  await postDuePayments(store, now);
+  await catchUp(store, now);
   return ok({ data: await getPaymentPlan(store, params.accountId, now) });
 });
 
 /** POST — create the monthly bank → account payment transfer and link it. */
 export const setupPlan: Handler = planErrors(async ({ store, params, body, now }) => {
-  await postDuePayments(store, now);
+  await catchUp(store, now);
   const parsed = paymentPlanSetupSchema.safeParse(body);
   if (!parsed.success) return validationError(parsed.error.issues);
   await setupPayments(store, params.accountId, parsed.data, now);
@@ -45,7 +45,7 @@ export const setupPlan: Handler = planErrors(async ({ store, params, body, now }
 
 /** PUT — replace manual schedule entries, sub-loans, and/or RAP settings. */
 export const updatePlan: Handler = planErrors(async ({ store, params, body, now }) => {
-  await postDuePayments(store, now);
+  await catchUp(store, now);
   const parsed = paymentPlanUpdateSchema.safeParse(body);
   if (!parsed.success) return validationError(parsed.error.issues);
   await updatePaymentPlan(store, params.accountId, parsed.data, now);
@@ -54,7 +54,7 @@ export const updatePlan: Handler = planErrors(async ({ store, params, body, now 
 
 /** DELETE — unlink the plan and delete its payment transfer (posted payments stay). */
 export const unlinkPlan: Handler = planErrors(async ({ store, params, now }) => {
-  await postDuePayments(store, now);
+  await catchUp(store, now);
   await unlinkPaymentPlan(store, params.accountId);
   return ok({ data: await getPaymentPlan(store, params.accountId, now) });
 });
