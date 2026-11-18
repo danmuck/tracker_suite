@@ -15,6 +15,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/projects/constants";
+import { optionalField } from "@/lib/projects/form-fields";
 import type { TaskFormData, TaskStatus, TaskPriority } from "@/types/projects/task";
 
 interface TaskFormProps {
@@ -62,10 +63,10 @@ export function TaskForm({ projectId, defaultValues, onSubmit, onCancel }: TaskF
       await onSubmit({
         projectId,
         title: title.trim(),
-        description: description.trim() || undefined,
+        description: optionalField(description.trim(), defaultValues?.description),
         status,
         priority,
-        dueDate: dueDate || undefined,
+        dueDate: optionalField(dueDate, defaultValues?.dueDate),
         tags,
       });
     } finally {

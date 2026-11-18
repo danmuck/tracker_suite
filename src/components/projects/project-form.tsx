@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PROJECT_STATUS_LABELS, DEFAULT_PROJECT_COLORS } from "@/lib/projects/constants";
+import { optionalField } from "@/lib/projects/form-fields";
 import type { ProjectFormData, ProjectStatus } from "@/types/projects/project";
 
 interface ProjectFormProps {
@@ -48,9 +49,9 @@ export function ProjectForm({ defaultValues, onSubmit, onCancel }: ProjectFormPr
     try {
       await onSubmit({
         name: name.trim(),
-        description: description.trim() || undefined,
+        description: optionalField(description.trim(), defaultValues?.description),
         status,
-        repositoryUrl: repositoryUrl.trim() || undefined,
+        repositoryUrl: optionalField(repositoryUrl.trim(), defaultValues?.repositoryUrl),
         color,
       });
     } finally {

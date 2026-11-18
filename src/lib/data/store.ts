@@ -27,6 +27,9 @@ export const COLLECTIONS = {
   transactions: { unique: [] },
   financeCategories: { unique: ["name"] },
   financeProfile: { unique: [] },
+  projects: { unique: [] },
+  tasks: { unique: [] },
+  scratchpads: { unique: ["projectId"] },
 } as const;
 
 export type CollectionName = keyof typeof COLLECTIONS;

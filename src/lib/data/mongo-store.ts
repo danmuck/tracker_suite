@@ -10,6 +10,9 @@ import Account from "@/models/finance/Account";
 import Transaction from "@/models/finance/Transaction";
 import Category from "@/models/finance/Category";
 import FinanceProfile from "@/models/finance/FinanceProfile";
+import Project from "@/models/projects/Project";
+import Task from "@/models/projects/Task";
+import Scratchpad from "@/models/projects/Scratchpad";
 import { isId } from "./api";
 import type { Filter, Update } from "./query";
 import { assertIdUnchanged, assertUpsertFilter, ConflictError } from "./store";
@@ -29,6 +32,9 @@ const MODELS: Record<CollectionName, AnyModel> = {
   transactions: Transaction as unknown as AnyModel,
   financeCategories: Category as unknown as AnyModel,
   financeProfile: FinanceProfile as unknown as AnyModel,
+  projects: Project as unknown as AnyModel,
+  tasks: Task as unknown as AnyModel,
+  scratchpads: Scratchpad as unknown as AnyModel,
 };
 
 // Plain JSON: string ids, ISO date strings, no undefined values.

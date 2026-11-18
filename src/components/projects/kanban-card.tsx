@@ -3,12 +3,12 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { Calendar, GripVertical, Pencil, Trash2 } from "lucide-react";
-import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PriorityBadge } from "@/components/projects/priority-badge";
 import { TASK_PRIORITY_COLORS } from "@/lib/projects/constants";
+import { formatDueDay } from "@/lib/projects/due-date";
 import type { Task } from "@/types/projects/task";
 
 interface KanbanCardProps {
@@ -82,7 +82,7 @@ export function KanbanCard({ task, onEdit, onDelete }: KanbanCardProps) {
           {task.dueDate && (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
-              {format(new Date(task.dueDate), "MMM d")}
+              {formatDueDay(task.dueDate)}
             </span>
           )}
         </div>

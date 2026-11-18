@@ -11,9 +11,13 @@ import { SETTINGS_RECORD_KEY } from "@/lib/future/validators";
 import { dispatch, unwrap } from "@/lib/data/dispatch";
 import { accounts, categories, profiles, transactions } from "@/lib/finance/api/docs";
 import { financeRoutes } from "@/lib/finance/api/routes";
+import { projects, scratchpads, tasks } from "@/lib/projects/api/handlers";
+import { projectsRoutes } from "@/lib/projects/api/routes";
+import type { RouteDef } from "@/lib/data/api";
 import { financeSample } from "./finance";
 import { futureSample } from "./future";
 import { linksSample } from "./links";
+import { projectsSample } from "./projects";
 
 export const SEEDED_KEY = "ts:data:seeded";
 
@@ -21,6 +25,24 @@ export async function loadSampleData(store: Store, today: Date = new Date()): Pr
   await loadLinks(store);
   await loadFuture(store, today);
   await loadFinance(store, today);
+  await loadProjects(store, today);
+}
+
+/** A request through a module's own handlers that throws, naming the step, on any non-2xx answer. */
+function sampleRequester(module: string, routes: RouteDef[], store: Store, today: Date) {
+  return async <T>(method: string, url: string, body?: unknown): Promise<T> => {
+    const result = await dispatch(routes, store, method, url, body, today);
+    if (result.status < 200 || result.status >= 300) {
+      // Never continue with a half-built dataset.
+      const sent = body as { name?: string; description?: string; title?: string } | undefined;
+      const what = sent?.name ?? sent?.description ?? sent?.title;
+      throw new Error(
+        `Loading the ${module} sample failed at ${method} ${url}${what ? ` (${what})` : ""}: ` +
+          `${result.status} ${JSON.stringify(result.body)}`,
+      );
+    }
+    return unwrap<T>(result);
+  };
 }
 
 async function loadLinks(store: Store): Promise<void> {
@@ -74,19 +96,7 @@ async function loadFinance(store: Store, today: Date): Promise<void> {
   await categories(store).deleteMany({});
   await profiles(store).deleteMany({});
 
-  const request = async <T>(method: string, url: string, body?: unknown): Promise<T> => {
-    const result = await dispatch(financeRoutes, store, method, url, body, today);
-    if (result.status < 200 || result.status >= 300) {
-      // Never continue with a half-built dataset.
-      const sent = body as { name?: string; description?: string } | undefined;
-      const what = sent?.name ?? sent?.description;
-      throw new Error(
-        `Loading the Finance sample failed at ${method} ${url}${what ? ` (${what})` : ""}: ` +
-          `${result.status} ${JSON.stringify(result.body)}`,
-      );
-    }
-    return unwrap<T>(result);
-  };
+  const request = sampleRequester("Finance", financeRoutes, store, today);
 
   const sample = financeSample(today);
   await request("GET", "/api/categories"); // seeds the default categories and the Cash account
@@ -121,6 +131,29 @@ async function loadFinance(store: Store, today: Date): Promise<void> {
     salaryTransactionId: linked.get("salary") ?? null,
     rentTransactionId: linked.get("rent") ?? null,
   });
+}
+
+// Projects are created through their own handlers too: complete documents, kanban order by
+// creation within each column, due dates stored the way the app stores a picked date.
+async function loadProjects(store: Store, today: Date): Promise<void> {
+  await scratchpads(store).deleteMany({});
+  await tasks(store).deleteMany({});
+  await projects(store).deleteMany({});
+
+  const request = sampleRequester("Projects", projectsRoutes, store, today);
+  for (const { tasks: sampleTasks, notes, ...data } of projectsSample().projects) {
+    const project = await request<{ _id: string }>("POST", "/api/projects", data);
+    for (const { dueInDays, ...task } of sampleTasks) {
+      await request("POST", "/api/tasks", {
+        ...task,
+        projectId: project._id,
+        ...(dueInDays !== undefined ? { dueDate: format(addDays(today, dueInDays), "yyyy-MM-dd") } : {}),
+      });
+    }
+    if (notes !== undefined) {
+      await request("PUT", `/api/projects/${project._id}/scratchpad`, { content: notes });
+    }
+  }
 }
 
 export async function ensureDemoSeed(store: Store, storage: StorageLike): Promise<boolean> {

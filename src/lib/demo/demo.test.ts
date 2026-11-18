@@ -20,6 +20,15 @@ import type { Category } from "@/types/finance/category";
 import type { SummaryResult } from "@/types/finance/summary";
 import type { ProjectionResult } from "@/types/finance/projection";
 import { accountSchema, financeProfileSchema, transactionSchema } from "@/lib/finance/validators";
+import { projectsSample } from "./projects";
+import { projectSchema, taskSchema } from "@/lib/projects/validators";
+import { projectsRoutes } from "@/lib/projects/api/routes";
+import type { Project } from "@/types/projects/project";
+import type { Task } from "@/types/projects/task";
+import type { Scratchpad } from "@/types/projects/scratchpad";
+import { TASK_STATUSES } from "@/lib/projects/constants";
+import { formatDueDay } from "@/lib/projects/due-date";
+import { projectRollup } from "@/lib/dashboard/stats";
 
 test("loadSampleData fills groups and links, and running it twice does not duplicate", async () => {
   const store = new BrowserStore(memoryStorage());
@@ -62,10 +71,14 @@ test("after a reset (store.clear) the demo seeds again", async () => {
   assert.equal(await ensureDemoSeed(store, storage), true);
   store.clear();
   assert.equal(await ensureDemoSeed(store, storage), true);
+  const projectCount = projectsSample().projects.length;
+  assert.equal(await store.collection("projects").count(), projectCount);
+  assert.equal(await store.collection("tasks").count(), projectsSample().projects.reduce((n, p) => n + p.tasks.length, 0));
+  assert.equal(await store.collection("scratchpads").count(), projectsSample().projects.filter((p) => p.notes !== undefined).length);
 });
 
 test("availableModules hides modules without browser data in browser mode", () => {
-  assert.deepEqual(availableModules("browser").map((m) => m.id), ["finance", "future", "links"]);
+  assert.deepEqual(availableModules("browser").map((m) => m.id), ["finance", "future", "projects", "links"]);
   assert.equal(availableModules("server").length, modules.length);
 });
 
@@ -196,6 +209,91 @@ test("loading the Finance sample fails loudly, naming the step, when a handler r
   await assert.rejects(loadSampleData(failing, new Date(2026, 10, 17, 10)), (error: Error) => {
     assert.match(error.message, /POST \/api\/accounts/);
     assert.match(error.message, /500/);
+    return true;
+  });
+});
+
+test("loadSampleData fills Projects through the real handlers, relative to today, and twice does not duplicate", async () => {
+  const store = new BrowserStore(memoryStorage());
+  const today = new Date(2026, 10, 17, 10);
+  await loadSampleData(store, today);
+  await loadSampleData(store, today);
+  const projects = await store.collection<Project>("projects").find();
+  const tasks = await store.collection<Task>("tasks").find();
+  const pads = await store.collection<Scratchpad>("scratchpads").find();
+  const sample = projectsSample();
+  assert.equal(projects.length, 3);
+  assert.deepEqual(projects.map((p) => p.status).sort(), ["active", "archived", "completed"]);
+  assert.equal(tasks.length, sample.projects.reduce((n, p) => n + p.tasks.length, 0));
+  assert.ok(tasks.length >= 12 && tasks.length <= 18);
+  assert.ok(tasks.every((t) => projects.some((p) => p._id === t.projectId)));
+  assert.deepEqual([...new Set(tasks.map((t) => t.status))].sort(), [...TASK_STATUSES].sort());
+  assert.equal(new Set(tasks.map((t) => t.priority)).size, 4);
+  assert.ok(tasks.every((t) => t.tags.length > 0));
+  // Kanban order: 0, 1, 2, ... within each project's column, in sample order.
+  for (const project of projects) {
+    for (const status of TASK_STATUSES) {
+      const column = tasks.filter((t) => t.projectId === project._id && t.status === status).sort((a, b) => a.order - b.order);
+      assert.deepEqual(column.map((t) => t.order), column.map((_, i) => i), `${project.name} ${status}`);
+    }
+  }
+  // Due dates are relative to today: some past, some ahead, stored as the app stores a picked date.
+  const due = tasks.flatMap((t) => (t.dueDate ? [t.dueDate] : [])).sort();
+  assert.ok(due.length >= 8 && due.length < tasks.length);
+  assert.ok(due.every((d) => /^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/.test(d)), due.join());
+  assert.ok(due[0] < "2026-11-17" && due[due.length - 1] > "2026-11-18");
+  assert.equal(tasks.find((t) => t.title === "Frost date lookup")?.dueDate, "2026-11-18T00:00:00.000Z");
+  // …and shown on the intended calendar day (today + 1), whatever the time zone
+  assert.equal(formatDueDay(tasks.find((t) => t.title === "Frost date lookup")?.dueDate), "Nov 18");
+  assert.equal(pads.length, 1);
+  assert.match(pads[0].content, /^# Garden Planner/);
+  assert.equal(projects.find((p) => p._id === pads[0].projectId)?.status, "active");
+});
+
+test("the Projects sample gives the project list, board and dashboard card something to show", async () => {
+  const store = new BrowserStore(memoryStorage());
+  const today = new Date(2026, 10, 17, 10);
+  await loadSampleData(store, today);
+  const get = (url: string) => dispatch(projectsRoutes, store, "GET", url, undefined, today);
+  const list = (await get("/api/projects")).body as Project[];
+  assert.equal(list.length, 3);
+  assert.ok(list.every((p) => p.taskCounts && p.taskCounts.total > 0));
+  const rollup = projectRollup(list);
+  assert.deepEqual([rollup.active, rollup.completed, rollup.archived], [1, 1, 1]);
+  assert.ok(rollup.openTasks > 0 && rollup.doneTasks > 0);
+  const active = list.find((p) => p.status === "active")!;
+  assert.equal(((await get(`/api/tasks?projectId=${active._id}`)).body as Task[]).length, 8);
+  const notes = await get(`/api/projects/${active._id}/scratchpad`);
+  assert.equal(notes.status, 200);
+  assert.ok((notes.body as Scratchpad).content.length > 0);
+});
+
+test("sample projects and tasks pass the module's own validation", () => {
+  for (const { tasks, notes, ...data } of projectsSample().projects) {
+    assert.equal(projectSchema.safeParse(data).success, true, data.name);
+    assert.ok(notes === undefined || notes.length <= 50000);
+    for (const { dueInDays, ...task } of tasks) {
+      assert.equal(taskSchema.safeParse({ ...task, projectId: "a".repeat(24) }).success, true, task.title);
+      assert.ok(dueInDays === undefined || Number.isInteger(dueInDays));
+    }
+  }
+});
+
+test("loading the Projects sample fails loudly, naming the step, when a handler refuses a request", async () => {
+  const store = new BrowserStore(memoryStorage());
+  let writes = 0;
+  const failing: Store = {
+    collection<T extends BaseDoc>(name: CollectionName): Collection<T> {
+      const collection = store.collection<T>(name);
+      if (name === "tasks") {
+        const insert = collection.insert.bind(collection);
+        collection.insert = (doc) => (++writes > 3 ? Promise.reject(new Error("disk full")) : insert(doc));
+      }
+      return collection;
+    },
+  };
+  await assert.rejects(loadSampleData(failing, new Date(2026, 10, 17, 10)), (error: Error) => {
+    assert.match(error.message, /^Loading the Projects sample failed at POST \/api\/tasks \(Watering log chart\): 500/);
     return true;
   });
 });

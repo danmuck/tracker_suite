@@ -5,5 +5,6 @@ import type { RouteDef } from "./api";
 import { linksRoutes } from "@/lib/links/api/routes";
 import { futureRoutes } from "@/lib/future/api/routes";
 import { financeRoutes } from "@/lib/finance/api/routes";
+import { projectsRoutes } from "@/lib/projects/api/routes";
 
-export const allRoutes: RouteDef[] = [...linksRoutes, ...futureRoutes, ...financeRoutes];
+export const allRoutes: RouteDef[] = [...linksRoutes, ...futureRoutes, ...financeRoutes, ...projectsRoutes];
