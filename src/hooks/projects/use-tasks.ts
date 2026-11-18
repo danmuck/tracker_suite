@@ -9,7 +9,7 @@ const TASKS_KEY = "/api/tasks";
 
 export function useTasks(projectId: string) {
   const { data, error, isLoading, mutate } = useSWR<Task[]>(
-    projectId ? `${TASKS_KEY}?projectId=${projectId}` : null,
+    projectId ? `${TASKS_KEY}?projectId=${encodeURIComponent(projectId)}` : null,
     fetcher,
     NO_RETRY_ON_STATUS
   );
@@ -24,7 +24,7 @@ export function useTasks(projectId: string) {
 }
 
 export const createTask = (data: TaskFormData) => send<Task>(TASKS_KEY, "POST", data);
-export const updateTask = (id: string, data: Partial<TaskFormData>) => send<Task>(`${TASKS_KEY}/${id}`, "PUT", data);
-export const deleteTask = (id: string) => send(`${TASKS_KEY}/${id}`, "DELETE");
+export const updateTask = (id: string, data: Partial<TaskFormData>) => send<Task>(`${TASKS_KEY}/${encodeURIComponent(id)}`, "PUT", data);
+export const deleteTask = (id: string) => send(`${TASKS_KEY}/${encodeURIComponent(id)}`, "DELETE");
 export const reorderTask = (id: string, data: { status: TaskStatus; order: number }) =>
-  send<Task>(`${TASKS_KEY}/${id}/reorder`, "PATCH", data);
+  send<Task>(`${TASKS_KEY}/${encodeURIComponent(id)}/reorder`, "PATCH", data);

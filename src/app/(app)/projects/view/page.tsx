@@ -29,6 +29,7 @@ import {
 } from "@/hooks/projects/use-tasks";
 import { RequestError } from "@/lib/data/request-error";
 import { safeHref } from "@/lib/safe-url";
+import { projectIdParam } from "@/lib/projects/paths";
 import { dueDay } from "@/lib/projects/due-date";
 import type { ProjectFormData } from "@/types/projects/project";
 import type { Task, TaskFormData, TaskStatus } from "@/types/projects/task";
@@ -42,7 +43,7 @@ export default function ProjectDetailPage() {
 }
 
 function ProjectDetailView() {
-  const projectId = useSearchParams().get("id") ?? "";
+  const projectId = projectIdParam(useSearchParams().get("id"));
   const { project, isLoading: projectLoading, error: projectError, mutate: mutateProject } = useProject(projectId);
   const { tasks, hasData: hasTasks, isLoading: tasksLoading, isError: tasksError, mutate: mutateTasks } = useTasks(projectId);
 
