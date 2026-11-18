@@ -1,7 +1,7 @@
 {
   "meta": {
-    "capturedAt": "2026-11-18T00:45:44.275Z",
-    "commit": "6f5dca15e44ad2734ca566573b79ff324d20d285"
+    "capturedAt": "2026-11-18T00:56:31.180Z",
+    "commit": "3967631d7b1eaa23f3d8c73f6f2dcdc44bb19559"
   },
   "steps": [
     {
@@ -82,9 +82,15 @@
     {
       "id": "P06",
       "request": "POST /api/projects",
-      "status": 500,
+      "status": 400,
       "body": {
-        "error": "Failed to create project"
+        "details": {
+          "fieldErrors": {},
+          "formErrors": [
+            "Invalid input: expected object, received undefined"
+          ]
+        },
+        "error": "Validation failed"
       }
     },
     {
@@ -117,9 +123,9 @@
     {
       "id": "P09",
       "request": "GET /api/projects/abc",
-      "status": 500,
+      "status": 404,
       "body": {
-        "error": "Failed to fetch project"
+        "error": "Project not found"
       }
     },
     {
@@ -172,9 +178,9 @@
     {
       "id": "P13",
       "request": "PUT /api/projects/abc",
-      "status": 500,
+      "status": 404,
       "body": {
-        "error": "Failed to update project"
+        "error": "Project not found"
       }
     },
     {
@@ -730,17 +736,23 @@
     {
       "id": "U08",
       "request": "PUT /api/tasks/abc",
-      "status": 500,
+      "status": 404,
       "body": {
-        "error": "Failed to update task"
+        "error": "Task not found"
       }
     },
     {
       "id": "U09",
       "request": "PUT /api/tasks/{tA}",
-      "status": 500,
+      "status": 400,
       "body": {
-        "error": "Failed to update task"
+        "details": {
+          "fieldErrors": {},
+          "formErrors": [
+            "Invalid input: expected object, received undefined"
+          ]
+        },
+        "error": "Validation failed"
       }
     },
     {
@@ -762,9 +774,9 @@
     {
       "id": "D03",
       "request": "DELETE /api/tasks/abc",
-      "status": 500,
+      "status": 404,
       "body": {
-        "error": "Failed to delete task"
+        "error": "Task not found"
       }
     },
     {
@@ -1016,17 +1028,23 @@
     {
       "id": "R09",
       "request": "PATCH /api/tasks/abc/reorder",
-      "status": 500,
+      "status": 404,
       "body": {
-        "error": "Failed to reorder task"
+        "error": "Task not found"
       }
     },
     {
       "id": "R10",
       "request": "PATCH /api/tasks/{tA}/reorder",
-      "status": 500,
+      "status": 400,
       "body": {
-        "error": "Failed to reorder task"
+        "details": {
+          "fieldErrors": {},
+          "formErrors": [
+            "Invalid input: expected object, received undefined"
+          ]
+        },
+        "error": "Validation failed"
       }
     },
     {
@@ -1089,17 +1107,17 @@
     {
       "id": "S06",
       "request": "GET /api/projects/abc/scratchpad",
-      "status": 500,
+      "status": 404,
       "body": {
-        "error": "Failed to fetch scratchpad"
+        "error": "Project not found"
       }
     },
     {
       "id": "S07",
       "request": "PUT /api/projects/abc/scratchpad",
-      "status": 500,
+      "status": 404,
       "body": {
-        "error": "Failed to update scratchpad"
+        "error": "Project not found"
       }
     },
     {
@@ -1127,9 +1145,9 @@
     {
       "id": "X04",
       "request": "DELETE /api/projects/abc",
-      "status": 500,
+      "status": 404,
       "body": {
-        "error": "Failed to delete project"
+        "error": "Project not found"
       }
     },
     {
