@@ -46,9 +46,9 @@ const WORKOUT_ORDER: Sort = { order: 1, createdAt: 1, _id: 1 };
 const NEWEST_FIRST: Sort = { date: -1, createdAt: -1, _id: -1 };
 const RECIPE_ORDER: Sort = { name: 1, _id: 1 };
 const SHOPPING_ORDER: Sort = { checked: 1, order: 1, _id: 1 };
-// Today's stats and add-to-list queries had no sort (MongoDB's natural order, which for these
-// never-moved documents is insertion order). Pinned: oldest first.
-const OLDEST_FIRST: Sort = { createdAt: 1, _id: 1 };
+// Today's add-to-list `findOne({ checked: false, ... })` had no sort; MongoDB answered it from the
+// `{ checked: 1, order: 1 }` index, so the lowest `order` won (checked with explain on MongoDB).
+const MERGE_TARGET_ORDER: Sort = { order: 1, createdAt: 1, _id: 1 };
 
 /**
  * A `workoutId` as today's routes kept it: Mongoose's isValidObjectId accepted 24 hex digits in either
@@ -328,9 +328,12 @@ export const fitnessStats: Handler = async ({ store, query, now }) => {
   const today = todayParam && DAY.test(todayParam) ? fromDay(todayParam) : now;
   const start = rangeStart(today, weeks);
 
+  // Today's queries had no sort; MongoDB answered `{ date: { $gte } }` from the `{ date: -1,
+  // createdAt: -1 }` index, so newest first. The order matters: the first casing seen names a top
+  // exercise, and paces on one date keep their input order.
   const [logs, runs, logDays, runDays] = await Promise.all([
-    workoutLogs(store).find({ date: { $gte: start } }, { sort: OLDEST_FIRST }),
-    runLogs(store).find({ date: { $gte: start } }, { sort: OLDEST_FIRST }),
+    workoutLogs(store).find({ date: { $gte: start } }, { sort: NEWEST_FIRST }),
+    runLogs(store).find({ date: { $gte: start } }, { sort: NEWEST_FIRST }),
     workoutLogs(store).distinct("date"),
     runLogs(store).distinct("date"),
   ]);
@@ -386,8 +389,8 @@ const noUnit = (unit: unknown): boolean => unit === undefined || unit === null |
  * (case-insensitive, whole value; no unit matching missing, "" or null) is merged by summing
  * quantities instead of duplicated; an ingredient with no quantity leaves the item's quantity alone.
  * Ingredients are handled in order, so a later one can merge into an item an earlier one added.
- * When several items match, the oldest (createdAt, then _id) is merged into: today's findOne had
- * no sort and took the first inserted.
+ * When several items match, the one with the lowest `order` (then createdAt, then _id) is merged
+ * into: today's findOne had no sort and MongoDB read the `{ checked: 1, order: 1 }` index.
  */
 export const addRecipeToList: Handler = async ({ store, params }) => {
   const recipe = await recipes(store).findById(params.recipeId);
@@ -403,7 +406,7 @@ export const addRecipeToList: Handler = async ({ store, params }) => {
     const unit = ing.unit?.trim() || undefined;
     const nameTest = wholeName(name);
     const unitTest = unit ? wholeName(unit) : null;
-    const candidates = await items.find({ checked: false }, { sort: OLDEST_FIRST });
+    const candidates = await items.find({ checked: false }, { sort: MERGE_TARGET_ORDER });
     const existing = candidates.find(
       (item) =>
         typeof item.name === "string" &&

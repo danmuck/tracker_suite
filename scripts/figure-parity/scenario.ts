@@ -390,7 +390,8 @@ export function buildScenario(): Step[] {
     // which had no quantity (0 + 1)
     send("A01", "POST", `${RC}/{rb}/add-to-list`, undefined, 200),
     // ONION (no unit) merges into an unchecked "Onion"/"onion" with no unit: H03 (unit "") or H04 (no
-    // unit). not guaranteed: findOne has no sort; today it takes the first inserted (H03). The second
+    // unit). findOne has no sort; MongoDB reads the {checked: 1, order: 1} index, so the lowest order
+    // wins (H03, order 2; the converted handlers sort by order, createdAt, _id). The second
     // "Onion" (unit "  " → "", no quantity) merges into the same item and leaves its quantity alone.
     // Shallot is added, then "shallot" merges into it
     send("A02", "POST", `${RC}/{ro}/add-to-list`, undefined, 200),

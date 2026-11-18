@@ -406,7 +406,7 @@ test("stats: weeks clamped (1 → 2, 500 → 104, junk → 12); today from the q
   );
   assert.deepEqual(s.range, { start: "2026-03-09", end: "2026-03-18", weeks: 2 });
   assert.equal(s.streak.current, 3);
-  // The first inserted log (2026-03-18, "Bench") names the exercise
+  // Newest first: the 2026-03-18 log's "Bench" names the exercise
   assert.deepEqual(s.topExercises, [{ name: "Bench", sessions: 2 }]);
   assert.equal((await getBody<{ range: { weeks: number } }>(`${F}/stats?today=2026-03-18&weeks=500`)).range.weeks, 104);
   assert.equal((await getBody<{ range: { weeks: number } }>(`${F}/stats?today=2026-03-18&weeks=junk`)).range.weeks, 12);
@@ -414,11 +414,21 @@ test("stats: weeks clamped (1 → 2, 500 → 104, junk → 12); today from the q
   assert.equal(clock.range.end, "2026-03-20");
 });
 
-test("stats: logs and runs are read oldest first (createdAt, then _id), so the first inserted casing names an exercise", async () => {
-  await log({ date: "2026-03-17", exercises: [ex("ROW", [1, 1, true])] });
-  await log({ date: "2026-03-16", exercises: [ex("row", [1, 1, true])] });
-  const s = await getBody<{ topExercises: { name: string }[] }>(`${F}/stats?today=2026-03-18`);
-  assert.deepEqual(s.topExercises.map((e) => e.name), ["ROW"]);
+// MongoDB answered the stats queries from the { date: -1, createdAt: -1 } index (observed on the
+// unconverted routes: these two inputs gave "row" and the distance-5 pace first)
+test("stats: logs are read newest first, so the newest log's casing names an exercise (the older log inserted first)", async () => {
+  await log({ date: "2026-03-16", exercises: [ex("ROW", [1, 1, true])] });
+  await log({ date: "2026-03-17", exercises: [ex("row", [1, 1, true])] });
+  const s = await getBody<{ topExercises: { name: string; sessions: number }[] }>(`${F}/stats?today=2026-03-18`);
+  assert.deepEqual(s.topExercises, [{ name: "row", sessions: 2 }]);
+});
+
+test("stats: two runs on one date list their paces newest created first", async () => {
+  await run({ date: "2026-03-16", distance: 3, durationSeconds: 1500 });
+  await run({ date: "2026-03-16", distance: 5, durationSeconds: 2400 });
+  await run({ date: "2026-03-15", distance: 4, durationSeconds: 2000 });
+  const s = await getBody<{ paces: { date: string; distance: number }[] }>(`${F}/stats?today=2026-03-18`);
+  assert.deepEqual(s.paces.map((p) => [p.date, p.distance]), [["2026-03-15", 4], ["2026-03-16", 5], ["2026-03-16", 3]]);
 });
 
 // ── Recipes ──
@@ -556,7 +566,7 @@ test("add-to-list: no unit matches a missing, empty or null unit; no quantity le
   const before = await shoppingItems(store).findById(onion._id);
   assert.deepEqual(await call("POST", `${F}/recipes/${r._id}/add-to-list`), { status: 200, body: { added: 1, merged: 4 } });
   const list = await getBody<ShoppingItem[]>(`${F}/shopping-items`);
-  // The oldest matching item ("Onion", created before "onion") takes both onion ingredients
+  // The matching item with the lowest order ("Onion", order 1; "onion" is 2) takes both onion ingredients
   const merged = list.find((i) => i._id === onion._id)!;
   assert.equal(merged.quantity, 3);
   assert.notEqual(merged.updatedAt, before!.updatedAt);
@@ -575,14 +585,29 @@ test("add-to-list: an ingredient without quantity, or with 0 on an item that has
   assert.deepEqual(await shoppingItems(store).findById(eggs._id), eggs);
 });
 
-test("add-to-list: when two items match, the oldest (createdAt, then _id) is merged into", async () => {
-  tick = START + 500;
-  const twins = await shoppingItems(store).insertMany([
-    { name: "Kale", checked: false, order: 0 },
-    { name: "kale", checked: false, order: 1 },
-  ] as never[]);
+test("add-to-list: when several items match, the lowest order wins (as MongoDB's { checked, order } index gave), then createdAt, then _id", async () => {
+  const older = await item({ name: "kale" });
+  await shoppingItems(store).updateById(older._id, { $set: { order: 9 } });
+  const lower = await shoppingItems(store).insert({ name: "Kale", checked: false, order: 3 } as never);
   const r = await recipe({ name: "R", ingredients: [{ name: "KALE", quantity: 1 }] });
   await call("POST", `${F}/recipes/${r._id}/add-to-list`);
+  assert.equal((await shoppingItems(store).findById(lower._id))!.quantity, 1);
+  assert.equal((await shoppingItems(store).findById(older._id))!.quantity, undefined);
+
+  // Tied on order: the older createdAt; tied on order and createdAt: the lower _id
+  tick = START + 10_000;
+  const later = await shoppingItems(store).insert({ name: "Chard", checked: false, order: 1 } as never);
+  tick = START + 5_000;
+  const earlier = await shoppingItems(store).insert({ name: "chard", checked: false, order: 1 } as never);
+  tick = START + 20_000;
+  const twins = await shoppingItems(store).insertMany([
+    { name: "Leek", checked: false, order: 0 },
+    { name: "leek", checked: false, order: 0 },
+  ] as never[]);
+  const r2 = await recipe({ name: "R2", ingredients: [{ name: "CHARD", quantity: 1 }, { name: "LEEK", quantity: 1 }] });
+  await call("POST", `${F}/recipes/${r2._id}/add-to-list`);
+  assert.equal((await shoppingItems(store).findById(earlier._id))!.quantity, 1);
+  assert.equal((await shoppingItems(store).findById(later._id))!.quantity, undefined);
   const target = [...twins].sort((p, q) => (p._id < q._id ? -1 : 1))[0];
   assert.equal((await shoppingItems(store).findById(target._id))!.quantity, 1);
 });
