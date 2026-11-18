@@ -3,7 +3,7 @@
 //
 // `{name}` in `path`, in any string inside `body`, and in object keys of `body` is replaced with the id
 // saved under that name. `save.from` is a dot path into the response body. `expect` is the status the
-// unconverted code returns (null = record whatever comes back). `allow` marks a step whose response
+// route answers (null = record whatever comes back). `allow` marks a step whose response
 // changed by decision D1a (malformed path id → the route's 404) or D1c (malformed JSON body → 400);
 // the golden is recorded on the converted routes, so capture expects `allow.status` for those steps.
 
@@ -556,24 +556,24 @@ export function buildScenario(today: string): Step[] {
     get("Z12", "/api/categories", 200),
 
     // ── Remaining error paths. After the final-state reads, so no earlier step's state changes. ──
-    // Payment plans: loadAccount (src/lib/finance/payment-plan.ts:81-87) runs first in every method
+    // Payment plans: loadAccount (src/lib/finance/api/payment-plan.ts) runs first in every method
     del("X01", plan(B), 404),
     del("X02", plan("{checking}"), 400),
     send("X03", "POST", plan(B), { fromAccountId: "{checking}", dayOfMonth: 5, startDate: d(10), firstAmount: 1 }, 404),
     send("X04", "PUT", plan(B), {}, 404),
     send("X05", "POST", plan("{checking}"), { fromAccountId: "{checking}", dayOfMonth: 5, startDate: d(10), firstAmount: 1 }, 400),
     send("X06", "PUT", plan("{checking}"), {}, 400),
-    // Malformed fromAccountId reaches Account.findById (payment-plan.ts:251): a cast error, the route's 500
+    // Malformed fromAccountId: assertId in setupPayments (src/lib/finance/api/payment-plan.ts) throws, the route's 500
     send("X07", "POST", plan("{car}"), { fromAccountId: "abc", dayOfMonth: 5, startDate: d(10), firstAmount: 1 }, 500),
-    // The engine's window guard (projection-engine.ts:67) through the sandbox path
+    // The engine's window guard (MAX_PROJECTION_DAYS, projection-engine.ts) through the sandbox path
     send("X08", "POST", "/api/projections", { startDate: "1900-01-01", endDate: "2100-01-01", sandbox: {} }, 400),
-    // Malformed linkedAccountId in a body: Mongoose cast errors, the routes' 500s (nothing is written)
+    // Malformed linkedAccountId in a body: assertId throws, the routes' 500s (nothing is written)
     send("X09", "POST", "/api/accounts", { name: "Parity Bad Link", type: "debt", balance: 10, isLoan: true, linkedAccountId: "abc", depositFunds: true }, 500),
     send("X10", "PUT", "/api/accounts/{car}", { name: "Parity Car Loan", type: "debt", balance: 8000, isLoan: true, linkedAccountId: "abc" }, 500),
-    // merge-rent: a schema failure is the same 400 as keepId === mergeId (merge-rent/route.ts:17-19)
+    // merge-rent: a schema failure is the same 400 as keepId === mergeId (mergeRent, src/lib/finance/api/profile-handlers.ts)
     send("X11", "POST", "/api/finance-profile/merge-rent", { keepId: "{rent}" }, 400),
     send("X12", "POST", "/api/finance-profile/merge-rent", { keepId: "abc", mergeId: "{rent}" }, 500),
-    // Malformed link id reaches Transaction.exists (apply-profile.ts:89): the route's 500
+    // Malformed link id: assertId in checkProfileLinks (src/lib/finance/api/profile.ts) throws, the route's 500
     send("X13", "PUT", "/api/finance-profile", { ...PROFILE, salaryTransactionId: "abc", rentSteps: [] }, 500),
     // Bug 7: deleting salary2 (X16) clears the profile's Salary link, so the merge at X18, which once
     // answered 409 for that dangling link after writing, now succeeds. Bug 13 checks the links before

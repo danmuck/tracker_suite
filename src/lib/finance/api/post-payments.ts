@@ -1,5 +1,5 @@
-// Due payment-plan payments, posted over the Store, once each (run before the Finance reads that
-// show balances or projections). Same logic and call order in both data sources.
+// Due payment-plan payments, posted over the Store, once each. Run by catchUp (catch-up.ts), after
+// pending transactions are applied. Same logic and call order in both data sources.
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import type { Store } from "@/lib/data/store";

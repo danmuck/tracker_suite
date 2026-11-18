@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { format, addDays, endOfDay } from "date-fns";
+import { format, addDays } from "date-fns";
 import { ArrowRight, HandCoins, TrendingUp, TrendingDown, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +23,7 @@ import { useTransactions } from "@/hooks/finance/use-transactions";
 import { useSummary } from "@/hooks/finance/use-summary";
 import { useProjections } from "@/hooks/finance/use-projections";
 import { useCategories } from "@/hooks/finance/use-categories";
+import { lastPresentInstant } from "@/lib/finance/dates";
 import { centsToDollars, formatDate } from "@/lib/finance/formatters";
 import { monthWeekBuckets } from "@/lib/finance/summary-utils";
 import { computeAccountTotals } from "@/lib/finance/account-utils";
@@ -40,7 +41,8 @@ export default function FinanceDashboardPage() {
     includeArchived: true,
   });
   const accounts = useMemo(() => allAccounts.filter((a) => !a.isArchived), [allAccounts]);
-  const todayEnd = useMemo(() => endOfDay(new Date()).toISOString(), []);
+  // Transactions dated today or earlier (the applied ones), by the same calendar-day rule as the API
+  const todayEnd = useMemo(() => lastPresentInstant(new Date()), []);
   const { transactions, isLoading: txLoading } = useTransactions({
     limit: 10,
     sort: "date",

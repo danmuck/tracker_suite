@@ -1,5 +1,5 @@
 // Datasheet profile routes (R21–R23) as store-backed handlers, shared by the server and browser data modes.
-// Same order as src/app/api/finance-profile/route.ts and src/app/api/finance-profile/merge-rent/route.ts.
+// Served by src/app/api/finance-profile/route.ts and merge-rent/route.ts, which only call serve().
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import { z } from "zod";

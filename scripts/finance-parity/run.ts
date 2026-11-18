@@ -157,8 +157,9 @@ async function runScenario(base: string, mode: "capture" | "check"): Promise<{ t
   }
 
   const ended = new Date();
-  if (localDate(ended) !== today || utcDate(ended) !== startUtc) {
-    fail(`The date changed during the run (local ${today} → ${localDate(ended)}, UTC ${startUtc} → ${utcDate(ended)}); run again`);
+  // Handlers read only the local calendar day of their clock, so only the local date must hold still
+  if (localDate(ended) !== today) {
+    fail(`The local date changed during the run (${today} → ${localDate(ended)}); run again`);
   }
   if (!finalBalances) fail("No finalBalances: step Z09 did not run");
 
@@ -189,13 +190,7 @@ async function main() {
     const now = new Date();
     const today = localDate(now);
     if (today !== golden.meta.localDate) {
-      fail(`Today (${today}) is not the golden's capture date (${golden.meta.localDate}); the golden must be re-captured from the unconverted code first`);
-    }
-    // The engine buckets by UTC day and the loan disbursement is dated "now": after 19:00 US-Eastern the
-    // UTC date is already tomorrow, and the run would differ from the golden for that reason alone
-    const goldenUtc = golden.meta.utcDate ?? golden.meta.capturedAt.slice(0, 10);
-    if (utcDate(now) !== goldenUtc) {
-      fail(`The UTC date (${utcDate(now)}) is not the golden's capture UTC date (${goldenUtc}); run check while the UTC date matches (before 19:00 US-Eastern standard time on ${golden.meta.localDate}), or re-capture the golden`);
+      fail(`Today (${today}) is not the golden's capture date (${golden.meta.localDate}); re-capture the golden today (see the header)`);
     }
     if (golden.meta.timeZone !== process.env.TZ) fail(`TZ ${JSON.stringify(process.env.TZ)} differs from the golden's ${golden.meta.timeZone}`);
     const { transcript, steps } = await runScenario(base, "check");

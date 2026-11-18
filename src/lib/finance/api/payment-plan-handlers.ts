@@ -1,5 +1,5 @@
 // Payment-plan routes (R7–R10) as store-backed handlers, shared by the server and browser data modes.
-// Same order as src/app/api/accounts/[accountId]/payment-plan/route.ts.
+// Served by src/app/api/accounts/[accountId]/payment-plan/route.ts, which only calls serve().
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import { fail, ok, type ApiResult, type Handler } from "@/lib/data/api";

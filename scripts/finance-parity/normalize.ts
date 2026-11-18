@@ -11,7 +11,7 @@ export interface TranscriptStep {
 }
 
 export interface Transcript {
-  /** `utcDate` is the UTC calendar date at capture (also the first 10 characters of `capturedAt`) */
+  /** `utcDate` is the UTC calendar date at capture (also the first 10 characters of `capturedAt`); informational, nothing compares it */
   meta: { capturedAt: string; localDate: string; utcDate?: string; timeZone: string; commit: string };
   steps: TranscriptStep[];
   finalBalances: Record<string, number>;

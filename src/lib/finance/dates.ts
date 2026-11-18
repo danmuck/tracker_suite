@@ -91,6 +91,16 @@ export function firstFutureInstant(now: Date): string {
 }
 
 /**
+ * The last stored instant that is not in the future (one millisecond before `firstFutureInstant`),
+ * for an inclusive `endDate` filter: `date <= lastPresentInstant(now)` keeps exactly the transactions
+ * dated today or earlier, the ones that are applied. The local end of day is not this bound west of
+ * UTC, where it already includes tomorrow's stored dates.
+ */
+export function lastPresentInstant(now: Date): string {
+  return new Date(new Date(firstFutureInstant(now)).getTime() - 1).toISOString();
+}
+
+/**
  * Whether a transaction dated `date` (read as it will be stored, see `toIso`) is dated after
  * the user's local calendar day. An invalid date is not in the future, as before.
  */

@@ -1,5 +1,5 @@
 // Transaction routes (R11–R15) as store-backed handlers, shared by the server and browser data modes.
-// Same signs and caps as src/app/api/transactions/route.ts and [transactionId]/route.ts. A PUT
+// Served by src/app/api/transactions/route.ts and [transactionId]/route.ts. A PUT
 // resolves and checks the new state before its first write (a refused edit changes nothing), and
 // drops the fields the new state does not use: toAccountId off a transfer, recurrenceRule off a
 // recurring transaction (bug 2).

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { asDate, toIso, filterDate, firstFutureInstant, isFutureDated, localDateStr, todayStoredDate } from "./dates";
+import { asDate, toIso, filterDate, firstFutureInstant, isFutureDated, lastPresentInstant, localDateStr, todayStoredDate } from "./dates";
 
 test("toIso stores what Mongoose's date cast stores", () => {
   assert.equal(toIso("2026-11-01"), "2026-11-01T00:00:00.000Z");
@@ -54,4 +54,15 @@ test("isFutureDated compares the stored UTC day with the local day of now", () =
   assert.equal(isFutureDated("2026-11-18", west), true);
   assert.equal(isFutureDated(new Date("2026-11-18T00:00:00.000Z"), west), true);
   assert.equal(isFutureDated("garbage", west), false);
+});
+
+test("lastPresentInstant: an inclusive upper bound that keeps exactly the dates isFutureDated calls not future", () => {
+  const west = new Date("2026-11-18T03:00:00.000Z"); // 17 Nov in New York, 18 Nov in UTC
+  assert.equal(lastPresentInstant(west), "2026-11-17T23:59:59.999Z");
+  const kept = (date: string) => new Date(date).getTime() <= new Date(lastPresentInstant(west)).getTime();
+  for (const date of ["2026-11-17T00:00:00.000Z", "2026-11-17T23:59:59.999Z", "2026-11-18T00:00:00.000Z", "2026-11-16T12:00:00.000Z"]) {
+    assert.equal(kept(date), !isFutureDated(date, west), date);
+  }
+  // The local end of day is not that bound west of UTC: it reaches into the next UTC day
+  assert.equal(lastPresentInstant(new Date("2026-11-17T15:00:00.000Z")), "2026-11-17T23:59:59.999Z");
 });

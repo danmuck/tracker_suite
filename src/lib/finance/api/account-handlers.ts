@@ -1,5 +1,5 @@
 // Account routes (R1–R6) as store-backed handlers, shared by the server and browser data modes.
-// Same order of reads and writes as src/app/api/accounts/route.ts and [accountId]/route.ts.
+// Served by src/app/api/accounts/route.ts and [accountId]/route.ts, which only call serve().
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import { fail, invalid, isId, notFound, ok, type Handler } from "@/lib/data/api";

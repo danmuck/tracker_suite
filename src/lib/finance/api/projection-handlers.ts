@@ -1,5 +1,5 @@
 // Projections and summary routes (R18–R20) as store-backed handlers, shared by the server and
-// browser data modes. Same order as src/app/api/projections/route.ts and src/app/api/summary/route.ts.
+// browser data modes. Served by src/app/api/projections/route.ts and src/app/api/summary/route.ts.
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import { format } from "date-fns";

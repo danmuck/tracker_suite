@@ -1,5 +1,5 @@
 // Category routes (R16–R17) as store-backed handlers, shared by the server and browser data modes.
-// Same reads and writes as src/app/api/categories/route.ts.
+// Served by src/app/api/categories/route.ts, which only calls serve().
 // Pure: no framework, browser or server imports (browser-reachable).
 
 import { fail, ok, type Handler } from "@/lib/data/api";
