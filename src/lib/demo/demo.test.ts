@@ -115,7 +115,7 @@ test("ensureDemoSeed claims the seeded key before loading, so a concurrent tab d
 });
 
 const SAMPLE_BALANCES = {
-  Cash: 0, "Everyday Checking (sample)": 263450, "Rainy Day Savings (sample)": 1280000, "Example Rewards Card": 39604, "Example Auto Loan": 980000 };
+  Cash: 0, "Everyday Checking": 263450, "Rainy Day Savings": 1280000, "Rewards Card": 39604, "Auto Loan": 980000 };
 
 test("loadSampleData fills Finance through the real handlers, relative to today, and twice does not duplicate", async () => {
   const store = new BrowserStore(memoryStorage());
@@ -126,18 +126,18 @@ test("loadSampleData fills Finance through the real handlers, relative to today,
   assert.equal(await store.collection<Account>("accounts").count({ isCash: true }), 1);
   const accts = await store.collection<Account>("accounts").find();
   assert.deepEqual(Object.fromEntries(accts.map((a) => [a.name, a.balance])), {
-    Cash: 0, "Everyday Checking (sample)": 263450, "Rainy Day Savings (sample)": 1280000, "Example Rewards Card": 39604, "Example Auto Loan": 980000 });
+    Cash: 0, "Everyday Checking": 263450, "Rainy Day Savings": 1280000, "Rewards Card": 39604, "Auto Loan": 980000 });
   assert.deepEqual(accts.map((a) => a.type).sort(), ["bank", "bank", "bank", "credit_card", "debt"]);
   const txs = await store.collection<TransactionDoc>("transactions").find({}, { sort: { date: 1 } });
   assert.equal(txs.length, 14);
   const oneOff = txs.filter((x) => !x.isRecurring);
   assert.deepEqual([oneOff.length, oneOff[0].date, oneOff[11].date], [12, "2026-10-21T00:00:00.000Z", "2026-11-25T00:00:00.000Z"]);
-  assert.deepEqual(oneOff.filter((x) => !x.balanceApplied).map((x) => x.description), ["Internet bill (sample)", "Auto loan payment"]);
+  assert.deepEqual(oneOff.filter((x) => !x.balanceApplied).map((x) => x.description), ["Internet bill", "Auto loan payment"]);
   const defaults = (await store.collection<Category>("financeCategories").find()).map((c) => c.name);
   assert.equal(defaults.length, 9);
   assert.ok(txs.every((x) => x.categoryTags.length > 0 && x.categoryTags.every((tag) => defaults.includes(tag))));
   assert.ok(new Set(oneOff.flatMap((x) => x.categoryTags)).size >= 7);
-  const [salary, rent] = [txs.find((x) => x.description === "Salary (sample)")!, txs.find((x) => x.description === "Rent (sample)")!];
+  const [salary, rent] = [txs.find((x) => x.description === "Salary")!, txs.find((x) => x.description === "Rent")!];
   assert.deepEqual([salary.date, rent.date, rent.amount], ["2026-09-22T00:00:00.000Z", "2026-08-01T00:00:00.000Z", 145000]);
   assert.ok(salary.amountSchedule!.length >= 1 && salary.amount > 100000 && salary.amount < 300000); // net pay per paycheck
   assert.equal(await store.collection("financeProfile").count(), 1);
@@ -175,7 +175,7 @@ test("the Finance sample has the same balances when loaded late in the evening U
   assert.deepEqual(Object.fromEntries(accts.map((a) => [a.name, a.balance])), SAMPLE_BALANCES);
   const pending = (await store.collection<TransactionDoc>("transactions").find({ isRecurring: false, balanceApplied: false }))
     .map((x) => x.description).sort();
-  assert.deepEqual(pending, ["Auto loan payment", "Internet bill (sample)"]);
+  assert.deepEqual(pending, ["Auto loan payment", "Internet bill"]);
 });
 
 test("loading the Finance sample fails loudly, naming the step, when a handler refuses a request", async () => {
