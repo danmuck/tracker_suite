@@ -1,10 +1,10 @@
 {
   "meta": {
-    "capturedAt": "2026-11-18T00:22:57.078Z",
+    "capturedAt": "2026-11-18T00:28:15.156Z",
     "localDate": "2026-11-17",
     "utcDate": "2026-11-18",
     "timeZone": "America/New_York",
-    "commit": "49f6518b58c2140f3126aa8f6ba3f7753ae7bf41"
+    "commit": "28e961366ac0ed8c06fd914b4845533dff352a87"
   },
   "steps": [
     {
@@ -6943,6 +6943,25 @@
               "transactions": [
                 {
                   "accountId": "<checking>",
+                  "amount": 8000,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2027-04-01",
+                  "description": "Parity auto-save",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 3896771,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:13>",
+                  "toAccountId": "<savings>",
+                  "type": "transfer"
+                },
+                {
+                  "accountId": "<checking>",
                   "amount": 145000,
                   "balanceApplied": false,
                   "categoryTags": [
@@ -6958,25 +6977,6 @@
                   },
                   "sourceTransactionId": "<rent>",
                   "type": "debit"
-                },
-                {
-                  "accountId": "<checking>",
-                  "amount": 8000,
-                  "balanceApplied": false,
-                  "categoryTags": [
-                    "transfer"
-                  ],
-                  "date": "2027-04-01",
-                  "description": "Parity auto-save",
-                  "isProjected": true,
-                  "isRecurring": true,
-                  "ledger": {
-                    "bank": 3751771,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:13>",
-                  "toAccountId": "<savings>",
-                  "type": "transfer"
                 },
                 {
                   "accountId": "<checking>",
@@ -19402,23 +19402,6 @@
                 },
                 {
                   "accountId": "<order>",
-                  "amount": 2275,
-                  "balanceApplied": false,
-                  "categoryTags": [
-                    "spending"
-                  ],
-                  "date": "2026-11-20",
-                  "description": "Parity order debit",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 9390,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:17>",
-                  "type": "debit"
-                },
-                {
-                  "accountId": "<order>",
                   "amount": 3150,
                   "balanceApplied": false,
                   "categoryTags": [
@@ -19428,12 +19411,29 @@
                   "description": "Parity order transfer",
                   "isProjected": false,
                   "ledger": {
-                    "bank": 6240,
+                    "bank": 8515,
                     "credit": 0
                   },
                   "sourceTransactionId": "<id:16>",
                   "toAccountId": "<checking>",
                   "type": "transfer"
+                },
+                {
+                  "accountId": "<order>",
+                  "amount": 2275,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "spending"
+                  ],
+                  "date": "2026-11-20",
+                  "description": "Parity order debit",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 6240,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:17>",
+                  "type": "debit"
                 }
               ]
             },
@@ -19724,23 +19724,6 @@
                 },
                 {
                   "accountId": "<order>",
-                  "amount": 2275,
-                  "balanceApplied": false,
-                  "categoryTags": [
-                    "spending"
-                  ],
-                  "date": "2026-11-20",
-                  "description": "Parity order debit",
-                  "isProjected": false,
-                  "ledger": {
-                    "bank": 9390,
-                    "credit": 0
-                  },
-                  "sourceTransactionId": "<id:17>",
-                  "type": "debit"
-                },
-                {
-                  "accountId": "<order>",
                   "amount": 3150,
                   "balanceApplied": false,
                   "categoryTags": [
@@ -19750,12 +19733,29 @@
                   "description": "Parity order transfer",
                   "isProjected": false,
                   "ledger": {
-                    "bank": 6240,
+                    "bank": 8515,
                     "credit": 0
                   },
                   "sourceTransactionId": "<id:16>",
                   "toAccountId": "<checking>",
                   "type": "transfer"
+                },
+                {
+                  "accountId": "<order>",
+                  "amount": 2275,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "spending"
+                  ],
+                  "date": "2026-11-20",
+                  "description": "Parity order debit",
+                  "isProjected": false,
+                  "ledger": {
+                    "bank": 6240,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:17>",
+                  "type": "debit"
                 }
               ]
             },

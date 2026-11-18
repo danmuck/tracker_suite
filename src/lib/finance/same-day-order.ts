@@ -11,15 +11,20 @@ export interface OrderedTransaction {
   createdAt?: Date | string;
   /** The entry's own account is a credit card or debt account: a credit there is a payment */
   onDebtAccount?: boolean;
+  /** A transfer's destination is a credit card or debt account: the transfer is a payment */
+  toDebtAccount?: boolean;
 }
 
 /**
- * 0 income (a credit on a bank account), 1 debits (card charges included),
- * 2 payments: transfers and credits on a credit card or debt account, ranked together.
+ * 0 income (a credit on a bank account), 1 transfers into a bank account (money moved between the
+ * owner's accounts lands before the day's spending, and after income so its source is funded),
+ * 2 debits (card charges included), 3 payments: transfers into, and credits on, a credit card or
+ * debt account, ranked together.
  */
-export function dayRank(t: Pick<OrderedTransaction, "type" | "onDebtAccount">): number {
-  if (t.type === "credit") return t.onDebtAccount ? 2 : 0;
-  return t.type === "debit" ? 1 : 2;
+export function dayRank(t: Pick<OrderedTransaction, "type" | "onDebtAccount" | "toDebtAccount">): number {
+  if (t.type === "credit") return t.onDebtAccount ? 3 : 0;
+  if (t.type === "debit") return 2;
+  return t.toDebtAccount ? 3 : 1;
 }
 
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
@@ -33,7 +38,7 @@ const created = (t: OrderedTransaction) => {
 };
 
 /**
- * By UTC calendar day of `date`; within a day by `dayRank` (income, debits, payments); then
+ * By UTC calendar day of `date`; within a day by `dayRank` (income, transfers between bank accounts, debits, payments); then
  * `createdAt` ascending (a missing or unparseable one last); then `_id` ascending.
  */
 export function sameDayOrder(a: OrderedTransaction, b: OrderedTransaction): number {

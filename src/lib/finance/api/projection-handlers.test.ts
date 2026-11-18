@@ -141,7 +141,7 @@ test("an unknown summary view is 400 and writes nothing", async () => {
   assert.deepEqual([t.writes("accounts"), t.writes("transactions")], before);
 });
 
-test("projections and the summary process a day's transactions income first, then debits, then transfers and payments, then by creation", async () => {
+test("projections and the summary process a day's transactions income first, then bank transfers, then debits, then payments, then by creation", async () => {
   // Created in the "wrong" order on a future day, from an empty account: caps depend on the order
   const empty = await acct({ name: "Empty", type: "bank", balance: 0 });
   // A pause between writes keeps their createdAt apart (the default store clock is real time)
@@ -153,7 +153,7 @@ test("projections and the summary process a day's transactions income first, the
   await post({ amount: 100, date: "2026-11-20", type: "credit", accountId: empty._id, description: "pay" });
   await tick();
   await post({ amount: 5, date: "2026-11-20", accountId: empty._id, description: "spend later" });
-  const expected = [["pay", 10000, false], ["spend", 2000, false], ["spend later", 500, false], ["move", 3000, false]];
+  const expected = [["pay", 10000, false], ["move", 3000, false], ["spend", 2000, false], ["spend later", 500, false]];
   const r = await proj(`${NOV}&accountId=${empty._id}`);
   assert.deepEqual(on(r, "2026-11-20"), expected);
   assert.equal(r.data.summary.endBalances[empty._id], 4500);

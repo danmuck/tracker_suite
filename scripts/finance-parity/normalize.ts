@@ -194,8 +194,8 @@ export interface CreatedTx {
 type DayEntry = { sourceTransactionId?: string; type?: string; date?: string };
 
 /**
- * Whether two entries may share a same-day rank (src/lib/finance/same-day-order.ts: income, debits,
- * payments). Same type always may. A credit and a transfer may too: a credit on a card or debt
+ * Whether two entries may share a same-day rank (src/lib/finance/same-day-order.ts: income, transfers
+ * into bank accounts, debits, payments). Same type always may. A credit and a transfer may too: a credit on a card or debt
  * account is a payment, ranked with transfers, and the response does not say which accounts are
  * debt accounts, so this check assumes they might be (it errs towards reporting).
  */

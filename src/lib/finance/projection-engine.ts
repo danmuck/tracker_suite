@@ -136,6 +136,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
     type: t.type,
     createdAt: t.createdAt,
     onDebtAccount: debtAccountIds.has(t.accountId.toString()),
+    toDebtAccount: t.toAccountId != null && debtAccountIds.has(t.toAccountId.toString()),
   });
 
   // Add one-time transactions
@@ -317,8 +318,9 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
 
   for (const day of days) {
     const dateStr = toUTCDateStr(day);
-    // Income first: credits on bank accounts, then debits (card charges included), then payments
-    // (transfers and credits on card or debt accounts, together), whether one-time or recurring,
+    // Income first: credits on bank accounts, then transfers into bank accounts, then debits (card
+    // charges included), then payments (transfers into, and credits on, card or debt accounts,
+    // together), whether one-time or recurring,
     // then by the source's createdAt and _id (same-day-order.ts). This order drives caps, payoffs,
     // alerts and the ledger below, and does not depend on the order the transactions arrived in.
     const dayAll = allProjected

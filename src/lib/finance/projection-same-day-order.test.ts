@@ -2,8 +2,9 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildProjection, type EngineAccount, type EngineTransaction } from "./projection-engine";
 
-// Each projected day's entries are processed: income (credits on bank accounts), debits (card charges
-// included), then payments (transfers and credits on card or debt accounts, ranked together), one-time
+// Each projected day's entries are processed: income (credits on bank accounts), transfers into bank
+// accounts, debits (card charges included), then payments (transfers into, and credits on, card or
+// debt accounts, ranked together), one-time
 // or recurring alike, then by the source transaction's createdAt and _id, whatever the input order.
 
 const bank: EngineAccount = { _id: "bank", type: "bank", balance: 0 };
@@ -29,7 +30,7 @@ const run = (transactions: EngineTransaction[], accounts: EngineAccount[] = [ban
 const day = (r: ReturnType<typeof run>, date: string) =>
   r.timeline.find((d) => d.date === date)!.transactions.map((t) => [t.description, t.amount]);
 
-test("one day: a credit from a newer recurring rule, then an old rule's debit, then a one-time transfer", () => {
+test("one day: a credit from a newer recurring rule, then a one-time bank transfer, then an old rule's debit", () => {
   // Rent started years ago and was created first; the salary rule is newer; the transfer is one-time
   const rent = tx("rent", {
     amount: 3_000, isRecurring: true, createdAt: "2090-01-01T00:00:00.000Z", date: "2090-01-10T00:00:00.000Z",
@@ -41,8 +42,8 @@ test("one day: a credit from a newer recurring rule, then an old rule's debit, t
   });
   const move = tx("move", { amount: 4_000, type: "transfer", toAccountId: "savings", createdAt: "2089-01-01T00:00:00.000Z" });
   const r = run([move, rent, salary]);
-  // From an empty bank, any other order would cap the debit or the transfer
-  assert.deepEqual(day(r, "2099-01-10"), [["salary", 10_000], ["rent", 3_000], ["move", 4_000]]);
+  // From an empty bank, income has to come first or the transfer and the debit would be capped
+  assert.deepEqual(day(r, "2099-01-10"), [["salary", 10_000], ["move", 4_000], ["rent", 3_000]]);
   assert.deepEqual([r.summary.endBalances.bank, r.summary.endBalances.savings], [3_000, 4_000]);
   assert.deepEqual(r.alerts, []);
 });
@@ -104,4 +105,31 @@ test("shuffled input gives identical output (timeline, ledger, alerts, summary)"
   // …and the weekly buckets concatenate days in that order too
   const weekly = (l: EngineTransaction[]) => JSON.stringify(buildProjection({ accounts: [bank, savings, loan], transactions: l, startDate: new Date("2099-01-01"), endDate: new Date("2099-01-31"), granularity: "weekly", today: "2098-12-31" }));
   assert.equal(weekly([...list].reverse()), weekly(list));
+});
+
+test("a transfer into a bank account lands before that day's spending: no shortfall that will not happen", () => {
+  const checking: EngineAccount = { _id: "bank", type: "bank", balance: 10_000 };
+  const funded: EngineAccount = { _id: "savings", type: "bank", balance: 500_000 };
+  const topUp = tx("top up", { amount: 100_000, type: "transfer", accountId: "savings", toAccountId: "bank", createdAt: "2098-07-01T00:00:00.000Z" });
+  const rent = tx("rent", { amount: 90_000, createdAt: "2098-05-01T00:00:00.000Z" });
+  const r = run([rent, topUp], [checking, funded, loan]);
+  assert.deepEqual(day(r, "2099-01-10"), [["top up", 100_000], ["rent", 90_000]]);
+  assert.deepEqual([r.summary.endBalances.bank, r.summary.endBalances.savings], [20_000, 400_000]);
+  assert.deepEqual(r.alerts, []);
+});
+
+test("a transfer out of a bank account still waits for that account's income the same day", () => {
+  const pay = tx("pay", { amount: 50_000, type: "credit", accountId: "savings", createdAt: "2098-09-01T00:00:00.000Z" });
+  const move = tx("move", { amount: 40_000, type: "transfer", accountId: "savings", toAccountId: "bank", createdAt: "2098-01-01T00:00:00.000Z" });
+  const r = run([move, pay]);
+  assert.deepEqual(day(r, "2099-01-10"), [["pay", 50_000], ["move", 40_000]]);
+  assert.deepEqual(r.alerts, []);
+});
+
+test("a transfer to a loan is a payment and still runs after spending", () => {
+  const start: EngineAccount = { _id: "bank", type: "bank", balance: 10_000 };
+  const payLoan = tx("pay loan", { amount: 8_000, type: "transfer", toAccountId: "loan", createdAt: "2098-01-01T00:00:00.000Z" });
+  const rent = tx("rent", { amount: 9_000, createdAt: "2098-05-01T00:00:00.000Z" });
+  const r = run([payLoan, rent], [start, savings, loan]);
+  assert.deepEqual(day(r, "2099-01-10"), [["rent", 9_000], ["pay loan", 1_000]]);
 });
