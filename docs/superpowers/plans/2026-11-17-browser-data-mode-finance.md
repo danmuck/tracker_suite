@@ -1900,22 +1900,42 @@ In Browser data mode the module is new, so everything is new; two things differ 
 Reproduced on purpose so both stores behave like today's code. Each line names where it is pinned (a `current behavior:` handler test, or a golden step). A follow-up plan should decide each.
 
 1. Editing a transaction reverses the old balance effect before checking the new transfer's accounts; a 400 leaves the reversal in place and the transaction marked applied. (Task 8 test; golden T42–T43)
+   Fixed: an edit resolves and validates the new state (accounts exist, ids well-formed, a transfer has a destination) before reversing anything; a refused edit leaves balances and the transaction as they were (43a87d1, d07822d).
 2. Changing a transfer to a debit or credit keeps the stale `toAccountId`; turning recurrence off keeps `recurrenceRule`. (Task 8 test; golden T40)
+   Fixed: a transfer turned debit or credit loses `toAccountId`; turning recurrence off removes `recurrenceRule`. `amountSchedule` is kept when recurrence is turned off: the Datasheet or payment plan that wrote it still owns it (9717104).
 3. Creating a loan with a missing linked account creates the account and then returns 400. (Task 7 test; golden A08)
+   Fixed: the linked account is checked before anything is created; a missing one answers 400 and creates nothing (43a87d1).
 4. "Future" detection compares UTC-midnight dates with local midnight: west of UTC a transaction dated tomorrow is applied today. (Task 8 test; golden T09)
+   Fixed: "future" compares calendar days, the stored UTC day against the local day of now, in every time zone, on create, update and apply-pending (f9a5353). The dashboard's recent transactions use the same bound (130296a).
 5. The summary's account filter fetches only transactions whose source is the account, so transfers into it are missing. (Task 11 test; golden R20)
+   Fixed: the summary's account filter matches the account as source or destination; a transfer in counts as money in, a transfer out as money out (aaca2d3).
 6. An unknown summary `view` uses the year's bounds with daily entries. (Task 11 test; golden R17)
+   Fixed: an unknown `view` answers 400 `{ error: "Invalid view" }` before anything is written (aaca2d3).
 7. Deleting an account or a transaction leaves dangling links: the Datasheet's Salary/Rent links (the next save answers 409), other accounts' `paymentTransactionId` pointing at a transfer deleted with an account, and `linkedAccountId`. (not reachable as a single assertion; golden Z04–Z08 shows the surviving state)
+   Fixed: deleting a transaction or an account clears every link to it and to the transactions deleted with it (Datasheet Salary/Rent links, `paymentTransactionId`, `linkedAccountId`); removing a payment plan clears links to its transfer (9717104, e175a8f).
 8. A semi-monthly rule created without `daysOfMonth` stores `[]` and produces no occurrences. (golden T15 and the projections that follow)
+   Fixed: creating or updating a semi-monthly rule without (or with empty) `daysOfMonth` answers 400; rules already stored that way still read and project as before (aaca2d3).
 9. Applying pending transactions has no claim: two overlapping `GET /api/accounts` requests can both apply the same transaction, and a failure between the balance write and the flag write re-applies it. (single-request behavior pinned by Task 7; the race itself is not testable here)
+   Fixed: each pending transaction is claimed with a conditional update before its balance is applied, and the claim is released if the balance write fails (92c4b62). Every route that posts payments now runs the same catch-up, pending transactions first (27c926a).
 10. `postDuePayments` advances `postedThrough` even when nothing is owed, and a failure after the claim loses those payments. (Task 7 test)
+   Fixed: a due date with nothing owed is done: it pays nothing and `postedThrough` advances past it, so it never comes back as catch-up; a posting that fails after the claim restores the previous `postedThrough`. Pending transactions are applied before payments are posted, on every route that posts (92c4b62, 89722a9, 27c926a). A narrow window remains between two concurrent requests: the one that loses a pending charge's claim can post before the winner has applied it, so that due date may pay 0 and the charge waits for the next due date (nothing is applied or posted twice).
 11. Updating a payment plan writes the schedule before the RAP account-type check, so a 400 leaves the schedule changed. (Task 9 test; golden P18–P19)
+   Fixed: the RAP account-type check runs before the schedule is written; a 400 changes nothing (43a87d1).
 12. Setting up payments is two writes: a failure after the transfer is created leaves an unlinked recurring transfer. (not testable without fault injection)
+   Fixed: if linking the new transfer fails, the transfer is deleted and the original error is reported (43a87d1, d07822d).
 13. Merge-rent ignores the merged transaction's own `amountSchedule` and clears no reference to the merged id. (golden F11–F16)
+   Fixed: the merged transaction's own amounts become rent steps (its start, then its later schedule entries; the kept steps win on an equal date), and a Rent link to the merged id moves to the kept one. Only the Rent link moves: merge-rent refuses a Salary-linked or loan-payment transaction on either side with 400, before any write (9717104, e175a8f).
 14. The loan-disbursement transaction's `date` is the current instant, not UTC midnight. (Task 7 test; golden A07)
+   Fixed: the disbursement is dated UTC midnight of the local calendar day (f9a5353).
 15. `useTransaction` reads `data.data` but the route returns the bare document; it has no callers. (unchanged by Task 14)
+   Fixed: `useTransaction` is deleted (aaca2d3).
 16. Two overlapping first `GET /api/categories` requests can both seed; the second fails on the unique index with 500. (Task 8 conflict test pins the 500)
+   Fixed: a conflict on the seed insert is treated as already seeded; both overlapping first requests answer 200 with the same list (92c4b62).
 17. `GET /api/transactions` does not validate its parameters: `page=0` is a 500; `limit=0` returns everything with `totalPages: null`. A non-numeric `page` or `limit` (`NaN`) is passed to MongoDB as today in My data mode (Task 4 keeps `skip: NaN` flowing through the Mongo store) but is not pinned and may answer differently in browser mode; `sort` on an array field (`?sort=categoryTags`) orders differently in the two stores. (Task 8 test for `page=0`)
+   Fixed: `page` (integer ≥ 1), `limit` (integer 1–500), `sort` (the scalar fields the UI sorts by) and `order` (`asc`/`desc`) are validated; anything else answers 400; defaults are unchanged (aaca2d3).
 18. Projections and the summary do not sort the transactions they fetch, and the engine keeps input order within a day (which drives caps and running totals). MongoDB may return an account-filtered query in index order, the browser store in insertion order, so two same-kind transactions on one day can be processed in a different order in the two modes. (the N7 order check keeps the parity scenario clear of it; not otherwise pinned)
+   Fixed: transactions are sorted before the engine sees them. Day order: income first, then debits (card charges included), then transfers and credits on card/debt accounts (payments); ties by `createdAt`, then `_id` (aaca2d3, ebf62ad, d4021d2).
 
 Browser-mode only, noted for the same follow-up: two tabs making their first Finance request at the same moment can each create a Cash account; and in browser mode the once-only claim on plan payments holds within one tab only.
+
+Fixed: the browser store re-reads storage before each request, so Cash seeding and plan-payment claims see other tabs' writes (92c4b62). A narrow cross-tab window remains (two tabs between their re-read and their write); closing it needs Web Locks.
