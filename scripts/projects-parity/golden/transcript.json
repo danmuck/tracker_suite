@@ -1,7 +1,7 @@
 {
   "meta": {
-    "capturedAt": "2026-11-18T01:18:00.882Z",
-    "commit": "e8275cff15d23c0ae72ba67d65725587a2aebfc8"
+    "capturedAt": "2026-11-18T01:35:15.483Z",
+    "commit": "66ee0f3c6357df19ed08b060a27de5fab6203234"
   },
   "steps": [
     {
@@ -818,6 +818,14 @@
         "tags": [],
         "title": "Parity wire API",
         "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "U11",
+      "request": "PUT /api/tasks/{tD}",
+      "status": 404,
+      "body": {
+        "error": "Project not found"
       }
     },
     {

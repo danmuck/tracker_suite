@@ -328,6 +328,24 @@ test("update task: 404 before the body, 400 on validation and broken JSON, 500 o
   assert.deepEqual([stored.title, stored.updatedAt], ["Keep", x.updatedAt]);
 });
 
+test("update task: a well-formed projectId that matches no project is 404, nothing written; checks run task, body, casts, project", async (t) => {
+  quiet(t);
+  const a = await project();
+  const x = await task(a._id, { title: "Keep" });
+  const notFound = { status: 404, body: { error: "Project not found" } };
+  assert.deepEqual(await call("PUT", `/api/tasks/${x._id}`, { projectId: UNKNOWN, title: "moved" }), notFound);
+  assert.deepEqual(await call("PUT", `/api/tasks/${x._id}`, { projectId: UNKNOWN.toUpperCase(), title: "moved", status: "done" }), notFound);
+  const gone = await project({ name: "Gone" });
+  await call("DELETE", `/api/projects/${gone._id}`);
+  assert.deepEqual(await call("PUT", `/api/tasks/${x._id}`, { projectId: gone._id, title: "moved" }), notFound);
+  // An unknown task is still "Task not found" first; a bad body 400 and a bad cast 500 before the project
+  assert.deepEqual(await call("PUT", `/api/tasks/${UNKNOWN}`, { projectId: UNKNOWN, title: "x" }), { status: 404, body: { error: "Task not found" } });
+  assert.equal((await call("PUT", `/api/tasks/${x._id}`, { projectId: UNKNOWN, title: "" })).status, 400);
+  assert.deepEqual(await call("PUT", `/api/tasks/${x._id}`, { projectId: UNKNOWN, title: "x", dueDate: "not a date" }), { status: 500, body: { error: "Failed to update task" } });
+  const [stored] = await list(a._id);
+  assert.deepEqual([stored.title, stored.projectId, stored.updatedAt], ["Keep", a._id, x.updatedAt]);
+});
+
 // ── Tasks: delete ──
 
 test("delete task: current behavior: leaves an order gap; unknown and malformed ids are 404", async () => {

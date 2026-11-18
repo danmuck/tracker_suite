@@ -222,7 +222,7 @@ export default function ProjectDetailPage({
         </TabsContent>
 
         <TabsContent value="notes" className="mt-4">
-          <ScratchpadEditor projectId={projectId} />
+          <ScratchpadEditor key={projectId} projectId={projectId} />
         </TabsContent>
       </Tabs>
 

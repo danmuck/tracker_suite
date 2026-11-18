@@ -155,6 +155,8 @@ export function buildScenario(): Step[] {
     raw("U09", "PUT", "/api/tasks/{tA}", 500, { allow: d1c() }),
     // What the task form sends when the description is emptied: "" stores ""
     send("U10", "PUT", "/api/tasks/{tC}", task("p1", "Parity wire API", { description: "" }), 200),
+    // Moving a task to a project that does not exist: 404, nothing written (Task 4 review); D04 shows tD unchanged
+    send("U11", "PUT", "/api/tasks/{tD}", task("unknown", "Parity moved away"), 404),
 
     // ── Tasks: delete ──
     // tB (todo 1) goes; todo keeps tA 0, tC 2, tD 3: a gap, not renumbered

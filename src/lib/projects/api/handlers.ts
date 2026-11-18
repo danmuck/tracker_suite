@@ -205,7 +205,8 @@ export const createTask: Handler = async ({ store, body }) => {
 };
 
 /**
- * Sets what the body holds; the order is kept. current behavior: an omitted priority, status or
+ * Sets what the body holds; the order is kept. A well-formed projectId that matches no project is
+ * a 404 (after the task lookup, the body and its casts). current behavior: an omitted priority, status or
  * tags is reset to its default, an omitted description or dueDate is kept, and a status (or
  * project) change keeps the order, so it can tie with a task already there.
  */
@@ -213,8 +214,11 @@ export const updateTask: Handler = async ({ store, params, body }) => {
   if (!(await tasks(store).findById(params.taskId))) return notFound(TASK);
   const parsed = taskSchema.safeParse(body);
   if (!parsed.success) return invalid(parsed.error);
+  const fields = taskFields(parsed.data);
+  // Same rule as create: a task never points at a project that does not exist.
+  if (!(await projects(store).findById(fields.projectId as string))) return notFound(PROJECT);
   // Deleted between the read and the write: today's findByIdAndUpdate answered 200 null.
-  return ok(await tasks(store).updateById(params.taskId, { $set: taskFields(parsed.data) }));
+  return ok(await tasks(store).updateById(params.taskId, { $set: fields }));
 };
 
 /** current behavior: the column is not renumbered, so an order gap is left. */
