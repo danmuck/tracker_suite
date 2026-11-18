@@ -715,5 +715,33 @@ export function buildScenario(today: string): Step[] {
     send("X47", "PUT", "/api/finance-profile", { ...PROFILE, salaryTransactionId: null, rentTransactionId: "{rent4}", rentSteps: [] }, 200),
     send("X48", "POST", "/api/finance-profile/merge-rent", { keepId: "{rent}", mergeId: "{rent4}" }, 200),
     get("X49", "/api/transactions/{rent}", 200),
+
+    // ── An account filter still tracks every balance. Last: it adds accounts. A thin bank ($200)
+    // gets a $2,875 paycheck in 7 days and sends a monthly $487.50 to its own savings in 9 days.
+    // Filtered on the savings, the transfer is $487.50 (capped by the source's full projected balance),
+    // not $200 (a source balance missing the paycheck). Projection, summary and sandbox. ──
+    send("X50", "POST", "/api/accounts", { name: "Parity Thin", type: "bank", balance: 200 }, 201, { save: { name: "thin", from: "_id" } }),
+    send("X51", "POST", "/api/accounts", { name: "Parity Thin Savings", type: "bank", balance: 0 }, 201, { save: { name: "thinSave", from: "_id" } }),
+    send("X52", "POST", "/api/transactions", { amount: 2875, date: d(7), description: "Parity thin paycheck", accountId: "{thin}", type: "credit", categoryTags: ["salary"] }, 201),
+    send(
+      "X53",
+      "POST",
+      "/api/transactions",
+      {
+        amount: 487.5,
+        date: d(9),
+        description: "Parity thin save",
+        accountId: "{thin}",
+        toAccountId: "{thinSave}",
+        type: "transfer",
+        isRecurring: true,
+        recurrenceRule: { frequency: "monthly", startDate: d(9), dayOfMonth: noon(d(9)).getUTCDate() },
+        categoryTags: ["transfer"],
+      },
+      201,
+    ),
+    get("X54", `/api/projections?startDate=${d(0)}&endDate=${d(13)}&accountId={thinSave}`, 200),
+    get("X55", `/api/summary?view=monthly&date=${d(9)}&accountId={thinSave}`, 200),
+    send("X56", "POST", "/api/projections", { startDate: d(0), endDate: d(13), accountId: "{thinSave}", sandbox: {} }, 200),
   ];
 }

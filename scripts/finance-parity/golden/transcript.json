@@ -1,10 +1,10 @@
 {
   "meta": {
-    "capturedAt": "2026-11-18T00:00:08.059Z",
+    "capturedAt": "2026-11-18T00:22:57.078Z",
     "localDate": "2026-11-17",
     "utcDate": "2026-11-18",
     "timeZone": "America/New_York",
-    "commit": "89722a9ee34fa485875a24274c359f570e249997"
+    "commit": "49f6518b58c2140f3126aa8f6ba3f7753ae7bf41"
   },
   "steps": [
     {
@@ -20525,6 +20525,700 @@
         },
         "type": "debit",
         "updatedAt": "<changed>"
+      }
+    },
+    {
+      "id": "X50",
+      "request": "POST /api/accounts",
+      "status": 201,
+      "body": {
+        "_id": "<thin>",
+        "balance": 20000,
+        "currency": "USD",
+        "isArchived": false,
+        "isCash": false,
+        "name": "Parity Thin",
+        "type": "bank",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X51",
+      "request": "POST /api/accounts",
+      "status": 201,
+      "body": {
+        "_id": "<thinSave>",
+        "balance": 0,
+        "currency": "USD",
+        "isArchived": false,
+        "isCash": false,
+        "name": "Parity Thin Savings",
+        "type": "bank",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X52",
+      "request": "POST /api/transactions",
+      "status": 201,
+      "body": {
+        "_id": "<id:22>",
+        "accountId": "<thin>",
+        "amount": 287500,
+        "balanceApplied": false,
+        "categoryTags": [
+          "salary"
+        ],
+        "date": "2026-11-24T00:00:00.000Z",
+        "description": "Parity thin paycheck",
+        "isRecurring": false,
+        "type": "credit",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X53",
+      "request": "POST /api/transactions",
+      "status": 201,
+      "body": {
+        "_id": "<id:23>",
+        "accountId": "<thin>",
+        "amount": 48750,
+        "balanceApplied": false,
+        "categoryTags": [
+          "transfer"
+        ],
+        "date": "2026-11-26T00:00:00.000Z",
+        "description": "Parity thin save",
+        "isRecurring": true,
+        "recurrenceRule": {
+          "dayOfMonth": 26,
+          "daysOfMonth": [],
+          "endDate": null,
+          "frequency": "monthly",
+          "interval": 1,
+          "startDate": "2026-11-26T00:00:00.000Z"
+        },
+        "toAccountId": "<thinSave>",
+        "type": "transfer",
+        "updatedAt": "<new>"
+      }
+    },
+    {
+      "id": "X54",
+      "request": "GET /api/projections?startDate=2026-11-17&endDate=2026-11-30&accountId={thinSave}",
+      "status": 200,
+      "body": {
+        "data": {
+          "alerts": [],
+          "summary": {
+            "debtPayments": 0,
+            "endBalances": {
+              "<thinSave>": 48750
+            },
+            "interestCharged": 0,
+            "loanPayments": 0,
+            "lowestCash": {
+              "amount": 0,
+              "date": "2026-11-17"
+            },
+            "netChange": 0,
+            "payoffDates": {},
+            "startBalances": {
+              "<thinSave>": 0
+            },
+            "totalExpenses": 0,
+            "totalIncome": 0,
+            "totalOut": 0
+          },
+          "timeline": [
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-17",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-18",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-19",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-20",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-21",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-22",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-23",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-24",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-25",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-26",
+              "transactions": [
+                {
+                  "accountId": "<thin>",
+                  "amount": 48750,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-26",
+                  "description": "Parity thin save",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 48750,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:23>",
+                  "toAccountId": "<thinSave>",
+                  "type": "transfer"
+                }
+              ]
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-27",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-28",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-29",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-30",
+              "transactions": []
+            }
+          ]
+        },
+        "dataVersion": "21|<changed>|<changed>|<car>:800000:<same>,<card>:0:<same>,<cash>:2500:<same>,<checking>:1376500:<same>,<doomedLoan>:90000:<new>,<loan>:1880000:<same>,<mergeLoan>:60000:<new>,<order>:0:<same>,<orderCard>:0:<same>,<thin>:20000:<new>,<thinSave>:0:<new>"
+      }
+    },
+    {
+      "id": "X55",
+      "request": "GET /api/summary?view=monthly&date=2026-11-26&accountId={thinSave}",
+      "status": 200,
+      "body": {
+        "data": {
+          "categoryBreakdown": [],
+          "days": [
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-01",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-02",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-03",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-04",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-05",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-06",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-07",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-08",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-09",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-10",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-11",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-12",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-13",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-14",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-15",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-16",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-17",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-18",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-19",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-20",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-21",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-22",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-23",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-24",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-25",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-26",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": [
+                {
+                  "accountId": "<thin>",
+                  "amount": 48750,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-26",
+                  "description": "Parity thin save",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 48750,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:23>",
+                  "toAccountId": "<thinSave>",
+                  "type": "transfer"
+                }
+              ]
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-27",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-28",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-29",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-30",
+              "totalCredits": 0,
+              "totalDebits": 0,
+              "transactions": []
+            }
+          ],
+          "period": {
+            "end": "2026-11-30",
+            "label": "November 2026",
+            "start": "2026-11-01"
+          },
+          "totals": {
+            "expenses": 0,
+            "income": 0,
+            "loanPayments": 0,
+            "net": 0,
+            "totalOut": 0
+          },
+          "view": "monthly"
+        }
+      }
+    },
+    {
+      "id": "X56",
+      "request": "POST /api/projections",
+      "status": 200,
+      "body": {
+        "data": {
+          "alerts": [],
+          "summary": {
+            "debtPayments": 0,
+            "endBalances": {
+              "<thinSave>": 48750
+            },
+            "interestCharged": 0,
+            "loanPayments": 0,
+            "lowestCash": {
+              "amount": 0,
+              "date": "2026-11-17"
+            },
+            "netChange": 0,
+            "payoffDates": {},
+            "startBalances": {
+              "<thinSave>": 0
+            },
+            "totalExpenses": 0,
+            "totalIncome": 0,
+            "totalOut": 0
+          },
+          "timeline": [
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-17",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-18",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-19",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-20",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-21",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-22",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-23",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-24",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 0
+              },
+              "date": "2026-11-25",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-26",
+              "transactions": [
+                {
+                  "accountId": "<thin>",
+                  "amount": 48750,
+                  "balanceApplied": false,
+                  "categoryTags": [
+                    "transfer"
+                  ],
+                  "date": "2026-11-26",
+                  "description": "Parity thin save",
+                  "isProjected": true,
+                  "isRecurring": true,
+                  "ledger": {
+                    "bank": 48750,
+                    "credit": 0
+                  },
+                  "sourceTransactionId": "<id:23>",
+                  "toAccountId": "<thinSave>",
+                  "type": "transfer"
+                }
+              ]
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-27",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-28",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-29",
+              "transactions": []
+            },
+            {
+              "balances": {
+                "<thinSave>": 48750
+              },
+              "date": "2026-11-30",
+              "transactions": []
+            }
+          ]
+        },
+        "dataVersion": "21|<same>|<same>|<car>:800000:<same>,<card>:0:<same>,<cash>:2500:<same>,<checking>:1376500:<same>,<doomedLoan>:90000:<same>,<loan>:1880000:<same>,<mergeLoan>:60000:<same>,<order>:0:<same>,<orderCard>:0:<same>,<thin>:20000:<same>,<thinSave>:0:<same>"
       }
     }
   ],

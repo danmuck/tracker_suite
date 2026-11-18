@@ -1908,7 +1908,7 @@ Reproduced on purpose so both stores behave like today's code. Each line names w
 4. "Future" detection compares UTC-midnight dates with local midnight: west of UTC a transaction dated tomorrow is applied today. (Task 8 test; golden T09)
    Fixed: "future" compares calendar days, the stored UTC day against the local day of now, in every time zone, on create, update and apply-pending (f9a5353). The dashboard's recent transactions use the same bound (130296a).
 5. The summary's account filter fetches only transactions whose source is the account, so transfers into it are missing. (Task 11 test; golden R20)
-   Fixed: the summary's account filter matches the account as source or destination; a transfer in counts as money in, a transfer out as money out (aaca2d3).
+   Fixed: the summary's account filter matches the account as source or destination (a transfer's destination only), so transfers into the account are listed in its days and move its balances. Transfers still stay out of `totals.income` and `totals.expenses`. Every account's transactions feed the balances, so a transfer into the filtered account is capped by its source's full projected balance (aaca2d3; the cap: the commit after 49f6518).
 6. An unknown summary `view` uses the year's bounds with daily entries. (Task 11 test; golden R17)
    Fixed: an unknown `view` answers 400 `{ error: "Invalid view" }` before anything is written (aaca2d3).
 7. Deleting an account or a transaction leaves dangling links: the Datasheet's Salary/Rent links (the next save answers 409), other accounts' `paymentTransactionId` pointing at a transfer deleted with an account, and `linkedAccountId`. (not reachable as a single assertion; golden Z04–Z08 shows the surviving state)

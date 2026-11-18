@@ -231,13 +231,14 @@ export const createTransaction: Handler = async ({ store, body, now }) => {
 
   const isFuture = isFutureDated(validated.date, now);
 
+  // Fields the new transaction does not use are not stored, as on PUT (bug 2): a destination only
+  // on a transfer, a rule only when recurring. A malformed toAccountId is still refused above.
+  const fields = transactionFields(validated, finalAmountInCents, !isFuture && !validated.isRecurring);
+  if (validated.type !== "transfer") delete fields.toAccountId;
+  if (!validated.isRecurring) delete fields.recurrenceRule;
+
   // T4
-  const transaction = await transactions(store).insert(
-    transactionFields(validated, finalAmountInCents, !isFuture && !validated.isRecurring) as Omit<
-      TransactionDoc,
-      "_id" | "createdAt" | "updatedAt"
-    >,
-  );
+  const transaction = await transactions(store).insert(fields as Omit<TransactionDoc, "_id" | "createdAt" | "updatedAt">);
 
   // Only non-recurring, non-future transactions change balances
   if (!validated.isRecurring && !isFuture) {

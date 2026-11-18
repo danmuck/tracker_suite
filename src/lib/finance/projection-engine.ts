@@ -201,9 +201,13 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
 
   // Filter by account if needed — include transfers where account is source OR destination. Only a
   // transfer has a destination: a debit or credit still holding an old toAccountId is not counted there
+  // The filter decides only what is shown (timeline, alerts, totals): balances are tracked over every
+  // account's transactions, so a transfer into the filtered account is capped by its source's real
+  // projected balance, not by a balance missing the source's own income and spending
   const filteredProjected = filterAccountId
     ? allProjected.filter((t) => t.accountId === filterAccountId || (t.type === "transfer" && t.toAccountId === filterAccountId))
     : allProjected;
+  const shown = new Set(filteredProjected);
 
   // Build day-by-day timeline
   // Step noon-UTC days (eachDayOfInterval snaps to local midnight, which is a
@@ -232,7 +236,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
   // Recurring transactions don't update DB balances, so we only rewind their past occurrences.
   const startBalances: Record<string, number> = { ...currentBalances };
 
-  const txToRewind = filteredProjected.filter((t) => {
+  const txToRewind = allProjected.filter((t) => {
     if (t.date < startStr) return false;
     // One-time transactions: only rewind if balance was actually applied to DB
     if (!t.isProjected) return t.balanceApplied === true;
@@ -317,7 +321,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
     // (transfers and credits on card or debt accounts, together), whether one-time or recurring,
     // then by the source's createdAt and _id (same-day-order.ts). This order drives caps, payoffs,
     // alerts and the ledger below, and does not depend on the order the transactions arrived in.
-    const dayTx = filteredProjected
+    const dayAll = allProjected
       .filter((t) => t.date === dateStr)
       .sort((a, b) => sameDayOrder(orderKey.get(a)!, orderKey.get(b)!));
     if (dateStr.slice(0, 7) !== currentMonth) {
@@ -327,7 +331,11 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
 
     // Payments toward a debt that is already cleared: left out of the timeline
     const dropped = new Set<ProjectedTransaction>();
-    for (const t of dayTx) {
+    // Alerts only for what is shown
+    const alert = (t: ProjectedTransaction, a: ProjectionAlert) => {
+      if (shown.has(t)) alerts.push(a);
+    };
+    for (const t of dayAll) {
       const origAmount = t.amount;
       // Already reflected in stored balances (it happened): replay it in full.
       // Limits only decide what can happen from here on.
@@ -389,9 +397,9 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
           sourceTransactionId: t.sourceTransactionId,
         };
         // A limit on the paying account cut the payment short
-        if (limitedBy) alerts.push({ ...alertBase, reason: limitedBy });
+        if (limitedBy) alert(t, { ...alertBase, reason: limitedBy });
         // The payment that clears the debt, dated when it actually happens
-        if (paysOff) alerts.push({ ...alertBase, reason: "debt_paid_off" });
+        if (paysOff) alert(t, { ...alertBase, reason: "debt_paid_off" });
 
         // Update balances: debt/CC accounts use reversed sign
         if (runningBalances[t.accountId] !== undefined) {
@@ -428,7 +436,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
           if (targetIds.has(accountId)) debtPayments += t.amount;
           if (t.amount < origAmount) t.originalAmount = origAmount;
           if (!settled && runningBalances[accountId] <= 0) {
-            alerts.push({
+            alert(t, {
               date: dateStr,
               description: t.description,
               accountId,
@@ -450,7 +458,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
             }
             if (t.amount < origAmount) {
               t.originalAmount = origAmount;
-              alerts.push({
+              alert(t, {
                 date: dateStr,
                 description: t.description,
                 accountId,
@@ -477,7 +485,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
           runningBalances[accountId] -= t.amount;
           if (t.amount < origAmount) {
             t.originalAmount = origAmount;
-            alerts.push({
+            alert(t, {
               date: dateStr,
               description: t.description,
               accountId,
@@ -493,9 +501,7 @@ function runProjection(input: ProjectionInput, carry?: Carry): ProjectionResult 
       }
       t.ledger = ledgerNow();
     }
-    for (let i = dayTx.length - 1; i >= 0; i--) {
-      if (dropped.has(dayTx[i])) dayTx.splice(i, 1);
-    }
+    const dayTx = dayAll.filter((t) => shown.has(t) && !dropped.has(t));
 
     // Month-end interest (future months only; past interest is already in DB balances)
     const isMonthEnd = toUTCDateStr(addDays(day, 1)).slice(5, 7) !== dateStr.slice(5, 7);

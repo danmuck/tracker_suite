@@ -141,7 +141,7 @@ test("an unknown summary view is 400 and writes nothing", async () => {
   assert.deepEqual([t.writes("accounts"), t.writes("transactions")], before);
 });
 
-test("projections and the summary process a day's transactions credits, debits, transfers, then by creation", async () => {
+test("projections and the summary process a day's transactions income first, then debits, then transfers and payments, then by creation", async () => {
   // Created in the "wrong" order on a future day, from an empty account: caps depend on the order
   const empty = await acct({ name: "Empty", type: "bank", balance: 0 });
   // A pause between writes keeps their createdAt apart (the default store clock is real time)
@@ -171,4 +171,32 @@ test("a stored semi-monthly rule without days still reads and projects (no occur
   const r = await proj(NOV);
   assert.equal(r.data.timeline.flatMap((d) => d.transactions).length, 0);
   assert.equal((await t.call("GET", "/api/summary?view=monthly&date=2026-11-17")).status, 200);
+});
+
+test("an account filter caps an inbound transfer against the source's full projected balance (every account's transactions count)", async () => {
+  // Checking $200, a $3,000 paycheck on 20 Nov, a recurring $500 Checking → Savings on the 25th; today is 17 Nov
+  const checking = await acct({ name: "Checking", type: "bank", balance: 200 });
+  await post({ amount: 3000, date: "2026-11-20", type: "credit", accountId: checking._id, description: "paycheck" });
+  await post({ amount: 500, date: "2026-11-25", type: "transfer", accountId: checking._id, toAccountId: savings._id, description: "save",
+    isRecurring: true, recurrenceRule: { frequency: "monthly", startDate: "2026-11-25", dayOfMonth: 25 } });
+  const save = (days: { transactions: { description: string; amount: number; originalAmount?: number }[] }[]) =>
+    days.flatMap((d) => d.transactions).filter((x) => x.description === "save").map((x) => [x.amount, x.originalAmount]);
+  const expected = [[50000, undefined]];
+
+  const all = (await summary("?view=monthly&date=2026-11-17")).data;
+  assert.deepEqual(save(all.days!), expected);
+  const sum = (await summary(`?view=monthly&date=2026-11-17&accountId=${savings._id}`)).data;
+  assert.deepEqual(save(sum.days!), expected);
+  assert.equal(sum.days!.find((d) => d.date === "2026-11-30")!.balances[savings._id], 50000);
+  // Only the filtered account is listed and reported; transfers stay out of income and expenses
+  assert.deepEqual([Object.keys(sum.days![0].balances), sum.totals.income, sum.totals.expenses], [[savings._id], 0, 0]);
+
+  const p = await proj(`${NOV}&accountId=${savings._id}`);
+  assert.deepEqual(save(p.data.timeline), expected);
+  assert.deepEqual([p.data.summary.endBalances, p.data.alerts], [{ [savings._id]: 50000 }, []]);
+  const what = (await t.call("POST", "/api/projections", { startDate: "2026-11-01", endDate: "2026-11-30", accountId: savings._id, sandbox: {} })).body as { data: ProjectionResult };
+  assert.deepEqual([save(what.data.timeline), what.data.summary.endBalances], [expected, { [savings._id]: 50000 }]);
+  // The source's own view is unchanged: paycheck in, transfer out
+  const own = (await summary(`?view=monthly&date=2026-11-17&accountId=${checking._id}`)).data;
+  assert.deepEqual([own.totals.income, own.days!.find((d) => d.date === "2026-11-30")!.balances[checking._id]], [300000, 270000]);
 });

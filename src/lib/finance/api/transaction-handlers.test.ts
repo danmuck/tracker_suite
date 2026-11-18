@@ -383,3 +383,22 @@ test("list: unshaped stored documents, the default page size, and a whitespace-o
   assert.equal((await balances()).Bank, 100000);
   assert.deepEqual(await tx().findById(old._id), old);
 });
+
+test("create stores what PUT keeps: no toAccountId off a transfer, no recurrenceRule when not recurring (bug 2)", async () => {
+  const rule = { frequency: "weekly", startDate: "2026-11-20", dayOfWeek: 5 };
+  for (const type of ["debit", "credit"]) {
+    const res = await t.call("POST", "/api/transactions", body({ type, toAccountId: card._id, recurrenceRule: rule }));
+    const created = res.body as TransactionDoc;
+    assert.deepEqual([res.status, "toAccountId" in created, "recurrenceRule" in created], [201, false, false]);
+    assert.deepEqual(await tx().findById(created._id), created);
+  }
+  // A malformed toAccountId on a debit is still refused (the route's 500), and nothing is written
+  const before = [t.writes("accounts"), t.writes("transactions")];
+  assert.equal((await t.call("POST", "/api/transactions", body({ toAccountId: "abc" }))).status, 500);
+  assert.deepEqual([t.writes("accounts"), t.writes("transactions")], before);
+  // A transfer keeps its destination; a recurring transaction keeps its rule
+  const move = await post({ type: "transfer", toAccountId: card._id, amount: 5 });
+  const rec = await post({ isRecurring: true, recurrenceRule: rule });
+  assert.deepEqual([move.toAccountId, rec.recurrenceRule?.frequency], [card._id, "weekly"]);
+  assert.deepEqual(await balances(), { Bank: 99500, Card: 19500, Loan: 30000 });
+});

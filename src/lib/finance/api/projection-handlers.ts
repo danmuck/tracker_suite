@@ -108,14 +108,11 @@ async function project(store: Store, now: Date, params: ProjectionParams, sandbo
       ],
     };
 
-    // Include transfers where account is source OR destination (only a transfer has a destination:
-    // a debit or credit still holding an old toAccountId belongs to its own account only)
-    const query = accountId
-      ? { $and: [{ $or: [{ accountId }, { toAccountId: accountId, type: "transfer" }] }, dateFilter] }
-      : dateFilter;
+    // Every account's transactions, also with an account filter: the engine tracks every balance
+    // (a transfer into the account is capped by its source's balance) and filters only its output
 
     if (accountId) assertId(accountId);
-    txs = (await transactions(store).find(query)).map(shapeTransaction); // PR3
+    txs = (await transactions(store).find(dateFilter)).map(shapeTransaction); // PR3
   }
 
   const result = buildProjection({
@@ -236,15 +233,12 @@ export const getSummary: Handler = ({ store, query: params, now }) =>
         },
       ],
     };
-    // Include transfers where the account is source OR destination (as projections do; a debit or
-    // credit still holding an old toAccountId belongs to its own account only)
-    const query = accountId
-      ? { $and: [{ $or: [{ accountId }, { toAccountId: accountId, type: "transfer" }] }, dateFilter] }
-      : dateFilter;
+    // Every account's transactions, as projections: the engine's filterAccountId decides what is shown
+    // (the account as source, or as a transfer's destination)
 
     if (accountId) assertId(accountId);
     // The engine orders each day's entries itself (same-day-order.ts), so fetch order does not matter
-    const txs = (await transactions(store).find(query)).map(shapeTransaction); // SU2
+    const txs = (await transactions(store).find(dateFilter)).map(shapeTransaction); // SU2
 
     const granularity = view === "annual" ? "monthly" : "daily";
     const projection = buildProjection({
