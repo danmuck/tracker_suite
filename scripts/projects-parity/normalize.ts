@@ -1,7 +1,7 @@
 // Projects parity transcripts: normalization, the list-order checks, and comparison.
 // Pure: no network, no database, no clock. `substitute` is the Finance tooling's, unchanged.
 //
-// Normalization differs from Finance's on purpose: only `createdAt` (dropped) and `updatedAt` (marked
+// Normalization differs from Finance's on purpose: only `createdAt` and `updatedAt` (each marked
 // <new> / <same> / <changed> per document) are "now" instants here. Every other date, `dueDate` with a
 // time of day included, is client data and is recorded verbatim.
 
@@ -32,12 +32,13 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 /**
  * A normalizer for one run; apply it to each response body in order (aliases and updatedAt markers
  * carry over). Ids become `<name>` when saved under a name, else `<id:N>` by first appearance; keys
- * are sorted; `createdAt` and `__v` are dropped; `updatedAt` becomes <new> the first time a document
- * is seen, then <same> or <changed> against the value last seen for it.
+ * are sorted; `__v` is dropped; `createdAt` and `updatedAt` each become <new> the first time a
+ * document is seen, then <same> or <changed> against the value last seen for it (a createdAt that
+ * ever reads <changed> differs from any golden, which holds <same>).
  */
 export function createNormalizer(saved: () => Record<string, string>): (body: unknown) => unknown {
   const numbered = new Map<string, string>();
-  const lastSeen = new Map<string, string>();
+  const lastSeen = new Map<string, string>(); // `${field}:${_id}` -> JSON of the value
 
   function alias(id: string): string {
     for (const [name, value] of Object.entries(saved())) {
@@ -57,12 +58,13 @@ export function createNormalizer(saved: () => Record<string, string>): (body: un
       const obj = value as Record<string, Json>;
       const out: Record<string, Json> = {};
       for (const key of Object.keys(obj).sort()) {
-        if (key === "createdAt" || key === "__v") continue;
-        if (key === "updatedAt") {
+        if (key === "__v") continue;
+        if (key === "createdAt" || key === "updatedAt") {
           if (typeof obj._id !== "string") continue;
           const current = JSON.stringify(obj[key]);
-          const previous = lastSeen.get(obj._id);
-          lastSeen.set(obj._id, current);
+          const seenKey = `${key}:${obj._id}`;
+          const previous = lastSeen.get(seenKey);
+          lastSeen.set(seenKey, current);
           out[key] = previous === undefined ? "<new>" : previous === current ? "<same>" : "<changed>";
           continue;
         }

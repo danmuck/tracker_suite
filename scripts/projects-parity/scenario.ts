@@ -98,6 +98,8 @@ export function buildScenario(): Step[] {
     send("P13", "PUT", `/api/projects/${BAD}`, { name: "x" }, 500, { allow: d1a(PROJECT_NOT_FOUND) }),
     // The project is looked up before the body is read: an unknown id with a broken body is a 404
     raw("P14", "PUT", "/api/projects/{unknown}", 404),
+    // A successful read after the updates: optional fields kept, defaults reset by P11
+    get("P15", "/api/projects/{p1}", 200),
 
     // ── Tasks: create and list ──
     get("T01", "/api/tasks", 400),
@@ -184,6 +186,9 @@ export function buildScenario(): Step[] {
     get("S05", "/api/projects/{unknown}/scratchpad", 404),
     get("S06", `/api/projects/${BAD}/scratchpad`, 500, { allow: d1a(PROJECT_NOT_FOUND) }),
     send("S07", "PUT", `/api/projects/${BAD}/scratchpad`, { content: "x" }, 500, { allow: d1a(PROJECT_NOT_FOUND) }),
+    // p3 gets a scratchpad so the cascade delete (X01) has one to remove (not visible over HTTP: the
+    // handler tests prove it is gone)
+    get("S08", "/api/projects/{p3}/scratchpad", 200, { save: { name: "s3", from: "_id" } }),
 
     // ── Cascade delete ──
     del("X01", "/api/projects/{p3}", 200),

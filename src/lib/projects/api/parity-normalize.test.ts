@@ -10,15 +10,20 @@ import { buildScenario, UNKNOWN_ID, type Step } from "../../../../scripts/projec
 
 const A = "a".repeat(24), B = "b".repeat(24), C = "c".repeat(24);
 
-test("normalizer: aliases ids, sorts keys, drops createdAt and __v, marks updatedAt, keeps client dates", () => {
+test("normalizer: aliases ids, sorts keys, drops __v, marks createdAt and updatedAt, keeps client dates", () => {
   const n = createNormalizer(() => ({ p1: A }));
   assert.equal(
     JSON.stringify(n({ title: "x", _id: B, __v: 0, createdAt: "c", projectId: A, updatedAt: "2026-01-01T10:00:00.000Z", dueDate: "2026-12-24T15:30:00.000Z" })),
-    '{"_id":"<id:1>","dueDate":"2026-12-24T15:30:00.000Z","projectId":"<p1>","title":"x","updatedAt":"<new>"}',
+    '{"_id":"<id:1>","createdAt":"<new>","dueDate":"2026-12-24T15:30:00.000Z","projectId":"<p1>","title":"x","updatedAt":"<new>"}',
   );
-  assert.deepEqual(n({ _id: B, updatedAt: "2026-01-01T10:00:00.000Z" }), { _id: "<id:1>", updatedAt: "<same>" });
+  assert.deepEqual(n({ _id: B, createdAt: "c", updatedAt: "2026-01-01T10:00:00.000Z" }), { _id: "<id:1>", createdAt: "<same>", updatedAt: "<same>" });
   assert.deepEqual(n([{ _id: C }, { _id: B, updatedAt: "2026-01-01T10:00:01.000Z" }]), [{ _id: "<id:2>" }, { _id: "<id:1>", updatedAt: "<changed>" }]);
-  // updatedAt without an _id is dropped
+  // A createdAt rewritten by an update or upsert is flagged
+  assert.deepEqual(n({ _id: B, createdAt: "d" }), { _id: "<id:1>", createdAt: "<changed>" });
+  // createdAt and updatedAt are tracked separately: the first createdAt of a seen document is <new>
+  assert.deepEqual(n({ _id: C, createdAt: "e", updatedAt: "u" }), { _id: "<id:2>", createdAt: "<new>", updatedAt: "<new>" });
+  // createdAt / updatedAt without an _id are dropped
+  assert.deepEqual(n({ createdAt: "x", a: 1 }), { a: 1 });
   assert.deepEqual(n({ updatedAt: "x", a: 1 }), { a: 1 });
 });
 
@@ -89,10 +94,10 @@ test("compareTranscripts: exact match, or an allowed step answering exactly its 
   assert.equal(compareTranscripts({ meta, steps: [today.steps[0]] }, today, steps).diffs.length, 1);
 });
 
-test("scenario: 45–70 unique steps; allowed differences only on malformed path ids and broken JSON", () => {
+test("scenario: 45–72 unique steps; allowed differences only on malformed path ids and broken JSON", () => {
   const steps = buildScenario();
   assert.equal(new Set(steps.map((s) => s.id)).size, steps.length);
-  assert.ok(steps.length >= 45 && steps.length <= 70, `${steps.length} steps`);
+  assert.ok(steps.length >= 45 && steps.length <= 72, `${steps.length} steps`);
   for (const s of steps.filter((s) => s.allow)) {
     assert.equal(s.expect, 500, s.id);
     if (s.allow!.rule === "D1a") assert.match(s.path, /\/abc(\/|$)/, s.id);

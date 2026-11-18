@@ -18,6 +18,7 @@
 - The clock comes from `ctx.now`.
 - My data mode must answer exactly as today except the intended differences below. Existing behaviour that looks wrong is reproduced and pinned with a `current behavior:` test unless Task 4 names it.
 - Intended differences in My data mode (same as the other converted modules): a malformed id in a path answers the route's 404 instead of 500; a malformed `projectId` in a query or body answers what the route answers today where reproducible, else 400 (say which); unparseable JSON answers 400; hooks throw `RequestError` on a non-OK response instead of handing the error body to the page; server log lines lose their route prefix; the demo build answers 403.
+  - An uppercase hex id in a path answers 404 (ids are recognised in lowercase only, as in Finance and Future); in a query or body it is lowercased, as Mongoose does.
 - Never touch the live database `test` or port 3030. Parity servers only on `tracker_parity`, ports 3031–3036, `NEXT_DIST_DIR=.next-parity`; stop what you start; `git checkout tsconfig.json` if the dev server rewrote it.
 - Sample data is fictional. Nothing copies MongoDB data into the browser.
 - One commit per task, files staged by name, never push.
