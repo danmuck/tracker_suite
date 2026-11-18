@@ -2,11 +2,19 @@
 
 import useSWR from "swr";
 import { fetcher, send } from "@/hooks/request";
+import { NO_RETRY_ON_STATUS } from "@/hooks/swr-options";
 import type { Recipe, RecipeFormData } from "@/types/figure/diet";
 
 export function useRecipes() {
-  const { data, error, isLoading, mutate } = useSWR<Recipe[]>("/api/figure/recipes", fetcher);
-  return { recipes: data ?? [], isLoading, isError: !!error, mutate };
+  const { data, error, isLoading, mutate } = useSWR<Recipe[]>("/api/figure/recipes", fetcher, NO_RETRY_ON_STATUS);
+  return {
+    recipes: data ?? [],
+    // SWR keeps the last list when a background refresh fails: isError can be true with data to show
+    hasData: data !== undefined,
+    isLoading,
+    isError: !!error,
+    mutate,
+  };
 }
 
 export const createRecipe = (data: RecipeFormData) =>

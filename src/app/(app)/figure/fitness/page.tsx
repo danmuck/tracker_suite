@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
-import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Dumbbell, NotebookPen, Plus } from "lucide-react";
+import { CalendarIcon, ChevronDown, CircleAlert, ChevronLeft, ChevronRight, Dumbbell, NotebookPen, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -37,7 +37,7 @@ import {
   useExerciseNames,
   useWorkoutLogs,
 } from "@/hooks/figure/use-workout-logs";
-import { formatDay, fromDay, toDay, todayDay } from "@/lib/figure/format";
+import { failureMessage, formatDay, fromDay, toDay, todayDay } from "@/lib/figure/format";
 import { addDays } from "date-fns";
 import { useSWRConfig } from "swr";
 import type {
@@ -83,8 +83,14 @@ function FitnessContent() {
   const [day, setDay] = useState(todayDay);
   const [dayOpen, setDayOpen] = useState(false);
 
-  const { workouts, isLoading: workoutsLoading, mutate: mutateWorkouts } = useWorkouts();
-  const { logs: dayLogs, isLoading: dayLoading } = useWorkoutLogs({ date: day });
+  const {
+    workouts,
+    hasData: hasWorkouts,
+    isLoading: workoutsLoading,
+    isError: workoutsError,
+    mutate: mutateWorkouts,
+  } = useWorkouts();
+  const { logs: dayLogs, hasData: hasDayLogs, isLoading: dayLoading, isError: dayError } = useWorkoutLogs({ date: day });
   const { logs: recentLogs, isLoading: recentLoading } = useWorkoutLogs({ limit: 15 });
   const exerciseNames = useExerciseNames();
   const { mutate } = useSWRConfig();
@@ -95,7 +101,7 @@ function FitnessContent() {
   const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
   const [deletingWorkout, setDeletingWorkout] = useState<Workout | null>(null);
 
-  const { runs, isLoading: runsLoading, mutate: mutateRuns } = useRuns();
+  const { runs, hasData: hasRuns, isLoading: runsLoading, isError: runsError, mutate: mutateRuns } = useRuns();
   const [runFormOpen, setRunFormOpen] = useState(false);
   const [editingRun, setEditingRun] = useState<RunLog | null>(null);
   const [deletingRun, setDeletingRun] = useState<RunLog | null>(null);
@@ -115,7 +121,13 @@ function FitnessContent() {
 
   async function handleDeleteRun() {
     if (!deletingRun) return;
-    await deleteRun(deletingRun._id);
+    try {
+      await deleteRun(deletingRun._id);
+    } catch (err) {
+      toast.error(failureMessage(err, "Failed to delete run"));
+      mutateRuns();
+      return;
+    }
     toast.success("Run deleted");
     mutateRuns();
   }
@@ -146,7 +158,13 @@ function FitnessContent() {
 
   async function handleDeleteLog() {
     if (!deletingLog) return;
-    await deleteWorkoutLog(deletingLog._id);
+    try {
+      await deleteWorkoutLog(deletingLog._id);
+    } catch (err) {
+      toast.error(failureMessage(err, "Failed to delete workout log"));
+      refreshLogs();
+      return;
+    }
     toast.success("Log deleted");
     refreshLogs();
   }
@@ -165,7 +183,13 @@ function FitnessContent() {
 
   async function handleDeleteWorkout() {
     if (!deletingWorkout) return;
-    await deleteWorkout(deletingWorkout._id);
+    try {
+      await deleteWorkout(deletingWorkout._id);
+    } catch (err) {
+      toast.error(failureMessage(err, "Failed to delete workout"));
+      mutateWorkouts();
+      return;
+    }
     mutateWorkouts();
   }
 
@@ -289,6 +313,15 @@ function FitnessContent() {
 
           {dayLoading ? (
             <LoadingState variant="cards" />
+          ) : dayError && !hasDayLogs ? (
+            // Only with nothing to show: a failed background refresh keeps the last list on screen
+            <div className="rounded-lg border border-dashed">
+              <EmptyState
+                icon={CircleAlert}
+                title="Could not load this day's workouts"
+                description="Something went wrong reading your workout log. Reload the page to try again."
+              />
+            </div>
           ) : dayLogs.length === 0 ? (
             <div className="rounded-lg border border-dashed">
               <EmptyState
@@ -325,6 +358,7 @@ function FitnessContent() {
           <RunsPanel
             runs={runs}
             isLoading={runsLoading}
+            isError={runsError && !hasRuns}
             onNew={() => setRunFormOpen(true)}
             onEdit={setEditingRun}
             onDelete={setDeletingRun}
@@ -334,6 +368,12 @@ function FitnessContent() {
         <TabsContent value="workouts">
           {workoutsLoading ? (
             <LoadingState variant="cards" />
+          ) : workoutsError && !hasWorkouts ? (
+            <EmptyState
+              icon={CircleAlert}
+              title="Could not load workouts"
+              description="Something went wrong reading your workouts. Reload the page to try again."
+            />
           ) : workouts.length === 0 ? (
             <EmptyState
               icon={Dumbbell}

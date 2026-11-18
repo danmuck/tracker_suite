@@ -43,3 +43,11 @@ export interface ShoppingItemFormData {
   unit?: string;
   checked?: boolean;
 }
+
+/** A partial shopping-item update: absent fields are left unchanged; `quantity: null` and `unit: ""` remove the field. */
+export interface ShoppingItemUpdateData {
+  name?: string;
+  quantity?: number | null;
+  unit?: string;
+  checked?: boolean;
+}

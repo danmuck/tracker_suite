@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Activity, Dumbbell, Footprints, Plus } from "lucide-react";
+import { Activity, CircleAlert, Dumbbell, Footprints, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,10 +35,10 @@ const whole = new Intl.NumberFormat("en-US");
 /** Fitness overview: weekly totals, activity grid and trend charts for lifting and running */
 export function FitnessDashboard() {
   const [weeks, setWeeks] = useState(12);
-  const { stats, isLoading } = useFitnessStats(weeks);
+  const { stats, isLoading, isError } = useFitnessStats(weeks);
   const [pickedExercise, setPickedExercise] = useState<string | null>(null);
   const exercise = pickedExercise ?? stats?.topExercises[0]?.name ?? null;
-  const { points } = useExerciseProgress(exercise, stats?.range.start);
+  const { points, hasData: hasPoints, isError: pointsError } = useExerciseProgress(exercise, stats?.range.start);
 
   const { logs: recentLogs } = useWorkoutLogs({ limit: 6 });
   const { runs } = useRuns();
@@ -87,6 +87,13 @@ export function FitnessDashboard() {
 
       {isLoading && !stats ? (
         <LoadingState variant="chart" />
+      ) : isError && !stats ? (
+        // Only with nothing to show: a failed refresh keeps the last numbers on screen
+        <EmptyState
+          icon={CircleAlert}
+          title="Could not load your training"
+          description="Something went wrong reading your workouts and runs. Reload the page to try again."
+        />
       ) : !stats || !hasData ? (
         <EmptyState
           icon={Activity}
@@ -176,6 +183,11 @@ export function FitnessDashboard() {
             >
               {points.length > 0 ? (
                 <ExerciseProgressChart points={points} />
+              ) : pointsError && !hasPoints ? (
+                <div className="flex h-56 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <CircleAlert className="h-6 w-6" />
+                  <span>Could not load progress for {exercise}</span>
+                </div>
               ) : (
                 <ChartEmpty icon={Dumbbell} text="No lifts in this range" href="/figure/fitness?tab=log" />
               )}

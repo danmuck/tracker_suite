@@ -17,9 +17,11 @@ const whole = new Intl.NumberFormat("en-US");
 const days = (n: number) => `${n} day${n !== 1 ? "s" : ""}`;
 
 export function FigureCard() {
-  const { stats, isLoading: statsLoading } = useFitnessStats(WEEKS);
-  const { logs, isLoading: logsLoading } = useWorkoutLogs({ limit: 1 });
-  const { items, isLoading: itemsLoading } = useShoppingItems();
+  const { stats, isLoading: statsLoading, isError: statsError } = useFitnessStats(WEEKS);
+  const { logs, hasData: hasLogs, isLoading: logsLoading, isError: logsError } = useWorkoutLogs({ limit: 1 });
+  const { items, hasData: hasItems, isLoading: itemsLoading, isError: itemsError } = useShoppingItems();
+  // A read that failed with nothing cached says so instead of showing zeros
+  const NOT_LOADED = "Could not load";
 
   const last = logs[0];
   const toBuy = items.filter((i) => !i.checked).length;
@@ -31,8 +33,8 @@ export function FigureCard() {
     <ModuleCard moduleId="figure" href="/figure/fitness" isLoading={statsLoading || logsLoading || itemsLoading}>
       <Headline
         label="Workouts this week"
-        value={sessions}
-        sub={stats ? weekDelta(sessions, stats.lastWeek.sessions) : undefined}
+        value={statsError && !stats ? "—" : sessions}
+        sub={stats ? weekDelta(sessions, stats.lastWeek.sessions) : statsError ? "Could not load your training" : undefined}
       />
 
       {hasActivity && (
@@ -73,10 +75,13 @@ export function FigureCard() {
             />
           </>
         )}
-        <StatRow label="Last workout" value={last ? `${last.name} · ${formatDay(last.date)}` : "None yet"} />
+        <StatRow
+          label="Last workout"
+          value={last ? `${last.name} · ${formatDay(last.date)}` : logsError && !hasLogs ? NOT_LOADED : "None yet"}
+        />
         <StatRow
           label="Shopping list"
-          value={`${toBuy} item${toBuy !== 1 ? "s" : ""} to buy`}
+          value={itemsError && !hasItems ? NOT_LOADED : `${toBuy} item${toBuy !== 1 ? "s" : ""} to buy`}
           href="/figure/diet?tab=shopping"
         />
       </StatRows>

@@ -56,7 +56,7 @@ export const modules: ModuleConfig[] = [
       { href: "/figure/fitness", label: "Fitness", icon: Dumbbell },
       { href: "/figure/diet", label: "Diet", icon: Salad },
     ],
-    browserData: false,
+    browserData: true,
   },
   {
     id: "future",

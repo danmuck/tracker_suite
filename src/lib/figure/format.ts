@@ -91,3 +91,8 @@ export function formatPace(durationSeconds: number, miles: number): string {
 export function formatMiles(miles: number): string {
   return `${Math.round(miles * 100) / 100} mi`;
 }
+
+/** The message to show for a failed request: the error's own, else `fallback` */
+export function failureMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}

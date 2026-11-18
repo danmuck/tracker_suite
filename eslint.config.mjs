@@ -20,7 +20,7 @@ const modulePattern = (id) => ({
 });
 
 // Modules whose data runs through the store adapter, so all of their src/lib code can reach the browser.
-const CONVERTED_MODULES = ["links", "future", "finance", "projects"];
+const CONVERTED_MODULES = ["links", "future", "finance", "projects", "figure"];
 
 // Code that can run in the browser (browser data mode, the demo) must not pull in server-only code.
 const BROWSER_REACHABLE = [

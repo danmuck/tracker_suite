@@ -2,6 +2,7 @@
 
 import useSWR from "swr";
 import { fetcher, send } from "@/hooks/request";
+import { NO_RETRY_ON_STATUS } from "@/hooks/swr-options";
 import type { ExerciseHistory, WorkoutLog, WorkoutLogFormData } from "@/types/figure/fitness";
 
 export function useWorkoutLogs(params: { date?: string; limit?: number } = {}) {
@@ -10,9 +11,17 @@ export function useWorkoutLogs(params: { date?: string; limit?: number } = {}) {
   if (params.limit) qs.set("limit", String(params.limit));
   const { data, error, isLoading, mutate } = useSWR<WorkoutLog[]>(
     `/api/figure/workout-logs?${qs}`,
-    fetcher
+    fetcher,
+    NO_RETRY_ON_STATUS
   );
-  return { logs: data ?? [], isLoading, isError: !!error, mutate };
+  return {
+    logs: data ?? [],
+    // SWR keeps the last list when a background refresh fails: isError can be true with data to show
+    hasData: data !== undefined,
+    isLoading,
+    isError: !!error,
+    mutate,
+  };
 }
 
 /** Most recent sets per exercise name (keyed lowercase), on or before `before` */
@@ -22,14 +31,17 @@ export function useExerciseHistory(names: string[], before?: string, excludeLogI
   if (before) qs.set("before", before);
   if (excludeLogId) qs.set("excludeLogId", excludeLogId);
   const key = qs.has("name") ? `/api/figure/exercises/history?${qs}` : null;
-  const { data, isLoading } = useSWR<Record<string, ExerciseHistory>>(key, fetcher, {
+  const { data, error, isLoading } = useSWR<Record<string, ExerciseHistory>>(key, fetcher, {
+    ...NO_RETRY_ON_STATUS,
     keepPreviousData: true,
   });
-  return { history: data ?? {}, isLoading };
+  // On an error the editor shows no "last time" hints; logging still works
+  return { history: data ?? {}, isLoading, isError: !!error };
 }
 
 export function useExerciseNames() {
-  const { data } = useSWR<string[]>("/api/figure/exercises/names", fetcher);
+  // Autocomplete only: on an error the name fields simply offer no suggestions
+  const { data } = useSWR<string[]>("/api/figure/exercises/names", fetcher, NO_RETRY_ON_STATUS);
   return data ?? [];
 }
 

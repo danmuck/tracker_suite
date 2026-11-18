@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useMemo, useState } from "react";
-import { BookOpen, Plus } from "lucide-react";
+import { BookOpen, CircleAlert, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import { useTabParam } from "@/hooks/use-tab-param";
 import { addRecipeToList, createRecipe, deleteRecipe, updateRecipe, useRecipes } from "@/hooks/figure/use-recipes";
 import { SHOPPING_ITEMS_KEY, useShoppingItems } from "@/hooks/figure/use-shopping-items";
 import { useSWRConfig } from "swr";
+import { failureMessage } from "@/lib/figure/format";
 import type { Recipe, RecipeFormData } from "@/types/figure/diet";
 
 const TABS = ["recipes", "shopping"] as const;
@@ -34,7 +35,7 @@ export default function DietPage() {
 
 function DietContent() {
   const [tab, setTab] = useTabParam(TABS, "recipes");
-  const { recipes, isLoading, mutate: mutateRecipes } = useRecipes();
+  const { recipes, hasData, isLoading, isError, mutate: mutateRecipes } = useRecipes();
   const { items } = useShoppingItems();
   const { mutate } = useSWRConfig();
 
@@ -71,7 +72,13 @@ function DietContent() {
 
   async function handleDelete() {
     if (!deleting) return;
-    await deleteRecipe(deleting._id);
+    try {
+      await deleteRecipe(deleting._id);
+    } catch (err) {
+      toast.error(failureMessage(err, "Failed to delete recipe"));
+      mutateRecipes();
+      return;
+    }
     setViewing(null);
     mutateRecipes();
     mutate(SHOPPING_ITEMS_KEY);
@@ -86,7 +93,7 @@ function DietContent() {
       });
       mutate(SHOPPING_ITEMS_KEY);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add to list");
+      toast.error(failureMessage(err, "Failed to add to list"));
     }
   }
 
@@ -118,6 +125,13 @@ function DietContent() {
         <TabsContent value="recipes" className="space-y-4">
           {isLoading ? (
             <LoadingState variant="cards" />
+          ) : isError && !hasData ? (
+            // Only with nothing to show: a failed background refresh keeps the last list on screen
+            <EmptyState
+              icon={CircleAlert}
+              title="Could not load recipes"
+              description="Something went wrong reading your recipes. Reload the page to try again."
+            />
           ) : recipes.length === 0 ? (
             <EmptyState
               icon={BookOpen}
