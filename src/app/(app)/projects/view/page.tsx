@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { use } from "react";
+import { Suspense, useState, useCallback } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { ArrowLeft, ExternalLink, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,16 +28,21 @@ import {
   reorderTask,
 } from "@/hooks/projects/use-tasks";
 import { RequestError } from "@/lib/data/request-error";
+import { safeHref } from "@/lib/safe-url";
 import { dueDay } from "@/lib/projects/due-date";
 import type { ProjectFormData } from "@/types/projects/project";
 import type { Task, TaskFormData, TaskStatus } from "@/types/projects/task";
 
-export default function ProjectDetailPage({
-  params,
-}: {
-  params: Promise<{ projectId: string }>;
-}) {
-  const { projectId } = use(params);
+export default function ProjectDetailPage() {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <ProjectDetailView />
+    </Suspense>
+  );
+}
+
+function ProjectDetailView() {
+  const projectId = useSearchParams().get("id") ?? "";
   const { project, isLoading: projectLoading, error: projectError, mutate: mutateProject } = useProject(projectId);
   const { tasks, hasData: hasTasks, isLoading: tasksLoading, isError: tasksError, mutate: mutateTasks } = useTasks(projectId);
 
@@ -178,10 +183,10 @@ export default function ProjectDetailPage({
           </div>
         </div>
         <div className="flex gap-2 shrink-0">
-          {project.repositoryUrl && (
+          {safeHref(project.repositoryUrl) && (
             <Button variant="outline" size="sm" asChild>
               <a
-                href={project.repositoryUrl}
+                href={safeHref(project.repositoryUrl)}
                 target="_blank"
                 rel="noopener noreferrer"
               >

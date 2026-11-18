@@ -11,6 +11,7 @@ import { formatBeds, formatDay, formatMoney, formatPercent, formatRent } from "@
 import { compareBest, pricePerSqft, rentShare, type CompareMetric } from "@/lib/future/stats";
 import { AMENITIES, AMENITY_LABELS, STATUS_LABELS } from "@/lib/future/validators";
 import { cn } from "@/lib/utils";
+import { safeHref } from "@/lib/safe-url";
 import type { Listing } from "@/types/future/apartments";
 
 interface ComparePanelProps {
@@ -140,9 +141,9 @@ export function ComparePanel({ listings, isLoading, annualSalary, commuteDestina
                 {picked.map((l) => (
                   <TableHead key={l._id} className="min-w-40 py-2 align-top">
                     <div className="flex items-start justify-between gap-2">
-                      {l.url ? (
+                      {safeHref(l.url) ? (
                         <a
-                          href={l.url}
+                          href={safeHref(l.url)}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="inline-flex items-center gap-1 whitespace-normal font-medium text-foreground underline-offset-4 hover:underline"

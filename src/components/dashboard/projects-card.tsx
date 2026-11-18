@@ -5,6 +5,7 @@ import { HBarList } from "@/components/dashboard/spark";
 import { useProjects } from "@/hooks/projects/use-projects";
 import { projectRollup } from "@/lib/dashboard/stats";
 import { modules } from "@/lib/modules";
+import { projectHref } from "@/lib/projects/paths";
 
 const MAX_PROJECTS = 5;
 const color = modules.find((m) => m.id === "projects")!.accentColor;
@@ -32,7 +33,7 @@ export function ProjectsCard() {
               label: p.name,
               fraction: p.done / p.total,
               value: `${p.done}/${p.total}`,
-              href: `/projects/${p.id}`,
+              href: projectHref(p.id),
             }))}
           />
         </ChartBlock>
@@ -54,7 +55,7 @@ export function ProjectsCard() {
           <StatRow
             label="Most open"
             value={`${busiest.name} · ${busiest.open} task${busiest.open !== 1 ? "s" : ""}`}
-            href={`/projects/${busiest.id}`}
+            href={projectHref(busiest.id)}
           />
         )}
       </StatRows>

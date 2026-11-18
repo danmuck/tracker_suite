@@ -9,7 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { getFaviconUrl } from "@/lib/links/favicon";
+import { LinkFavicon } from "@/components/links/link-favicon";
+import { safeHref } from "@/lib/safe-url";
 import type { LinkItem } from "@/types/links/link";
 
 interface LinkCardProps {
@@ -32,17 +33,12 @@ export function LinkCard({ link, onEdit, onDelete }: LinkCardProps) {
       <CardContent className="pt-4">
         <div className="flex items-start gap-3">
           <a
-            href={link.url}
+            href={safeHref(link.url)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-3 flex-1 min-w-0 group"
           >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={getFaviconUrl(link.url)}
-              alt=""
-              className="h-6 w-6 shrink-0"
-            />
+            <LinkFavicon url={link.url} className="h-6 w-6 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate group-hover:underline">
                 {link.name}

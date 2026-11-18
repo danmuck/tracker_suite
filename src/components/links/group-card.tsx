@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { getIcon } from "@/lib/icon-map";
 import type { LinkGroup } from "@/types/links/link-group";
+import { linkGroupHref } from "@/lib/links/paths";
 
 interface GroupCardProps {
   group: LinkGroup;
@@ -26,7 +27,7 @@ export function GroupCard({ group, onEdit, onDelete }: GroupCardProps) {
     <Card className="relative overflow-hidden">
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between">
-          <Link href={`/links/${group.slug}`} className="flex items-center gap-2 flex-1 min-w-0">
+          <Link href={linkGroupHref(group.slug)} className="flex items-center gap-2 flex-1 min-w-0">
             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted">
               <Icon className="h-4 w-4" />
             </div>
