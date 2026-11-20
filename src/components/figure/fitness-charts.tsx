@@ -215,7 +215,7 @@ export function ExerciseProgressChart({ points }: { points: ExerciseProgressPoin
 }
 
 /**
- * One cell per day, weeks as columns (Mon at top). Shade is a single-hue
+ * One cell per day, weeks as columns (Sun at top). Shade is a single-hue
  * sequential scale on how many sessions were logged; the hover title spells it out.
  */
 export function ActivityHeatmap({ days }: { days: DayPoint[] }) {
@@ -236,7 +236,7 @@ export function ActivityHeatmap({ days }: { days: DayPoint[] }) {
     <div className="space-y-2">
       <div className="flex gap-2 overflow-x-auto pb-1">
         <div className="grid shrink-0 grid-rows-7 gap-[3px] text-[10px] leading-none text-muted-foreground">
-          {["Mon", "", "Wed", "", "Fri", "", "Sun"].map((l, i) => (
+          {["Sun", "", "Tue", "", "Thu", "", "Sat"].map((l, i) => (
             <span key={i} className="flex h-3.5 items-center">
               {l}
             </span>

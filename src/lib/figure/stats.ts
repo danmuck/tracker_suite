@@ -67,7 +67,8 @@ export interface ExerciseProgressPoint {
   volume: number;
 }
 
-const WEEK_OPTS = { weekStartsOn: 1 } as const;
+/** Training weeks run Sunday to Saturday, so a weekend spans two weeks */
+export const WEEK_OPTS = { weekStartsOn: 0 } as const;
 
 const doneSets = (sets: LoggedSet[]) => sets.filter((s) => s.done !== false);
 
@@ -81,34 +82,61 @@ export function estimateOneRepMax(weight: number, reps: number): number {
   return reps === 1 ? weight : weight * (1 + reps / 30);
 }
 
-/** First day of the window: Monday of the week `weeks - 1` weeks before `today`'s week */
+/** First day of the window: Sunday of the week `weeks - 1` weeks before `today`'s week */
 export function rangeStart(today: Date, weeks: number): string {
   return toDay(addWeeks(startOfWeek(today, WEEK_OPTS), -(weeks - 1)));
 }
 
+/** A rest day ends the streak when it follows another rest day in the same week, or is the third in its week */
+const MAX_RESTS_PER_WEEK = 2;
+
 /**
- * Day-streaks of activity (a lift or a run). The current streak counts back from
- * today, or from yesterday when nothing is logged yet today.
+ * Day-streaks of activity (a lift or a run), in Sunday–Saturday weeks. A streak survives single
+ * rest days: it breaks on the second rest day in a row within one week, or on a third rest day in
+ * the same week (counting only rest days since the streak began). Two rest days in a row across
+ * weeks (Saturday and Sunday, a weekend off) do not break it. Its length is the days from
+ * its first active day to its last, rest days inside included.
+ *
+ * Today counts only once something is logged: until then it is not a rest day, so the current
+ * streak still stands if it was alive at the end of yesterday. Days after `today` are ignored.
  */
 export function computeStreak(activeDays: Set<string>, today: Date): { current: number; longest: number } {
-  const sorted = [...activeDays].sort();
+  const todayKey = toDay(today);
+  const past = [...activeDays].filter((d) => d <= todayKey).sort();
+  if (past.length === 0) return { current: 0, longest: 0 };
+
   let longest = 0;
-  let run = 0;
-  let prev: string | null = null;
-  for (const d of sorted) {
-    run = prev && differenceInCalendarDays(fromDay(d), fromDay(prev)) === 1 ? run + 1 : 1;
-    longest = Math.max(longest, run);
-    prev = d;
+  let start: Date | null = null;
+  let lastActive: Date | null = null;
+  let rests: Date[] = [];
+  const span = () => (start && lastActive ? differenceInCalendarDays(lastActive, start) + 1 : 0);
+
+  for (let d = fromDay(past[0]); toDay(d) < todayKey; d = addDays(d, 1)) {
+    if (activeDays.has(toDay(d))) {
+      start ??= d;
+      lastActive = d;
+      longest = Math.max(longest, span());
+      continue;
+    }
+    if (!start) continue;
+    const week = toDay(startOfWeek(d, WEEK_OPTS));
+    const restsThisWeek = rests.filter((r) => toDay(startOfWeek(r, WEEK_OPTS)) === week);
+    const afterRest = restsThisWeek.some((r) => differenceInCalendarDays(d, r) === 1);
+    if (afterRest || restsThisWeek.length + 1 > MAX_RESTS_PER_WEEK) {
+      start = null;
+      lastActive = null;
+      rests = [];
+    } else {
+      rests.push(d);
+    }
   }
 
-  let cursor = today;
-  if (!activeDays.has(toDay(cursor))) cursor = addDays(cursor, -1);
-  let current = 0;
-  while (activeDays.has(toDay(cursor))) {
-    current++;
-    cursor = addDays(cursor, -1);
+  if (activeDays.has(todayKey)) {
+    start ??= fromDay(todayKey);
+    lastActive = fromDay(todayKey);
+    longest = Math.max(longest, span());
   }
-  return { current, longest };
+  return { current: span(), longest };
 }
 
 /**
