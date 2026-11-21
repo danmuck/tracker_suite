@@ -29,6 +29,8 @@ never let anything rewrite the HTML on the way out (see "Turn off" in step 4).
 
 ## Check locally before every deploy
 
+`npm run deploy:static` (see [Deploy](#deploy)) runs these checks itself; by hand:
+
 ```bash
 npm ci
 npm test
@@ -198,20 +200,43 @@ does not need to match a git branch.
 
 ## Deploy
 
+Commit and push your changes to `host-transition`, then:
+
 ```bash
 git switch host-transition && git pull
-npm ci
-npm test
-npm run build:static
-npx wrangler pages deploy out --project-name tracker-suite --branch main
+npm run deploy:static
 ```
 
-- Set the three variables from step 5 first (new terminal → set them again).
-- `--branch main` makes it a production deploy; without it Wrangler uses the current git branch
-  and creates a preview instead. Add `--commit-dirty=true` only to silence the warning about
-  uncommitted changes.
-- Every per-deploy address redirects to your domain, so check the deploy on the domain itself.
-- Roll back from the dashboard (Deployments → a previous deploy → Rollback).
+`scripts/deploy-static.sh` does every step and stops at the first problem:
+
+1. **Code**: you must be on `host-transition` with no uncommitted changes, level with
+   `origin/host-transition`. Only committed, pushed code goes live, so every deploy matches a
+   commit.
+2. **Checks**: `npm ci`, `npm test`, `npm audit --omit=dev`.
+3. **Build**: `npm run build:static`, then checks that `out/` has the headers file and no API
+   routes, source maps, database settings or values from `.env*`.
+4. **Credentials**: asks for the account ID and the token unless `CLOUDFLARE_ACCOUNT_ID` /
+   `CLOUDFLARE_API_TOKEN` are already set. The token is read without echo, never written to disk,
+   and unset after the upload. Wrangler metrics are turned off.
+5. **Confirm**, then upload with `wrangler pages deploy … --branch main` (production), recording
+   the commit in the Pages dashboard.
+6. **Live checks**: waits (up to 2 minutes) until the site serves this build's security policy,
+   then checks every page returns 200, `/api/accounts` returns 404, and the security headers are
+   present.
+
+Options:
+- `npm run deploy:static -- --dry-run` runs steps 1–3 and stops: a production build in `out/` to
+  look at with `npm run preview:static` (restart the preview after every build; it reads
+  `_headers` only at start).
+- `DEPLOY_BRANCH`, `PAGES_PROJECT` and `SITE_URL` override the branch (`host-transition`), the Pages
+  project (`tracker-suite`) and the address checked afterwards.
+
+Notes:
+- Every per-deploy address redirects to your domain, so the script checks the domain itself.
+- Roll back from the dashboard (Workers & Pages → tracker-suite → Deployments → a previous deploy
+  → Rollback).
+- To deploy by hand instead: the commands in step 5 to set the variables, then `npm run
+  build:static` and `npx wrangler pages deploy out --project-name tracker-suite --branch main`.
 
 ## After the first deploy
 
