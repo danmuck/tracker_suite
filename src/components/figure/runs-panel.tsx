@@ -2,6 +2,7 @@
 
 import { CircleAlert, Footprints, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { endOfWeek, startOfMonth, startOfWeek } from "date-fns";
+import { WEEK_OPTS } from "@/lib/figure/stats";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -55,8 +56,8 @@ export function RunsPanel({ runs, isLoading, isError = false, onNew, onEdit, onD
   }
 
   const now = new Date();
-  const weekStart = toDay(startOfWeek(now, { weekStartsOn: 1 }));
-  const weekEnd = toDay(endOfWeek(now, { weekStartsOn: 1 }));
+  const weekStart = toDay(startOfWeek(now, WEEK_OPTS));
+  const weekEnd = toDay(endOfWeek(now, WEEK_OPTS));
   const monthStart = toDay(startOfMonth(now));
   const thisWeek = runs.filter((r) => r.date >= weekStart && r.date <= weekEnd);
   const thisMonth = runs.filter((r) => r.date >= monthStart);

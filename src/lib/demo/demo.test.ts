@@ -353,8 +353,8 @@ test("the Figure sample has a current streak and visible progress on the main li
   const store = new BrowserStore(memoryStorage());
   await loadSampleData(store, FIGURE_TODAY);
   const stats = (await figureGet(store, "/api/figure/stats?weeks=12&today=2026-11-17")).body as FitnessStats;
-  assert.equal(stats.streak.current, 10);
-  assert.ok(stats.streak.longest >= 10);
+  assert.equal(stats.streak.current, 38);
+  assert.ok(stats.streak.longest >= 38);
   assert.ok(stats.weeks.every((w) => w.sessions > 0 || w.runs > 0), "every week of the 12 has activity");
   assert.ok(stats.paces.length === 20);
   for (const name of ["Bench Press", "Back Squat", "Deadlift"]) {
@@ -373,8 +373,8 @@ test("the Figure sample has a current streak and visible progress on the main li
 });
 
 test("the Figure sample gives the dashboard's Figure card non-zero numbers", async () => {
-  // Monday: "this week" is only today, which has a lift and a run
-  for (const today of [FIGURE_TODAY, new Date(2026, 10, 16, 10)]) {
+  // Sunday: "this week" is only today, which has a lift and a run
+  for (const today of [FIGURE_TODAY, new Date(2026, 10, 15, 10)]) {
     const store = new BrowserStore(memoryStorage());
     await loadSampleData(store, today);
     const day = format(today, "yyyy-MM-dd");

@@ -32,8 +32,10 @@ export interface FigureSample {
   };
 }
 
-// Days ago, oldest first. Lifting and running together cover every day of the last ten, so the
-// current streak is 10 days; today has both a lift and a run, so "this week" is never empty.
+// Days ago, oldest first. Lifting and running together cover every day of the last ten; over the
+// last 38 the rest days come singly, at most two in a Sunday–Saturday week, so the current streak is 38 days
+// (the rest day before it is the third in its week). Today has both a lift and a run, so "this
+// week" is never empty.
 const LIFT_DAYS = [77, 70, 65, 63, 58, 56, 53, 51, 49, 46, 44, 42, 39, 37, 35, 32, 30, 28, 25, 23, 21, 18, 16, 14, 11, 9, 7, 4, 2, 0];
 const ROTATION: FigureWorkoutKey[] = ["push", "pull", "legs"];
 
