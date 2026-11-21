@@ -13,8 +13,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { loadSampleData, SEEDED_KEY } from "@/lib/demo";
-import { getBrowserStore, runExclusive } from "@/lib/data/local";
+import { clearBrowserData, loadSampleData } from "@/lib/demo";
+import { getBrowserStorage, getBrowserStore, runExclusive } from "@/lib/data/local";
 import { IS_DEMO, setDataSource, useResolvedDataSource } from "@/lib/data/mode";
 
 const errorMessage = (error: unknown) => (error instanceof Error ? error.message : undefined);
@@ -30,16 +30,12 @@ async function loadSample() {
   window.location.reload();
 }
 
-async function resetBrowserData() {
-  if (!window.confirm("Delete all browser data?")) return;
+async function clearAllData() {
+  if (!window.confirm("Delete all data stored in this browser? Use \"Load sample data\" to get the sample set back.")) return;
   try {
-    await runExclusive(async () => {
-      getBrowserStore().clear();
-      // Deliberate second guard: clear() already removes the key, but a reset must always reseed in the demo.
-      window.localStorage.removeItem(SEEDED_KEY);
-    });
+    await runExclusive(async () => clearBrowserData(getBrowserStore(), getBrowserStorage()));
   } catch (error) {
-    toast.error("Could not reset browser data", { description: errorMessage(error) });
+    toast.error("Could not clear browser data", { description: errorMessage(error) });
     return;
   }
   window.location.reload();
@@ -90,8 +86,8 @@ export function DataSourceSwitch() {
         <DropdownMenuItem disabled={!inBrowser} onSelect={() => void loadSample()}>
           Load sample data
         </DropdownMenuItem>
-        <DropdownMenuItem disabled={!inBrowser} onSelect={() => void resetBrowserData()}>
-          Reset browser data
+        <DropdownMenuItem disabled={!inBrowser} onSelect={() => void clearAllData()}>
+          Clear all data
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

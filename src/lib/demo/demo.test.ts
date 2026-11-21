@@ -1,7 +1,7 @@
 import test from "node:test";
 import { format } from "date-fns";
 import assert from "node:assert/strict";
-import type { BaseDoc, Collection, CollectionName, Store } from "@/lib/data/store";
+import { COLLECTIONS, type BaseDoc, type Collection, type CollectionName, type Store } from "@/lib/data/store";
 import { BrowserStore } from "@/lib/data/browser-store";
 import { memoryStorage } from "@/lib/data/test-helpers";
 import { availableModules, modules } from "@/lib/modules";
@@ -9,7 +9,7 @@ import type { LinkGroup } from "@/types/links/link-group";
 import type { LinkItem } from "@/types/links/link";
 import type { Listing, Tour } from "@/types/future/apartments";
 import { listingSchema } from "@/lib/future/validators";
-import { ensureDemoSeed, loadSampleData, SEEDED_KEY } from "./index";
+import { clearBrowserData, ensureDemoSeed, loadSampleData, SEEDED_KEY } from "./index";
 import { futureSample } from "./future";
 import { linksSample } from "./links";
 import { financeSample } from "./finance";
@@ -78,12 +78,35 @@ test("ensureDemoSeed leaves the key unset when loading fails, and a later call s
   assert.ok((await store.collection<LinkGroup>("linkGroups").find()).length > 0);
 });
 
-test("after a reset (store.clear) the demo seeds again", async () => {
+test("clearBrowserData empties every collection and the demo stays empty after a reload", async () => {
   const storage = memoryStorage();
   const store = new BrowserStore(storage);
   assert.equal(await ensureDemoSeed(store, storage), true);
-  store.clear();
+  clearBrowserData(store, storage);
+  for (const name of Object.keys(COLLECTIONS) as CollectionName[]) {
+    assert.equal(await store.collection(name).count(), 0, name);
+  }
+  // A reload builds a new store over the same storage; the demo must not reseed.
+  const reloaded = new BrowserStore(storage);
+  assert.equal(await ensureDemoSeed(reloaded, storage), false);
+  assert.equal(await reloaded.collection("projects").count(), 0);
+  assert.equal(await reloaded.collection("accounts").count(), 0);
+});
+
+test("clearBrowserData on a store that was never seeded still stops the first-visit seed", async () => {
+  const storage = memoryStorage();
+  const store = new BrowserStore(storage);
+  clearBrowserData(store, storage);
+  assert.equal(await ensureDemoSeed(store, storage), false);
+  assert.equal(await store.collection("linkGroups").count(), 0);
+});
+
+test("loading the sample after clearing restores it in full", async () => {
+  const storage = memoryStorage();
+  const store = new BrowserStore(storage);
   assert.equal(await ensureDemoSeed(store, storage), true);
+  clearBrowserData(store, storage);
+  await loadSampleData(store);
   const projectCount = projectsSample().projects.length;
   assert.equal(await store.collection("projects").count(), projectCount);
   assert.equal(await store.collection("tasks").count(), projectsSample().projects.reduce((n, p) => n + p.tasks.length, 0));
@@ -423,16 +446,16 @@ test("sample Figure bodies pass the module's own validation", () => {
   assert.ok(sample.recipes.some((r) => r.name === sample.shopping.fromRecipe));
 });
 
-test("after a reset (store.clear) the Figure sample loads again", async () => {
+test("after clearing, loading the sample brings the Figure data back", async () => {
   const storage = memoryStorage();
   const store = new BrowserStore(storage);
   assert.equal(await ensureDemoSeed(store, storage), true);
   assert.equal(await store.collection("workoutLogs").count(), 30);
-  store.clear();
+  clearBrowserData(store, storage);
   for (const name of ["workouts", "workoutLogs", "runLogs", "recipes", "shoppingItems"] as const) {
     assert.equal(await store.collection(name).count(), 0, name);
   }
-  assert.equal(await ensureDemoSeed(store, storage), true);
+  await loadSampleData(store);
   assert.equal(await store.collection("workoutLogs").count(), 30);
   assert.equal(await store.collection("runLogs").count(), 20);
 });
