@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation";
 import { LayoutDashboard } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { modules } from "@/lib/modules";
+import { SidebarTrigger } from "@/components/ui/sidebar";
+import { isAppPath } from "@/lib/modules";
 
 const anchors = [
 	{ href: "/#projects", label: "Projects" },
@@ -15,10 +16,8 @@ const anchors = [
 
 export function SiteHeader() {
 	const pathname = usePathname();
-	// The dashboard and the module pages: the Demos button is hidden while they are open
-	const inDemos =
-		pathname === "/dashboard" ||
-		modules.some((mod) => pathname === mod.basePath || pathname.startsWith(`${mod.basePath}/`));
+	// The Demos button is hidden while the dashboard or a module page is open
+	const inDemos = isAppPath(pathname);
 
 	const goHome = (event: React.MouseEvent) => {
 		// From another page the router lands at the top. Already home, a link to "/" does
@@ -31,7 +30,10 @@ export function SiteHeader() {
 
 	return (
 		<header className="bg-background/80 sticky top-0 z-40 border-b border-brand backdrop-blur">
-			<div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-6">
+			{/* Pinned to the far left of the bar, outside the centered row */}
+			<SidebarTrigger className="absolute top-1/2 left-3 -translate-y-1/2" />
+			{/* Extra left padding keeps the logo clear of the toggle until the row has side margins */}
+			<div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 pr-6 pl-14 xl:pl-6">
 				<Link href="/" aria-label="Home" onClick={goHome}>
 					<Logo />
 				</Link>

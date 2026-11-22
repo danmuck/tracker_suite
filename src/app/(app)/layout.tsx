@@ -1,16 +1,14 @@
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
 import { AppHeader } from "@/components/app-header";
 import { ModuleGate } from "@/components/module-gate";
 
+// The nav bar and the sidebar come from AppShell in the root layout
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider defaultOpen={true} className="min-h-0 flex-1">
-      <AppSidebar />
-      <SidebarInset className="min-w-0">
-        <AppHeader />
-        <main className="flex-1 p-6"><ModuleGate>{children}</ModuleGate></main>
-      </SidebarInset>
-    </SidebarProvider>
+    <>
+      <AppHeader />
+      <main className="flex-1 p-6">
+        <ModuleGate>{children}</ModuleGate>
+      </main>
+    </>
   );
 }

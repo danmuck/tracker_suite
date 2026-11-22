@@ -96,6 +96,14 @@ export function availableModules(source: DataSource): ModuleConfig[] {
   return source === "browser" ? modules.filter((m) => m.browserData) : modules;
 }
 
+/** The dashboard and the module pages, as opposed to the landing page */
+export function isAppPath(pathname: string): boolean {
+  return (
+    pathname === "/dashboard" ||
+    modules.some((mod) => pathname === mod.basePath || pathname.startsWith(`${mod.basePath}/`))
+  );
+}
+
 export const globalNavItems: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },

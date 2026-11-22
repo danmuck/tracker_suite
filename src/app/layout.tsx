@@ -2,8 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { SiteHeader } from "@/components/site/site-header";
+import { AppShell } from "@/components/app-shell";
 import { site } from "@/lib/site";
 import "./globals.css";
 
@@ -39,13 +38,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          {/* ThemeToggle in the nav bar needs a TooltipProvider */}
-          <TooltipProvider delayDuration={0}>
-            <div className="flex min-h-svh flex-col">
-              <SiteHeader />
-              {children}
-            </div>
-          </TooltipProvider>
+          <AppShell>{children}</AppShell>
           <Toaster />
         </ThemeProvider>
       </body>

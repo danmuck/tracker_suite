@@ -12,7 +12,6 @@ import {
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
   SidebarMenu,
@@ -23,8 +22,8 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { LinksNavItems } from "@/components/links/links-nav-items";
 import { availableModules, globalNavItems } from "@/lib/modules";
 import { useResolvedDataSource } from "@/lib/data/mode";
@@ -34,6 +33,8 @@ export function AppSidebar() {
   const pathname = usePathname();
   const source = useResolvedDataSource();
   const openSections = useOpenSections();
+  // Collapsed to icons, sections stay shut, so nothing in them loads data (the landing page)
+  const expanded = useSidebar().state === "expanded";
   const visibleModules = source === null ? [] : availableModules(source);
   const activeModuleId = visibleModules.find((mod) => pathname.startsWith(mod.basePath))?.id;
 
@@ -71,7 +72,7 @@ export function AppSidebar() {
           return (
             <Collapsible
               key={mod.id}
-              open={openSections.includes(mod.id)}
+              open={expanded && openSections.includes(mod.id)}
               onOpenChange={(open) => setSectionOpen(mod.id, open)}
               className="group/collapsible"
             >
@@ -114,12 +115,6 @@ export function AppSidebar() {
           );
         })}
       </SidebarContent>
-
-      <SidebarFooter className="p-2">
-        <div className="flex items-center justify-center group-data-[collapsible=icon]:justify-center">
-          <ThemeToggle />
-        </div>
-      </SidebarFooter>
 
       <SidebarRail />
     </Sidebar>
