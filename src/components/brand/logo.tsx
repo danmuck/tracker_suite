@@ -10,7 +10,15 @@ export function Logo({ className }: { className?: string }) {
       aria-label={site.title}
       className={cn("size-8 shrink-0", className)}
     >
-      <rect width="32" height="32" rx="7" className="fill-brand" />
+      <rect
+        x="1.25"
+        y="1.25"
+        width="29.5"
+        height="29.5"
+        rx="5.75"
+        strokeWidth={2.5}
+        className="fill-brand stroke-[color:color-mix(in_oklab,var(--brand),black_20%)] dark:stroke-brand"
+      />
       <text
         x="14"
         y="21.5"
