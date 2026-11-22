@@ -1,5 +1,4 @@
 import { Wordmark } from "@/components/brand/wordmark";
-import { site } from "@/lib/site";
 
 export function SiteFooter() {
 	return (
