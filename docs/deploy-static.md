@@ -200,17 +200,17 @@ does not need to match a git branch.
 
 ## Deploy
 
-Commit and push your changes to `host-transition`, then:
+Commit and push your changes to `dev`, then:
 
 ```bash
-git switch host-transition && git pull
+git switch dev && git pull
 npm run deploy:static
 ```
 
 `scripts/deploy-static.sh` does every step and stops at the first problem:
 
-1. **Code**: you must be on `host-transition` with no uncommitted changes, level with
-   `origin/host-transition`. Only committed, pushed code goes live, so every deploy matches a
+1. **Code**: you must be on `dev` with no uncommitted changes, level with
+   `origin/dev`. Only committed, pushed code goes live, so every deploy matches a
    commit.
 2. **Checks**: `npm ci`, `npm test`, `npm audit --omit=dev`.
 3. **Build**: `npm run build:static`, then checks that `out/` has the headers file and no API
@@ -228,7 +228,7 @@ Options:
 - `npm run deploy:static -- --dry-run` runs steps 1–3 and stops: a production build in `out/` to
   look at with `npm run preview:static` (restart the preview after every build; it reads
   `_headers` only at start).
-- `DEPLOY_BRANCH`, `PAGES_PROJECT` and `SITE_URL` override the branch (`host-transition`), the Pages
+- `DEPLOY_BRANCH`, `PAGES_PROJECT` and `SITE_URL` override the branch (`dev`), the Pages
   project (`tracker-suite`) and the address checked afterwards.
 
 Notes:

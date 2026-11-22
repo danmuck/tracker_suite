@@ -5,14 +5,14 @@
 # Steps and one-time setup: docs/deploy-static.md
 #
 # Settings (environment variables, all optional):
-#   DEPLOY_BRANCH          git branch to deploy from            (default: host-transition)
+#   DEPLOY_BRANCH          git branch to deploy from            (default: dev)
 #   PAGES_PROJECT          Cloudflare Pages project name        (default: tracker-suite)
 #   SITE_URL               public address checked after deploy  (default: https://danmuck.dev)
 #   CLOUDFLARE_ACCOUNT_ID  asked for if not set (not a secret)
 #   CLOUDFLARE_API_TOKEN   asked for if not set, without echo; never written to disk
 set -euo pipefail
 
-DEPLOY_BRANCH="${DEPLOY_BRANCH:-host-transition}"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-dev}"
 PAGES_PROJECT="${PAGES_PROJECT:-tracker-suite}"
 SITE_URL="${SITE_URL:-https://danmuck.dev}"
 SITE_URL="${SITE_URL%/}"
