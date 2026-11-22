@@ -35,7 +35,7 @@ function walk(dir: string): string[] {
 
 function entryPoints(): string[] {
   const entries = [
-    ...["hooks", "components", "app/(app)", "lib/demo"].flatMap((d) => walk(join(SRC, ...d.split("/")))),
+    ...["hooks", "components", "app/(app)", "app/(site)", "lib/demo"].flatMap((d) => walk(join(SRC, ...d.split("/")))),
     ...walk(join(SRC, "lib", "data")).filter((f) => !isForbiddenFile(f)),
   ];
   for (const m of readdirSync(join(SRC, "lib"), { withFileTypes: true })) {
