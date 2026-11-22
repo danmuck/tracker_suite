@@ -45,10 +45,17 @@ export async function connectDB() {
   }
 
   if (!cached.promise) {
-    cached.promise = mongoose.connect(MONGODB_URI).then((m) => m);
+    cached.promise = mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 5000 });
   }
 
-  cached.conn = await cached.promise;
+  try {
+    cached.conn = await cached.promise;
+  } catch (error) {
+    // Forget the failed attempt so the next request reconnects, instead of every request
+    // replaying this rejection until the server is restarted.
+    cached.promise = null;
+    throw error;
+  }
 
   await cached.seed();
 

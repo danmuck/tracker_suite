@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# tracker_suite
 
-## Getting Started
+Personal site and workspace for **dan muck.** The front page is a portfolio with a
+live workspace in it; behind it sit the modules (Finance, Figure, Future, Projects,
+Links).
 
-First, run the development server:
+The same code runs two ways:
+
+| | Hosted (public) | Local |
+| --- | --- | --- |
+| Command | `npm run build:static` | `npm run dev` |
+| Runs as | static files, no server | Next.js server on port 3030 |
+| Data | sample data in the visitor's browser | your MongoDB ("My data"), or browser data |
+| Modules | every module that supports browser data | every module |
+
+Nothing is hidden in the hosted build: each module works there against browser
+storage. Locally the data source switch in the top bar moves between your database
+and browser data.
+
+## Running locally
 
 ```bash
+npm ci
+echo 'MONGODB_URI=mongodb://127.0.0.1:27017/tracker_suite' > .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Publishing
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`npm run deploy:static` builds, checks, deploys and verifies the public site. See
+[docs/deploy-static.md](docs/deploy-static.md).
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Where things live
 
-## Learn More
+```
+src/lib/site.ts              landing page copy, links, skills, project list
+src/lib/modules.ts           module registry: routes, navigation, accent color
+src/app/(site)/              landing page (top bar, full width)
+src/app/(app)/               module pages (sidebar shell)
+src/components/site/         landing page sections, including the workspace
+src/components/dashboard/    one live card per module, shown in the workspace
+src/components/brand/        the "dan muck." wordmark
+src/lib/data/                data layer: server database or browser storage
+```
 
-To learn more about Next.js, take a look at the following resources:
+To change what the front page says, edit `src/lib/site.ts`. The yellow accent is
+`--brand` in `src/app/globals.css`.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Checks
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm test
+npm run lint
+```

@@ -25,6 +25,7 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Wordmark } from "@/components/brand/wordmark";
 import { LinksNavItems } from "@/components/links/links-nav-items";
 import { availableModules, globalNavItems } from "@/lib/modules";
 import { useResolvedDataSource } from "@/lib/data/mode";
@@ -35,15 +36,15 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4 group-data-[collapsible=icon]:px-0">
-        <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-sm">
-            TS
-          </div>
-          <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">
-            Tracker Suite
-          </span>
-        </div>
+      <SidebarHeader className="h-14 justify-center border-b px-4 group-data-[collapsible=icon]:px-0">
+        <Link
+          href="/"
+          aria-label="dan muck, home"
+          className="flex items-center group-data-[collapsible=icon]:justify-center"
+        >
+          <Wordmark className="text-xl group-data-[collapsible=icon]:hidden" />
+          <Wordmark variant="mark" className="hidden text-base group-data-[collapsible=icon]:inline" />
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>
