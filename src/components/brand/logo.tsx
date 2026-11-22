@@ -8,9 +8,9 @@ export function Logo({ className }: { className?: string }) {
       viewBox="0 0 32 32"
       role="img"
       aria-label={site.title}
-      className={cn("text-foreground size-8 shrink-0", className)}
+      className={cn("size-8 shrink-0", className)}
     >
-      <rect width="32" height="32" rx="7" fill="currentColor" />
+      <rect width="32" height="32" rx="7" className="fill-brand" />
       <text
         x="14"
         y="21.5"
@@ -18,11 +18,11 @@ export function Logo({ className }: { className?: string }) {
         fontWeight={900}
         fontSize={15}
         letterSpacing={-1}
-        className="fill-background"
+        className="fill-black"
       >
         {site.mark}
       </text>
-      <circle cx="26.8" cy="20.1" r="1.4" className="fill-brand" />
+      <circle cx="26.8" cy="20.1" r="1.4" className="fill-brand-foreground dark:fill-foreground" />
     </svg>
   );
 }
