@@ -16,7 +16,7 @@ export function Section({
         <h2 className="text-muted-foreground shrink-0 font-mono text-xs tracking-widest uppercase">
           {label}
         </h2>
-        <div className="bg-border h-px min-w-4 flex-1" />
+        <div className="bg-brand h-px min-w-4 flex-1" />
         {aside ? (
           <div className="text-muted-foreground text-right font-mono text-xs">{aside}</div>
         ) : null}
