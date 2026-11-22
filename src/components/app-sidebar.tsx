@@ -1,5 +1,6 @@
 "use client";
 
+import { useLayoutEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight } from "lucide-react";
@@ -29,10 +30,19 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LinksNavItems } from "@/components/links/links-nav-items";
 import { availableModules, globalNavItems } from "@/lib/modules";
 import { useResolvedDataSource } from "@/lib/data/mode";
+import { setSectionOpen, useOpenSections } from "@/hooks/use-open-sections";
 
 export function AppSidebar() {
   const pathname = usePathname();
   const source = useResolvedDataSource();
+  const openSections = useOpenSections();
+  const visibleModules = source === null ? [] : availableModules(source);
+  const activeModuleId = visibleModules.find((mod) => pathname.startsWith(mod.basePath))?.id;
+
+  // Opening a module expands its section; it then stays open until collapsed by hand
+  useLayoutEffect(() => {
+    if (activeModuleId) setSectionOpen(activeModuleId, true);
+  }, [activeModuleId, pathname]);
 
   return (
     <Sidebar collapsible="icon">
@@ -66,16 +76,15 @@ export function AppSidebar() {
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="bg-brand" />
 
         {/* Module groups */}
-        {(source === null ? [] : availableModules(source)).map((mod) => {
-          const isModuleActive = pathname.startsWith(mod.basePath);
-
+        {visibleModules.map((mod) => {
           return (
             <Collapsible
               key={mod.id}
-              defaultOpen={isModuleActive}
+              open={openSections.includes(mod.id)}
+              onOpenChange={(open) => setSectionOpen(mod.id, open)}
               className="group/collapsible"
             >
               <SidebarGroup>
