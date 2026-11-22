@@ -98,4 +98,5 @@ export function availableModules(source: DataSource): ModuleConfig[] {
 
 export const globalNavItems: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
 ];

@@ -3,7 +3,7 @@ import { Wordmark } from "@/components/brand/wordmark";
 import { cn } from "@/lib/utils";
 import { externalProps, site } from "@/lib/site";
 
-/** `compact` is the smaller hero used on the local server, where the workspace is the point */
+/** `compact` is the smaller hero used on the local server, where the app is the point */
 export function Hero({ compact = false }: { compact?: boolean }) {
   return (
     <section className={cn(compact ? "pt-10 pb-4 sm:pt-14" : "pt-16 pb-8 sm:pt-24")}>

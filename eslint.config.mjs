@@ -3,7 +3,7 @@ import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
 
 // Modules stay independent: code inside one module may not import from another.
-// Only the home dashboard (src/components/dashboard, src/lib/dashboard, src/components/site/workspace.tsx)
+// Only the home dashboard (src/components/dashboard, src/lib/dashboard, src/app/(app)/dashboard/page.tsx)
 // reads across modules, and it is not listed here.
 const MODULE_API_DIRS = {
   finance: ["accounts", "categories", "finance-profile", "projections", "summary", "transactions"],

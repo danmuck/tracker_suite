@@ -1,10 +1,9 @@
 import Link from "next/link";
+import { LayoutDashboard } from "lucide-react";
 import { Wordmark } from "@/components/brand/wordmark";
-import { DataSourceSwitch } from "@/components/data-source-switch";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const anchors = [
-  { href: "/#workspace", label: "Workspace" },
   { href: "/#projects", label: "Projects" },
   { href: "/#about", label: "About" },
   { href: "/#contact", label: "Contact" },
@@ -28,8 +27,14 @@ export function SiteHeader() {
             </a>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-1">
-          <DataSourceSwitch />
+        <div className="ml-auto flex items-center gap-3">
+          <Link
+            href="/dashboard"
+            className="hover:bg-accent inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors"
+          >
+            <LayoutDashboard className="size-4" aria-hidden />
+            Dashboard
+          </Link>
           <ThemeToggle />
         </div>
       </div>
