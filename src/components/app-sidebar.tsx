@@ -24,6 +24,7 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
+import { Wordmark } from "@/components/brand/wordmark";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LinksNavItems } from "@/components/links/links-nav-items";
 import { availableModules, globalNavItems } from "@/lib/modules";
@@ -36,14 +37,17 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-4 group-data-[collapsible=icon]:px-0">
-        <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-sm">
-            TS
-          </div>
-          <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">
-            Tracker Suite
-          </span>
-        </div>
+        <Link
+          href="/"
+          aria-label="Home"
+          className="flex h-8 items-center group-data-[collapsible=icon]:justify-center"
+        >
+          <Wordmark className="text-xl whitespace-nowrap group-data-[collapsible=icon]:hidden" />
+          <Wordmark
+            variant="mark"
+            className="hidden text-base group-data-[collapsible=icon]:inline"
+          />
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>

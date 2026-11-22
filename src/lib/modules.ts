@@ -1,4 +1,5 @@
 import {
+  Home,
   LayoutDashboard,
   Wallet,
   ArrowRightLeft,
@@ -96,5 +97,5 @@ export function availableModules(source: DataSource): ModuleConfig[] {
 }
 
 export const globalNavItems: NavItem[] = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/", label: "Home", icon: Home },
 ];

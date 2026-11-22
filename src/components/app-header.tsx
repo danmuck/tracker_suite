@@ -15,8 +15,6 @@ const segmentLabels: Record<string, string> = {
 };
 
 function buildBreadcrumb(pathname: string): string {
-  if (pathname === "/") return "Dashboard";
-
   const segments = pathname.split("/").filter(Boolean);
   return segments
     .map((seg) => segmentLabels[seg] ?? seg.charAt(0).toUpperCase() + seg.slice(1))
