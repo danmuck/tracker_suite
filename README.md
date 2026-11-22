@@ -1,69 +1,36 @@
-# tracker_suite
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-Personal site and workspace for **dan muck.** — a public landing page with a
-set of private modules behind it.
+## Getting Started
 
-- **Public mode** serves only the landing page (portfolio, about, contact).
-- **Local mode** adds the workspace: a panel per module on the landing page
-  with live totals, plus the modules themselves under their own routes.
-
-## Running
+First, run the development server:
 
 ```bash
-cp .env.example .env.local   # SUITE_MODE and MONGODB_URI
-npm install
-npm run dev                  # http://localhost:3030
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-| `SUITE_MODE` | Result |
-| --- | --- |
-| `local` | Modules and their data APIs are served. Needs `MONGODB_URI`. |
-| `public` | Landing page only. Every module route answers 404. |
-| unset | `local` under `next dev`, `public` in a production build. |
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-A production build therefore exposes nothing private unless it opts in. To
-host the full suite on your own machine with `npm run build && npm start`, set
-`SUITE_MODE=local` in `.env.local`. The module APIs have no authentication, so
-only use local mode on a machine or network you trust.
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-The gate is enforced in three places: `src/proxy.ts` (404 for module pages and
-APIs), the suite layout (`notFound()`), and `connectDB()` (refuses to open a
-database connection outside local mode).
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-`GET /api/health` reports liveness, and in local mode database reachability
-(503 when the database is down).
+## Learn More
 
-## Layout
+To learn more about Next.js, take a look at the following resources:
 
-```
-src/config/site.ts       landing page copy, links, skills, projects
-src/config/modules.ts    module registry: routes, API prefix, navigation
-src/lib/suite-mode.ts    local / public switch
-src/proxy.ts             blocks module routes in public mode
-src/app/(site)/          landing page
-src/app/(suite)/         module pages, inside the sidebar shell
-src/app/api/<module>/    module APIs
-src/components/site/     landing page sections and the workspace panel
-src/components/brand/    wordmark
-```
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-### Editing the landing page
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-All copy lives in `src/config/site.ts`. Colors are tokens in
-`src/app/globals.css`; `--brand` is the yellow accent.
+## Deploy on Vercel
 
-### Adding a module
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
-1. Add an entry to `src/config/modules.ts`. Its `basePath` and `apiPrefix` are
-   gated automatically and its `nav` appears in the sidebar and on the
-   workspace panel.
-2. Put pages under `src/app/(suite)/<module>/` and APIs under
-   `src/app/api/<module>/`.
-3. Optionally register a live summary for the workspace panel in the
-   `summaries` map in `src/components/site/workspace.tsx`.
-
-## Modules
-
-**Finance** (`/finance`) — accounts, transactions with recurrence and
-transfers, balance projections with alerts, and reports. Data is stored in
-MongoDB.
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

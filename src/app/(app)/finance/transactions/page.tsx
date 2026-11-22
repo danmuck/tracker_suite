@@ -1,0 +1,616 @@
+"use client";
+
+import { Suspense } from "react";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Plus,
+  Search,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Repeat,
+  Pencil,
+  Trash2,
+  ArrowRightLeft,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { MONEY_IN, MONEY_OUT, TYPE_STYLE } from "@/components/finance/transaction-styles";
+import { toast } from "sonner";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  type SortingState,
+  type ColumnDef,
+} from "@tanstack/react-table";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/page-header";
+import { LoadingState } from "@/components/loading-state";
+import { EmptyState } from "@/components/empty-state";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
+import { TransactionForm } from "@/components/finance/transaction-form";
+import { CurrencyDisplay } from "@/components/finance/currency-display";
+import { CategoryBadge } from "@/components/finance/category-badge";
+import {
+  useTransactions,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction,
+} from "@/hooks/finance/use-transactions";
+import { useAccounts } from "@/hooks/finance/use-accounts";
+import { useCategories } from "@/hooks/finance/use-categories";
+import { formatDate, formatCurrency } from "@/lib/finance/formatters";
+import type { Transaction, TransactionFormData } from "@/types/finance/transaction";
+import type { TransactionFilters } from "@/types/api";
+import { DEFAULT_LIMIT, LIMIT_OPTIONS, limitFromParam, pageFromParam } from "@/lib/finance/list-params";
+
+
+function TransactionsContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const [debouncedSearch, setDebouncedSearch] = useState(search);
+  const [accountFilter, setAccountFilter] = useState(
+    searchParams.get("accountId") ?? ""
+  );
+  const [typeFilter, setTypeFilter] = useState(
+    searchParams.get("type") ?? ""
+  );
+  const [categoryFilter, setCategoryFilter] = useState(
+    searchParams.get("category") ?? ""
+  );
+  const [recurringOnly, setRecurringOnly] = useState(
+    searchParams.get("recurring") === "true"
+  );
+  // Clamped so a hand-edited URL never asks the API for an invalid page or page size
+  const [page, setPage] = useState(() => pageFromParam(searchParams.get("page")));
+  const [limit, setLimit] = useState(() => limitFromParam(searchParams.get("limit")));
+  const [sorting, setSorting] = useState<SortingState>([
+    { id: "date", desc: true },
+  ]);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Transaction | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Transaction | null>(null);
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  // Sync filters to URL
+  useEffect(() => {
+    const p = new URLSearchParams();
+    if (debouncedSearch) p.set("search", debouncedSearch);
+    if (accountFilter) p.set("accountId", accountFilter);
+    if (typeFilter) p.set("type", typeFilter);
+    if (categoryFilter) p.set("category", categoryFilter);
+    if (recurringOnly) p.set("recurring", "true");
+    if (page !== 1) p.set("page", String(page));
+    if (limit !== DEFAULT_LIMIT) p.set("limit", String(limit));
+    router.replace(`/finance/transactions?${p.toString()}`, { scroll: false });
+  }, [debouncedSearch, accountFilter, typeFilter, categoryFilter, recurringOnly, page, limit, router]);
+
+  const sortCol = sorting[0]?.id ?? "date";
+  const sortOrder = sorting[0]?.desc ? "desc" : "asc";
+
+  const filters: TransactionFilters = {
+    search: debouncedSearch || undefined,
+    accountId: accountFilter || undefined,
+    type: typeFilter as TransactionFilters["type"] || undefined,
+    category: categoryFilter || undefined,
+    isRecurring: recurringOnly ? true : undefined,
+    page,
+    limit,
+    sort: sortCol,
+    order: sortOrder,
+  };
+
+  const { transactions, pagination, isLoading, mutate } = useTransactions(filters);
+  // Include archived accounts so older transactions still resolve their account names
+  const { accounts: allAccounts } = useAccounts(undefined, { includeArchived: true });
+  const { categories } = useCategories();
+
+  const accountMap = Object.fromEntries(allAccounts.map((a) => [a._id, a]));
+  const accounts = allAccounts.filter((a) => !a.isArchived);
+  // Keep a selected archived account in the filter dropdown so its value still renders
+  const filterAccounts = allAccounts.filter(
+    (a) => !a.isArchived || a._id === accountFilter
+  );
+
+  // Total available funds: bank balances + available credit on CCs
+  const totalAvailable = accounts.reduce((sum, a) => {
+    if (a.type === "bank") return sum + a.balance;
+    if (a.type === "credit_card" && a.creditLimit) {
+      return sum + Math.max(0, a.creditLimit - a.balance);
+    }
+    return sum;
+  }, 0);
+
+  const columns: ColumnDef<Transaction>[] = [
+    {
+      accessorKey: "date",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2"
+          onClick={() =>
+            column.toggleSorting(column.getIsSorted() === "asc")
+          }
+        >
+          Date
+          {column.getIsSorted() === "asc" ? (
+            <ArrowUp className="ml-1 h-3 w-3" />
+          ) : column.getIsSorted() === "desc" ? (
+            <ArrowDown className="ml-1 h-3 w-3" />
+          ) : (
+            <ArrowUpDown className="ml-1 h-3 w-3" />
+          )}
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span className="text-muted-foreground text-sm">
+          {formatDate(row.original.date)}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "description",
+      header: "Description",
+      cell: ({ row }) => (
+        <div className="max-w-[200px]">
+          <p className="font-medium truncate">{row.original.description}</p>
+          {row.original.notes && (
+            <p className="text-xs text-muted-foreground truncate">
+              {row.original.notes}
+            </p>
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "accountId",
+      header: "Account",
+      cell: ({ row }) => {
+        const tx = row.original;
+        const account = accountMap[tx.accountId];
+        if (tx.type === "transfer" && tx.toAccountId) {
+          const toAccount = accountMap[tx.toAccountId];
+          return (
+            <span className="text-sm flex items-center gap-1">
+              <span className={MONEY_OUT}>{account?.name ?? tx.accountId}</span>
+              <ArrowRightLeft className="h-3 w-3 text-muted-foreground" />
+              <span className={MONEY_IN}>{toAccount?.name ?? tx.toAccountId}</span>
+            </span>
+          );
+        }
+        return (
+          <span className={cn("text-sm", tx.type === "credit" ? MONEY_IN : MONEY_OUT)}>
+            {account?.name ?? tx.accountId}
+          </span>
+        );
+      },
+    },
+    {
+      accessorKey: "categoryTags",
+      header: "Categories",
+      cell: ({ row }) => (
+        <div className="flex flex-wrap gap-1">
+          {row.original.categoryTags.map((tag) => (
+            <CategoryBadge key={tag} categoryName={tag} categories={categories} />
+          ))}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "type",
+      header: "Type",
+      cell: ({ row }) => (
+        <Badge
+          variant="outline"
+          className={cn("capitalize", TYPE_STYLE[row.original.type].badge)}
+        >
+          {row.original.type}
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "isRecurring",
+      header: "",
+      cell: ({ row }) =>
+        row.original.isRecurring ? (
+          <Repeat className="h-3.5 w-3.5 text-muted-foreground" />
+        ) : null,
+    },
+    {
+      accessorKey: "amount",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="-ml-2"
+          onClick={() =>
+            column.toggleSorting(column.getIsSorted() === "asc")
+          }
+        >
+          Amount
+          {column.getIsSorted() === "asc" ? (
+            <ArrowUp className="ml-1 h-3 w-3" />
+          ) : column.getIsSorted() === "desc" ? (
+            <ArrowDown className="ml-1 h-3 w-3" />
+          ) : (
+            <ArrowUpDown className="ml-1 h-3 w-3" />
+          )}
+        </Button>
+      ),
+      cell: ({ row }) => {
+        const tx = row.original;
+        if (tx.type === "transfer") {
+          return (
+            <CurrencyDisplay cents={tx.amount} className="font-mono text-sm text-muted-foreground" />
+          );
+        }
+        const cents = tx.type === "credit" ? tx.amount : -tx.amount;
+        return (
+          <CurrencyDisplay cents={cents} colored className="font-mono text-sm" />
+        );
+      },
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => (
+        <div className="flex gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7"
+            onClick={() => setEditTarget(row.original)}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive hover:text-destructive"
+            onClick={() => setDeleteTarget(row.original)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ),
+    },
+  ];
+
+  const table = useReactTable({
+    data: transactions,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    manualSorting: true,
+    manualPagination: true,
+  });
+
+  async function handleCreate(data: TransactionFormData) {
+    try {
+      await createTransaction(data);
+      await mutate();
+      setCreateOpen(false);
+      toast.success("Transaction created");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to create transaction");
+      throw err;
+    }
+  }
+
+  async function handleEdit(data: TransactionFormData) {
+    if (!editTarget) return;
+    try {
+      await updateTransaction(editTarget._id, data);
+      await mutate();
+      setEditTarget(null);
+      toast.success("Transaction updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update transaction");
+      throw err;
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    await deleteTransaction(deleteTarget._id);
+    await mutate();
+    setDeleteTarget(null);
+    toast.success("Transaction deleted");
+  }
+
+  const totalPages = pagination?.totalPages ?? 1;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        title="Transactions"
+        description="Track and manage all your financial transactions"
+        action={
+          <div className="flex items-center gap-3">
+            {accounts.length > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {formatCurrency(totalAvailable)} available
+              </span>
+            )}
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Transaction
+            </Button>
+          </div>
+        }
+      />
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search transactions..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="pl-8"
+          />
+        </div>
+
+        <Select
+          value={accountFilter}
+          onValueChange={(v) => {
+            setAccountFilter(v === "_all" ? "" : v);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-[160px]">
+            <SelectValue placeholder="All accounts" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">All accounts</SelectItem>
+            {filterAccounts.map((a) => (
+              <SelectItem key={a._id} value={a._id}>
+                {a.name}
+                {a.isArchived ? " (archived)" : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={typeFilter}
+          onValueChange={(v) => {
+            setTypeFilter(v === "_all" ? "" : v);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="All types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">All types</SelectItem>
+            <SelectItem value="credit">Income</SelectItem>
+            <SelectItem value="debit">Expense</SelectItem>
+            <SelectItem value="transfer">Transfer</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={categoryFilter}
+          onValueChange={(v) => {
+            setCategoryFilter(v === "_all" ? "" : v);
+            setPage(1);
+          }}
+        >
+          <SelectTrigger className="w-[150px]">
+            <SelectValue placeholder="All categories" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">All categories</SelectItem>
+            {categories.map((c) => (
+              <SelectItem key={c._id} value={c.name}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Button
+          variant={recurringOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => {
+            setRecurringOnly((v) => !v);
+            setPage(1);
+          }}
+          className="gap-1.5"
+        >
+          <Repeat className="h-3.5 w-3.5" />
+          Recurring
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <LoadingState variant="table" />
+      ) : transactions.length === 0 ? (
+        <EmptyState
+          icon={ArrowRightLeft}
+          title="No transactions found"
+          description="No transactions match your current filters."
+          action={{ label: "Add Transaction", onClick: () => setCreateOpen(true) }}
+        />
+      ) : (
+        <>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                {table.getHeaderGroups().map((hg) => (
+                  <TableRow key={hg.id}>
+                    {hg.headers.map((header) => (
+                      <TableHead key={header.id}>
+                        {header.isPlaceholder
+                          ? null
+                          : typeof header.column.columnDef.header === "function"
+                          ? header.column.columnDef.header(header.getContext())
+                          : header.column.columnDef.header}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} className={TYPE_STYLE[row.original.type].row}>
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        {typeof cell.column.columnDef.cell === "function"
+                          ? cell.column.columnDef.cell(cell.getContext())
+                          : cell.getValue() as React.ReactNode}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Rows per page:</span>
+              <Select
+                value={String(limit)}
+                onValueChange={(v) => {
+                  setLimit(Number(v));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-8 w-16">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {LIMIT_OPTIONS.map((l) => (
+                    <SelectItem key={l} value={String(l)}>
+                      {l}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                Page {page} of {totalPages}
+                {pagination && ` (${pagination.total} total)`}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => p - 1)}
+                disabled={page <= 1}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Create dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Add Transaction</DialogTitle>
+          </DialogHeader>
+          <TransactionForm
+            onSubmit={handleCreate}
+            onCancel={() => setCreateOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit dialog */}
+      <Dialog
+        open={!!editTarget}
+        onOpenChange={(o) => !o && setEditTarget(null)}
+      >
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Transaction</DialogTitle>
+          </DialogHeader>
+          {editTarget && (
+            <TransactionForm
+              defaultValues={{
+                description: editTarget.description,
+                amount: editTarget.amount / 100,
+                date: editTarget.date,
+                accountId: editTarget.accountId,
+                toAccountId: editTarget.toAccountId,
+                type: editTarget.type,
+                categoryTags: editTarget.categoryTags,
+                isRecurring: editTarget.isRecurring,
+                recurrenceRule: editTarget.recurrenceRule,
+                notes: editTarget.notes,
+                amountSchedule: editTarget.amountSchedule,
+              }}
+              onSubmit={handleEdit}
+              onCancel={() => setEditTarget(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete dialog */}
+      <DeleteConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(o) => !o && setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete transaction"
+        description={`Delete "${deleteTarget?.description}"? This cannot be undone.`}
+      />
+    </div>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense fallback={<div className="p-6"><LoadingState variant="table" /></div>}>
+      <TransactionsContent />
+    </Suspense>
+  );
+}

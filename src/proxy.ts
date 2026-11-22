@@ -1,23 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isModulePath } from "@/config/modules";
-import { modulesEnabled } from "@/lib/suite-mode";
+import { demoApiGuard } from "@/lib/data/dispatch";
 
-/**
- * In public mode every module route answers 404, as if it did not exist.
- * This is the outer gate; the suite layout and the database layer check the
- * mode again on their own.
- */
+// In the demo build no API route may run: all data lives in the visitor's browser.
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  if (modulesEnabled() || !isModulePath(pathname)) return NextResponse.next();
-
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
-  // Rewrite to a path no route matches so the branded 404 page renders.
-  return NextResponse.rewrite(new URL("/_gated", request.url), { status: 404 });
+  const refusal = demoApiGuard(request.nextUrl.pathname, process.env.NEXT_PUBLIC_DEMO === "1");
+  if (!refusal) return NextResponse.next();
+  return NextResponse.json(refusal.body, { status: refusal.status });
 }
 
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|icon.svg).*)"],
-};
+export const config = { matcher: ["/api", "/api/:path*"] };

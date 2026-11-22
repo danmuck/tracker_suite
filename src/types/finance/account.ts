@@ -1,0 +1,37 @@
+export type AccountType = "bank" | "credit_card" | "debt";
+
+export interface Account {
+  _id: string;
+  name: string;
+  type: AccountType;
+  balance: number; // cents
+  creditLimit?: number; // cents, credit_card only
+  isLoan?: boolean; // debt only
+  linkedAccountId?: string; // ref to bank account for loan disbursement
+  currency: string;
+  notes?: string;
+  isCash?: boolean;
+  isArchived?: boolean;
+  apr?: number; // fraction
+  minimumPayment?: number; // cents
+  paymentTransactionId?: string;
+  subLoans?: { name: string; balance: number; apr: number }[]; // cents, fraction
+  rap?: { enabled: boolean; autoSchedule: boolean; recertDate: string; dependents: number };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccountFormData {
+  name: string;
+  type: AccountType;
+  balance: number; // dollars for form input
+  creditLimit?: number;
+  isLoan?: boolean;
+  linkedAccountId?: string;
+  /** Create only: deposit the loan amount into the linked bank account */
+  depositFunds?: boolean;
+  currency?: string;
+  notes?: string;
+  apr?: number | null; // percent in the form (6.5), null clears
+  minimumPayment?: number | null; // dollars, null clears
+}
