@@ -422,7 +422,7 @@ test("stats: weeks clamped (1 → 2, 500 → 104, junk → 12); today from the q
   const s = await getBody<{ range: { start: string; end: string; weeks: number }; streak: { current: number }; topExercises: { name: string; sessions: number }[] }>(
     `${F}/stats?today=2026-03-18&weeks=1`,
   );
-  assert.deepEqual(s.range, { start: "2026-03-09", end: "2026-03-18", weeks: 2 });
+  assert.deepEqual(s.range, { start: "2026-03-08", end: "2026-03-18", weeks: 2 });
   assert.equal(s.streak.current, 3);
   // Newest first: the 2026-03-18 log's "Bench" names the exercise
   assert.deepEqual(s.topExercises, [{ name: "Bench", sessions: 2 }]);

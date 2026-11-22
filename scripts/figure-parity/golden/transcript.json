@@ -1,7 +1,7 @@
 {
   "meta": {
-    "capturedAt": "2026-11-18T02:51:50.587Z",
-    "commit": "48c5f5d3942f588e772f94ea23c7c77fcca72d6f"
+    "capturedAt": "2026-11-20T23:32:06.635Z",
+    "commit": "efa0c5f92c89490d134f31355d04535f8787b3c3"
   },
   "steps": [
     {
@@ -2050,6 +2050,11 @@
       "body": {
         "days": [
           {
+            "date": "2026-03-08",
+            "lifts": 0,
+            "runs": 0
+          },
+          {
             "date": "2026-03-09",
             "lifts": 0,
             "runs": 0
@@ -2101,8 +2106,8 @@
           }
         ],
         "lastWeek": {
-          "miles": 6.2,
-          "runs": 1,
+          "miles": 0,
+          "runs": 0,
           "sessions": 1,
           "volume": 3620
         },
@@ -2131,7 +2136,7 @@
         ],
         "range": {
           "end": "2026-03-18",
-          "start": "2026-03-09",
+          "start": "2026-03-08",
           "weeks": 2
         },
         "streak": {
@@ -2139,8 +2144,8 @@
           "longest": 4
         },
         "thisWeek": {
-          "miles": 5.7,
-          "runs": 2,
+          "miles": 11.9,
+          "runs": 3,
           "sessions": 3,
           "volume": 5700
         },
@@ -2168,24 +2173,24 @@
         ],
         "weeks": [
           {
-            "label": "Mar 9",
-            "miles": 6.2,
-            "runSeconds": 3300,
-            "runs": 1,
+            "label": "Mar 8",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
             "sessions": 1,
             "sets": 4,
             "volume": 3620,
-            "weekStart": "2026-03-09"
+            "weekStart": "2026-03-08"
           },
           {
-            "label": "Mar 16",
-            "miles": 5.7,
-            "runSeconds": 2790,
-            "runs": 2,
+            "label": "Mar 15",
+            "miles": 11.9,
+            "runSeconds": 6090,
+            "runs": 3,
             "sessions": 3,
             "sets": 8,
             "volume": 5700,
-            "weekStart": "2026-03-16"
+            "weekStart": "2026-03-15"
           }
         ]
       }
@@ -2196,6 +2201,11 @@
       "status": 200,
       "body": {
         "days": [
+          {
+            "date": "2025-12-28",
+            "lifts": 0,
+            "runs": 0
+          },
           {
             "date": "2025-12-29",
             "lifts": 0,
@@ -2598,8 +2608,8 @@
           }
         ],
         "lastWeek": {
-          "miles": 6.2,
-          "runs": 1,
+          "miles": 0,
+          "runs": 0,
           "sessions": 1,
           "volume": 3620
         },
@@ -2628,7 +2638,7 @@
         ],
         "range": {
           "end": "2026-03-18",
-          "start": "2025-12-29",
+          "start": "2025-12-28",
           "weeks": 12
         },
         "streak": {
@@ -2636,8 +2646,8 @@
           "longest": 4
         },
         "thisWeek": {
-          "miles": 5.7,
-          "runs": 2,
+          "miles": 11.9,
+          "runs": 3,
           "sessions": 3,
           "volume": 5700
         },
@@ -2677,124 +2687,124 @@
         ],
         "weeks": [
           {
-            "label": "Dec 29",
+            "label": "Dec 28",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-12-29"
+            "weekStart": "2025-12-28"
           },
           {
-            "label": "Jan 5",
+            "label": "Jan 4",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-05"
+            "weekStart": "2026-01-04"
           },
           {
-            "label": "Jan 12",
+            "label": "Jan 11",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-12"
+            "weekStart": "2026-01-11"
           },
           {
-            "label": "Jan 19",
+            "label": "Jan 18",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-19"
+            "weekStart": "2026-01-18"
           },
           {
-            "label": "Jan 26",
+            "label": "Jan 25",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-26"
+            "weekStart": "2026-01-25"
           },
           {
-            "label": "Feb 2",
+            "label": "Feb 1",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-02-02"
+            "weekStart": "2026-02-01"
           },
           {
-            "label": "Feb 9",
+            "label": "Feb 8",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-02-09"
+            "weekStart": "2026-02-08"
           },
           {
-            "label": "Feb 16",
+            "label": "Feb 15",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-02-16"
+            "weekStart": "2026-02-15"
           },
           {
-            "label": "Feb 23",
+            "label": "Feb 22",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 1,
             "sets": 2,
             "volume": 1475,
-            "weekStart": "2026-02-23"
+            "weekStart": "2026-02-22"
           },
           {
-            "label": "Mar 2",
+            "label": "Mar 1",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-03-02"
+            "weekStart": "2026-03-01"
           },
           {
-            "label": "Mar 9",
-            "miles": 6.2,
-            "runSeconds": 3300,
-            "runs": 1,
+            "label": "Mar 8",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
             "sessions": 1,
             "sets": 4,
             "volume": 3620,
-            "weekStart": "2026-03-09"
+            "weekStart": "2026-03-08"
           },
           {
-            "label": "Mar 16",
-            "miles": 5.7,
-            "runSeconds": 2790,
-            "runs": 2,
+            "label": "Mar 15",
+            "miles": 11.9,
+            "runSeconds": 6090,
+            "runs": 3,
             "sessions": 3,
             "sets": 8,
             "volume": 5700,
-            "weekStart": "2026-03-16"
+            "weekStart": "2026-03-15"
           }
         ]
       }
@@ -2805,6 +2815,11 @@
       "status": 200,
       "body": {
         "days": [
+          {
+            "date": "2024-03-24",
+            "lifts": 0,
+            "runs": 0
+          },
           {
             "date": "2024-03-25",
             "lifts": 0,
@@ -6427,8 +6442,8 @@
           }
         ],
         "lastWeek": {
-          "miles": 6.2,
-          "runs": 1,
+          "miles": 0,
+          "runs": 0,
           "sessions": 1,
           "volume": 3620
         },
@@ -6457,7 +6472,7 @@
         ],
         "range": {
           "end": "2026-03-18",
-          "start": "2024-03-25",
+          "start": "2024-03-24",
           "weeks": 104
         },
         "streak": {
@@ -6465,8 +6480,8 @@
           "longest": 4
         },
         "thisWeek": {
-          "miles": 5.7,
-          "runs": 2,
+          "miles": 11.9,
+          "runs": 3,
           "sessions": 3,
           "volume": 5700
         },
@@ -6506,526 +6521,6 @@
         ],
         "weeks": [
           {
-            "label": "Mar 25",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-03-25"
-          },
-          {
-            "label": "Apr 1",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-04-01"
-          },
-          {
-            "label": "Apr 8",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-04-08"
-          },
-          {
-            "label": "Apr 15",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-04-15"
-          },
-          {
-            "label": "Apr 22",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-04-22"
-          },
-          {
-            "label": "Apr 29",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-04-29"
-          },
-          {
-            "label": "May 6",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-05-06"
-          },
-          {
-            "label": "May 13",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-05-13"
-          },
-          {
-            "label": "May 20",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-05-20"
-          },
-          {
-            "label": "May 27",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-05-27"
-          },
-          {
-            "label": "Jun 3",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-06-03"
-          },
-          {
-            "label": "Jun 10",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-06-10"
-          },
-          {
-            "label": "Jun 17",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-06-17"
-          },
-          {
-            "label": "Jun 24",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-06-24"
-          },
-          {
-            "label": "Jul 1",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-07-01"
-          },
-          {
-            "label": "Jul 8",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-07-08"
-          },
-          {
-            "label": "Jul 15",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-07-15"
-          },
-          {
-            "label": "Jul 22",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-07-22"
-          },
-          {
-            "label": "Jul 29",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-07-29"
-          },
-          {
-            "label": "Aug 5",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-08-05"
-          },
-          {
-            "label": "Aug 12",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-08-12"
-          },
-          {
-            "label": "Aug 19",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-08-19"
-          },
-          {
-            "label": "Aug 26",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-08-26"
-          },
-          {
-            "label": "Sep 2",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-09-02"
-          },
-          {
-            "label": "Sep 9",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-09-09"
-          },
-          {
-            "label": "Sep 16",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-09-16"
-          },
-          {
-            "label": "Sep 23",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-09-23"
-          },
-          {
-            "label": "Sep 30",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-09-30"
-          },
-          {
-            "label": "Oct 7",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-10-07"
-          },
-          {
-            "label": "Oct 14",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-10-14"
-          },
-          {
-            "label": "Oct 21",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-10-21"
-          },
-          {
-            "label": "Oct 28",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-10-28"
-          },
-          {
-            "label": "Nov 4",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-11-04"
-          },
-          {
-            "label": "Nov 11",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-11-11"
-          },
-          {
-            "label": "Nov 18",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-11-18"
-          },
-          {
-            "label": "Nov 25",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-11-25"
-          },
-          {
-            "label": "Dec 2",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-12-02"
-          },
-          {
-            "label": "Dec 9",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-12-09"
-          },
-          {
-            "label": "Dec 16",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-12-16"
-          },
-          {
-            "label": "Dec 23",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-12-23"
-          },
-          {
-            "label": "Dec 30",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2024-12-30"
-          },
-          {
-            "label": "Jan 6",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-01-06"
-          },
-          {
-            "label": "Jan 13",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-01-13"
-          },
-          {
-            "label": "Jan 20",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-01-20"
-          },
-          {
-            "label": "Jan 27",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-01-27"
-          },
-          {
-            "label": "Feb 3",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-02-03"
-          },
-          {
-            "label": "Feb 10",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-02-10"
-          },
-          {
-            "label": "Feb 17",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-02-17"
-          },
-          {
-            "label": "Feb 24",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-02-24"
-          },
-          {
-            "label": "Mar 3",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-03-03"
-          },
-          {
-            "label": "Mar 10",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-03-10"
-          },
-          {
-            "label": "Mar 17",
-            "miles": 0,
-            "runSeconds": 0,
-            "runs": 0,
-            "sessions": 0,
-            "sets": 0,
-            "volume": 0,
-            "weekStart": "2025-03-17"
-          },
-          {
             "label": "Mar 24",
             "miles": 0,
             "runSeconds": 0,
@@ -7033,7 +6528,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-03-24"
+            "weekStart": "2024-03-24"
           },
           {
             "label": "Mar 31",
@@ -7043,7 +6538,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-03-31"
+            "weekStart": "2024-03-31"
           },
           {
             "label": "Apr 7",
@@ -7053,7 +6548,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-04-07"
+            "weekStart": "2024-04-07"
           },
           {
             "label": "Apr 14",
@@ -7063,7 +6558,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-04-14"
+            "weekStart": "2024-04-14"
           },
           {
             "label": "Apr 21",
@@ -7073,7 +6568,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-04-21"
+            "weekStart": "2024-04-21"
           },
           {
             "label": "Apr 28",
@@ -7083,7 +6578,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-04-28"
+            "weekStart": "2024-04-28"
           },
           {
             "label": "May 5",
@@ -7093,7 +6588,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-05-05"
+            "weekStart": "2024-05-05"
           },
           {
             "label": "May 12",
@@ -7103,7 +6598,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-05-12"
+            "weekStart": "2024-05-12"
           },
           {
             "label": "May 19",
@@ -7113,7 +6608,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-05-19"
+            "weekStart": "2024-05-19"
           },
           {
             "label": "May 26",
@@ -7123,7 +6618,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-05-26"
+            "weekStart": "2024-05-26"
           },
           {
             "label": "Jun 2",
@@ -7133,7 +6628,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-06-02"
+            "weekStart": "2024-06-02"
           },
           {
             "label": "Jun 9",
@@ -7143,7 +6638,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-06-09"
+            "weekStart": "2024-06-09"
           },
           {
             "label": "Jun 16",
@@ -7153,7 +6648,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-06-16"
+            "weekStart": "2024-06-16"
           },
           {
             "label": "Jun 23",
@@ -7163,7 +6658,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-06-23"
+            "weekStart": "2024-06-23"
           },
           {
             "label": "Jun 30",
@@ -7173,7 +6668,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-06-30"
+            "weekStart": "2024-06-30"
           },
           {
             "label": "Jul 7",
@@ -7183,7 +6678,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-07-07"
+            "weekStart": "2024-07-07"
           },
           {
             "label": "Jul 14",
@@ -7193,7 +6688,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-07-14"
+            "weekStart": "2024-07-14"
           },
           {
             "label": "Jul 21",
@@ -7203,7 +6698,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-07-21"
+            "weekStart": "2024-07-21"
           },
           {
             "label": "Jul 28",
@@ -7213,7 +6708,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-07-28"
+            "weekStart": "2024-07-28"
           },
           {
             "label": "Aug 4",
@@ -7223,7 +6718,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-08-04"
+            "weekStart": "2024-08-04"
           },
           {
             "label": "Aug 11",
@@ -7233,7 +6728,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-08-11"
+            "weekStart": "2024-08-11"
           },
           {
             "label": "Aug 18",
@@ -7243,7 +6738,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-08-18"
+            "weekStart": "2024-08-18"
           },
           {
             "label": "Aug 25",
@@ -7253,7 +6748,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-08-25"
+            "weekStart": "2024-08-25"
           },
           {
             "label": "Sep 1",
@@ -7263,7 +6758,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-09-01"
+            "weekStart": "2024-09-01"
           },
           {
             "label": "Sep 8",
@@ -7273,7 +6768,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-09-08"
+            "weekStart": "2024-09-08"
           },
           {
             "label": "Sep 15",
@@ -7283,7 +6778,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-09-15"
+            "weekStart": "2024-09-15"
           },
           {
             "label": "Sep 22",
@@ -7293,7 +6788,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-09-22"
+            "weekStart": "2024-09-22"
           },
           {
             "label": "Sep 29",
@@ -7303,7 +6798,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-09-29"
+            "weekStart": "2024-09-29"
           },
           {
             "label": "Oct 6",
@@ -7313,7 +6808,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-10-06"
+            "weekStart": "2024-10-06"
           },
           {
             "label": "Oct 13",
@@ -7323,7 +6818,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-10-13"
+            "weekStart": "2024-10-13"
           },
           {
             "label": "Oct 20",
@@ -7333,7 +6828,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-10-20"
+            "weekStart": "2024-10-20"
           },
           {
             "label": "Oct 27",
@@ -7343,7 +6838,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-10-27"
+            "weekStart": "2024-10-27"
           },
           {
             "label": "Nov 3",
@@ -7353,7 +6848,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-11-03"
+            "weekStart": "2024-11-03"
           },
           {
             "label": "Nov 10",
@@ -7363,7 +6858,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-11-10"
+            "weekStart": "2024-11-10"
           },
           {
             "label": "Nov 17",
@@ -7373,7 +6868,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-11-17"
+            "weekStart": "2024-11-17"
           },
           {
             "label": "Nov 24",
@@ -7383,7 +6878,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-11-24"
+            "weekStart": "2024-11-24"
           },
           {
             "label": "Dec 1",
@@ -7393,7 +6888,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-12-01"
+            "weekStart": "2024-12-01"
           },
           {
             "label": "Dec 8",
@@ -7403,7 +6898,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-12-08"
+            "weekStart": "2024-12-08"
           },
           {
             "label": "Dec 15",
@@ -7413,7 +6908,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-12-15"
+            "weekStart": "2024-12-15"
           },
           {
             "label": "Dec 22",
@@ -7423,7 +6918,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-12-22"
+            "weekStart": "2024-12-22"
           },
           {
             "label": "Dec 29",
@@ -7433,7 +6928,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-12-29"
+            "weekStart": "2024-12-29"
           },
           {
             "label": "Jan 5",
@@ -7443,7 +6938,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-05"
+            "weekStart": "2025-01-05"
           },
           {
             "label": "Jan 12",
@@ -7453,7 +6948,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-12"
+            "weekStart": "2025-01-12"
           },
           {
             "label": "Jan 19",
@@ -7463,7 +6958,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-19"
+            "weekStart": "2025-01-19"
           },
           {
             "label": "Jan 26",
@@ -7473,7 +6968,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-26"
+            "weekStart": "2025-01-26"
           },
           {
             "label": "Feb 2",
@@ -7483,7 +6978,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-02-02"
+            "weekStart": "2025-02-02"
           },
           {
             "label": "Feb 9",
@@ -7493,7 +6988,7 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-02-09"
+            "weekStart": "2025-02-09"
           },
           {
             "label": "Feb 16",
@@ -7503,17 +6998,17 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-02-16"
+            "weekStart": "2025-02-16"
           },
           {
             "label": "Feb 23",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
-            "sessions": 1,
-            "sets": 2,
-            "volume": 1475,
-            "weekStart": "2026-02-23"
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-02-23"
           },
           {
             "label": "Mar 2",
@@ -7523,27 +7018,547 @@
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-03-02"
+            "weekStart": "2025-03-02"
           },
           {
             "label": "Mar 9",
-            "miles": 6.2,
-            "runSeconds": 3300,
-            "runs": 1,
-            "sessions": 1,
-            "sets": 4,
-            "volume": 3620,
-            "weekStart": "2026-03-09"
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-03-09"
           },
           {
             "label": "Mar 16",
-            "miles": 5.7,
-            "runSeconds": 2790,
-            "runs": 2,
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-03-16"
+          },
+          {
+            "label": "Mar 23",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-03-23"
+          },
+          {
+            "label": "Mar 30",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-03-30"
+          },
+          {
+            "label": "Apr 6",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-04-06"
+          },
+          {
+            "label": "Apr 13",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-04-13"
+          },
+          {
+            "label": "Apr 20",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-04-20"
+          },
+          {
+            "label": "Apr 27",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-04-27"
+          },
+          {
+            "label": "May 4",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-05-04"
+          },
+          {
+            "label": "May 11",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-05-11"
+          },
+          {
+            "label": "May 18",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-05-18"
+          },
+          {
+            "label": "May 25",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-05-25"
+          },
+          {
+            "label": "Jun 1",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-06-01"
+          },
+          {
+            "label": "Jun 8",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-06-08"
+          },
+          {
+            "label": "Jun 15",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-06-15"
+          },
+          {
+            "label": "Jun 22",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-06-22"
+          },
+          {
+            "label": "Jun 29",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-06-29"
+          },
+          {
+            "label": "Jul 6",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-07-06"
+          },
+          {
+            "label": "Jul 13",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-07-13"
+          },
+          {
+            "label": "Jul 20",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-07-20"
+          },
+          {
+            "label": "Jul 27",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-07-27"
+          },
+          {
+            "label": "Aug 3",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-08-03"
+          },
+          {
+            "label": "Aug 10",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-08-10"
+          },
+          {
+            "label": "Aug 17",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-08-17"
+          },
+          {
+            "label": "Aug 24",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-08-24"
+          },
+          {
+            "label": "Aug 31",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-08-31"
+          },
+          {
+            "label": "Sep 7",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-09-07"
+          },
+          {
+            "label": "Sep 14",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-09-14"
+          },
+          {
+            "label": "Sep 21",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-09-21"
+          },
+          {
+            "label": "Sep 28",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-09-28"
+          },
+          {
+            "label": "Oct 5",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-10-05"
+          },
+          {
+            "label": "Oct 12",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-10-12"
+          },
+          {
+            "label": "Oct 19",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-10-19"
+          },
+          {
+            "label": "Oct 26",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-10-26"
+          },
+          {
+            "label": "Nov 2",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-11-02"
+          },
+          {
+            "label": "Nov 9",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-11-09"
+          },
+          {
+            "label": "Nov 16",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-11-16"
+          },
+          {
+            "label": "Nov 23",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-11-23"
+          },
+          {
+            "label": "Nov 30",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-11-30"
+          },
+          {
+            "label": "Dec 7",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-12-07"
+          },
+          {
+            "label": "Dec 14",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-12-14"
+          },
+          {
+            "label": "Dec 21",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-12-21"
+          },
+          {
+            "label": "Dec 28",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2025-12-28"
+          },
+          {
+            "label": "Jan 4",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2026-01-04"
+          },
+          {
+            "label": "Jan 11",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2026-01-11"
+          },
+          {
+            "label": "Jan 18",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2026-01-18"
+          },
+          {
+            "label": "Jan 25",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2026-01-25"
+          },
+          {
+            "label": "Feb 1",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2026-02-01"
+          },
+          {
+            "label": "Feb 8",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2026-02-08"
+          },
+          {
+            "label": "Feb 15",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2026-02-15"
+          },
+          {
+            "label": "Feb 22",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 1,
+            "sets": 2,
+            "volume": 1475,
+            "weekStart": "2026-02-22"
+          },
+          {
+            "label": "Mar 1",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 0,
+            "sets": 0,
+            "volume": 0,
+            "weekStart": "2026-03-01"
+          },
+          {
+            "label": "Mar 8",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
+            "sessions": 1,
+            "sets": 4,
+            "volume": 3620,
+            "weekStart": "2026-03-08"
+          },
+          {
+            "label": "Mar 15",
+            "miles": 11.9,
+            "runSeconds": 6090,
+            "runs": 3,
             "sessions": 3,
             "sets": 8,
             "volume": 5700,
-            "weekStart": "2026-03-16"
+            "weekStart": "2026-03-15"
           }
         ]
       }
@@ -7554,6 +7569,11 @@
       "status": 200,
       "body": {
         "days": [
+          {
+            "date": "2025-12-28",
+            "lifts": 0,
+            "runs": 0
+          },
           {
             "date": "2025-12-29",
             "lifts": 0,
@@ -7956,8 +7976,8 @@
           }
         ],
         "lastWeek": {
-          "miles": 6.2,
-          "runs": 1,
+          "miles": 0,
+          "runs": 0,
           "sessions": 1,
           "volume": 3620
         },
@@ -7986,7 +8006,7 @@
         ],
         "range": {
           "end": "2026-03-18",
-          "start": "2025-12-29",
+          "start": "2025-12-28",
           "weeks": 12
         },
         "streak": {
@@ -7994,8 +8014,8 @@
           "longest": 4
         },
         "thisWeek": {
-          "miles": 5.7,
-          "runs": 2,
+          "miles": 11.9,
+          "runs": 3,
           "sessions": 3,
           "volume": 5700
         },
@@ -8035,124 +8055,124 @@
         ],
         "weeks": [
           {
-            "label": "Dec 29",
+            "label": "Dec 28",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2025-12-29"
+            "weekStart": "2025-12-28"
           },
           {
-            "label": "Jan 5",
+            "label": "Jan 4",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-05"
+            "weekStart": "2026-01-04"
           },
           {
-            "label": "Jan 12",
+            "label": "Jan 11",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-12"
+            "weekStart": "2026-01-11"
           },
           {
-            "label": "Jan 19",
+            "label": "Jan 18",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-19"
+            "weekStart": "2026-01-18"
           },
           {
-            "label": "Jan 26",
+            "label": "Jan 25",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-01-26"
+            "weekStart": "2026-01-25"
           },
           {
-            "label": "Feb 2",
+            "label": "Feb 1",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-02-02"
+            "weekStart": "2026-02-01"
           },
           {
-            "label": "Feb 9",
+            "label": "Feb 8",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-02-09"
+            "weekStart": "2026-02-08"
           },
           {
-            "label": "Feb 16",
+            "label": "Feb 15",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-02-16"
+            "weekStart": "2026-02-15"
           },
           {
-            "label": "Feb 23",
+            "label": "Feb 22",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 1,
             "sets": 2,
             "volume": 1475,
-            "weekStart": "2026-02-23"
+            "weekStart": "2026-02-22"
           },
           {
-            "label": "Mar 2",
+            "label": "Mar 1",
             "miles": 0,
             "runSeconds": 0,
             "runs": 0,
             "sessions": 0,
             "sets": 0,
             "volume": 0,
-            "weekStart": "2026-03-02"
+            "weekStart": "2026-03-01"
           },
           {
-            "label": "Mar 9",
-            "miles": 6.2,
-            "runSeconds": 3300,
-            "runs": 1,
+            "label": "Mar 8",
+            "miles": 0,
+            "runSeconds": 0,
+            "runs": 0,
             "sessions": 1,
             "sets": 4,
             "volume": 3620,
-            "weekStart": "2026-03-09"
+            "weekStart": "2026-03-08"
           },
           {
-            "label": "Mar 16",
-            "miles": 5.7,
-            "runSeconds": 2790,
-            "runs": 2,
+            "label": "Mar 15",
+            "miles": 11.9,
+            "runSeconds": 6090,
+            "runs": 3,
             "sessions": 3,
             "sets": 8,
             "volume": 5700,
-            "weekStart": "2026-03-16"
+            "weekStart": "2026-03-15"
           }
         ]
       }

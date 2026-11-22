@@ -68,3 +68,4 @@ ehthumbs.db
 *.bson
 CLAUDE.md
 .wrangler/
+.dev.vars*

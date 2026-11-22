@@ -11,7 +11,7 @@
 // A run on converted code may answer `allow.status` (with `allow.error`) instead, and nothing else.
 //
 // Every date is a fixed `yyyy-MM-dd` string and every stats step passes `today=2026-03-18` (a
-// Wednesday; its week starts Monday 2026-03-16), so the transcript does not depend on the day it is
+// Wednesday; its week starts Sunday 2026-03-15), so the transcript does not depend on the day it is
 // recorded. Lists the routes sort with a tie-breaker that a timestamp settles (logs and runs by
 // `date` desc, `createdAt` desc; workouts by `order`, `createdAt`) are checked by the runner, which
 // also waits a few milliseconds after each step so no two documents share a `createdAt`.

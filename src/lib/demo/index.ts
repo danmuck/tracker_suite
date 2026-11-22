@@ -1,7 +1,7 @@
 // Sample data loading and first-visit seeding for the demo build.
 // Pure: only touches the Store and StorageLike it is given.
 
-import type { StorageLike } from "@/lib/data/browser-store";
+import type { BrowserStore, StorageLike } from "@/lib/data/browser-store";
 import { addDays, format } from "date-fns";
 import type { BaseDoc, Store } from "@/lib/data/store";
 import type { LinkGroup } from "@/types/links/link-group";
@@ -195,6 +195,15 @@ async function loadFigure(store: Store, today: Date): Promise<void> {
     if (!item) throw new Error(`Loading the Figure sample failed: no shopping item "${name}"`);
     await request("PUT", `/api/figure/shopping-items/${item._id}`, { checked: true });
   }
+}
+
+/**
+ * Deletes every record in browser storage and keeps it empty: the seeded marker is set again so
+ * the demo's first-visit seed does not refill it on the next load. `loadSampleData` restores it.
+ */
+export function clearBrowserData(store: BrowserStore, storage: StorageLike): void {
+  store.clear(); // also removes SEEDED_KEY, which lives under the same prefix
+  storage.setItem(SEEDED_KEY, "1");
 }
 
 export async function ensureDemoSeed(store: Store, storage: StorageLike): Promise<boolean> {
