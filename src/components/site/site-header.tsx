@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LayoutDashboard } from "lucide-react";
-import { Wordmark } from "@/components/brand/wordmark";
+import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 
 const anchors = [
@@ -14,7 +14,7 @@ export function SiteHeader() {
     <header className="bg-background/80 sticky top-0 z-40 border-b backdrop-blur">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-6">
         <Link href="/" aria-label="Home">
-          <Wordmark className="text-xl" />
+          <Logo />
         </Link>
         <nav className="hidden items-center gap-5 sm:flex">
           {anchors.map((a) => (

@@ -8,7 +8,7 @@ export function Hero() {
       <p className="text-muted-foreground font-mono text-xs tracking-widest uppercase">
         {site.role}
       </p>
-      <h1 className="mt-4 text-7xl leading-none sm:text-8xl lg:text-9xl">
+      <h1 className="mt-4 text-6xl leading-none sm:text-7xl lg:text-8xl">
         <Wordmark />
       </h1>
       <p className="text-muted-foreground mt-6 max-w-2xl text-lg">{site.intro}</p>

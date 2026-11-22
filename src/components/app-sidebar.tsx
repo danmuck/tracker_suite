@@ -24,7 +24,7 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { Wordmark } from "@/components/brand/wordmark";
+import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LinksNavItems } from "@/components/links/links-nav-items";
 import { availableModules, globalNavItems } from "@/lib/modules";
@@ -42,11 +42,7 @@ export function AppSidebar() {
           aria-label="Home"
           className="flex h-8 items-center group-data-[collapsible=icon]:justify-center"
         >
-          <Wordmark className="text-xl whitespace-nowrap group-data-[collapsible=icon]:hidden" />
-          <Wordmark
-            variant="mark"
-            className="hidden text-base group-data-[collapsible=icon]:inline"
-          />
+          <Logo />
         </Link>
       </SidebarHeader>
 

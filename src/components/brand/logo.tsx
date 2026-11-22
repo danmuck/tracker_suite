@@ -1,0 +1,28 @@
+import { cn } from "@/lib/utils";
+import { site } from "@/lib/site";
+
+/** The "dm." tile: the same mark as the browser tab icon, in the theme's colors */
+export function Logo({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 32 32"
+      role="img"
+      aria-label={site.title}
+      className={cn("text-foreground size-8 shrink-0", className)}
+    >
+      <rect width="32" height="32" rx="7" fill="currentColor" />
+      <text
+        x="14"
+        y="21.5"
+        textAnchor="middle"
+        fontWeight={900}
+        fontSize={15}
+        letterSpacing={-1}
+        className="fill-background"
+      >
+        {site.mark}
+      </text>
+      <circle cx="26.8" cy="20.1" r="1.4" className="fill-brand" />
+    </svg>
+  );
+}
