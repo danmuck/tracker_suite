@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# dan muck.
 
-## Getting Started
+My personal site and the productivity app I use every day, in one Next.js project. The front page is a landing page with the app's dashboard embedded in it. The app has five modules: Finance, Figure (fitness and diet), Future (apartment tracker), Projects and Links.
 
-First, run the development server:
+## Two ways to run it
+
+| | Local server | Public site |
+|---|---|---|
+| Data | MongoDB ("My data"), or browser storage if you switch | Sample data stored in the visitor's browser |
+| Build | `npm run dev` / `npm run build` | `npm run build:static` |
+| Server | Next.js with API routes | Static files only, no server and no database |
+
+Both run the same pages and the same module code. The header's data switch chooses between "My data" and "Browser data" on the local server; the public build is locked to browser data.
+
+## Local setup
+
+You need Node.js and a local MongoDB.
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Create `.env.local`:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+MONGODB_URI=mongodb://localhost:27017/tracker
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Then:
 
-## Learn More
+```bash
+npm run dev    # http://localhost:3030
+npm test       # unit tests for the pure library code
+npm run lint
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Publishing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run build:static     # writes the static site to out/
+npm run preview:static   # serves out/ on http://localhost:8788
+npm run deploy:static    # checks, builds and deploys
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+The full steps, including one-time hosting setup, are in [docs/deploy-static.md](docs/deploy-static.md).
 
-## Deploy on Vercel
+## Where things live
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app/(site)/`: the landing page at `/`
+- `src/app/(app)/<module>/`: module pages, inside the sidebar shell
+- `src/app/api/`: API routes (local server only)
+- `src/lib/site.ts`: all landing-page copy
+- `src/components/site/`, `src/components/brand/`: landing sections and the wordmark
+- `src/components/dashboard/`, `src/lib/dashboard/`: the module cards on the front page
+- `src/{models,hooks,components,lib,types}/<module>/`: each module's own code
+- `src/lib/data/`: the storage layer shared by MongoDB and browser data
+- `src/lib/modules.ts`: the module registry

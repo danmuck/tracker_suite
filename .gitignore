@@ -67,5 +67,8 @@ ehthumbs.db
 *.dump
 *.bson
 CLAUDE.md
+# written by next dev
+AGENTS.md
+
 .wrangler/
 .dev.vars*
