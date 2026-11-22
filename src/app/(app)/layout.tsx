@@ -5,7 +5,7 @@ import { ModuleGate } from "@/components/module-gate";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={true} className="min-h-0 flex-1">
       <AppSidebar />
       <SidebarInset className="min-w-0">
         <AppHeader />

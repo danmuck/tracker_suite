@@ -135,9 +135,11 @@
     background-color: var(--brand);
     color: var(--brand-foreground);
   }
-  /* Anchor links land below the sticky site header */
+  /* Anchor links land below the sticky nav bar (h-14 plus its border). Keep this no taller than the bar:
+     the router treats a page whose top sits above this line as out of view and scrolls
+     into it, which lands on a later section instead of the top */
   html {
-    scroll-padding-top: 5rem;
+    scroll-padding-top: calc(3.5rem + 1px);
   }
   @media (prefers-reduced-motion: no-preference) {
     html {

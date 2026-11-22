@@ -148,7 +148,7 @@ export const site = {
 	name: "dan muck",
 	mark: "dm",
 	title: "dan muck.",
-	role: "Systems & Network Programming",
+	role: "Systems Programming & Network Architecture",
 	description:
 		"Software engineer with a focus on distributed systems, networking, and developer tooling.",
 	intro:

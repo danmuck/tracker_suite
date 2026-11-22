@@ -15,7 +15,6 @@ import {
   SidebarFooter,
   SidebarGroup,
   SidebarGroupLabel,
-  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -25,7 +24,6 @@ import {
   SidebarRail,
   SidebarSeparator,
 } from "@/components/ui/sidebar";
-import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LinksNavItems } from "@/components/links/links-nav-items";
 import { availableModules, globalNavItems } from "@/lib/modules";
@@ -45,17 +43,7 @@ export function AppSidebar() {
   }, [activeModuleId, pathname]);
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4 group-data-[collapsible=icon]:px-0">
-        <Link
-          href="/"
-          aria-label="Home"
-          className="flex h-8 items-center group-data-[collapsible=icon]:justify-center"
-        >
-          <Logo />
-        </Link>
-      </SidebarHeader>
-
+    <Sidebar collapsible="icon" className="top-14 h-[calc(100svh-3.5rem)]">
       <SidebarContent>
         {/* Global nav */}
         <SidebarGroup>

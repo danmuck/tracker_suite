@@ -3,7 +3,7 @@ import { Wordmark } from "@/components/brand/wordmark";
 
 export default function NotFound() {
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-4 px-6 text-center">
+    <main className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
       <Link href="/" aria-label="Home">
         <Wordmark className="text-2xl" />
       </Link>

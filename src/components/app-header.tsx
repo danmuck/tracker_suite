@@ -3,7 +3,6 @@
 import { usePathname } from "next/navigation";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { DataSourceSwitch } from "@/components/data-source-switch";
 
 const segmentLabels: Record<string, string> = {
@@ -32,7 +31,6 @@ export function AppHeader() {
       <span className="font-medium text-sm">{label}</span>
       <div className="ml-auto flex items-center gap-1">
         <DataSourceSwitch />
-        <ThemeToggle />
       </div>
     </header>
   );
