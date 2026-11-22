@@ -84,9 +84,9 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
-  /* The yellow of the wordmark dot; the same in light and dark */
-  --brand: oklch(0.83 0.15 104);
-  --brand-foreground: oklch(0.22 0.03 104);
+  /* The dark red of the wordmark dot; the same in light and dark */
+  --brand: oklch(0.39 0.15 25);
+  --brand-foreground: oklch(0.97 0.01 25);
 }
 
 .dark {
