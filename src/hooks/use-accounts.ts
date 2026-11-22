@@ -3,12 +3,11 @@
 import useSWR from "swr";
 import type { Account, AccountFormData } from "@/types/account";
 import { dollarsToCents } from "@/lib/formatters";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { fetcher } from "@/lib/fetcher";
 
 export function useAccounts(type?: string) {
   const params = type ? `?type=${type}` : "";
-  const { data, error, isLoading, mutate } = useSWR(`/api/accounts${params}`, fetcher);
+  const { data, error, isLoading, mutate } = useSWR(`/api/finance/accounts${params}`, fetcher);
   return {
     accounts: (data || []) as Account[],
     isLoading,
@@ -19,7 +18,7 @@ export function useAccounts(type?: string) {
 
 export function useAccount(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
-    id ? `/api/accounts/${id}` : null,
+    id ? `/api/finance/accounts/${id}` : null,
     fetcher
   );
   return {
@@ -31,7 +30,7 @@ export function useAccount(id: string) {
 }
 
 export async function createAccount(data: AccountFormData) {
-  const res = await fetch("/api/accounts", {
+  const res = await fetch("/api/finance/accounts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -48,7 +47,7 @@ export async function createAccount(data: AccountFormData) {
 }
 
 export async function updateAccount(id: string, data: Partial<AccountFormData>) {
-  const res = await fetch(`/api/accounts/${id}`, {
+  const res = await fetch(`/api/finance/accounts/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -65,7 +64,7 @@ export async function updateAccount(id: string, data: Partial<AccountFormData>) 
 }
 
 export async function deleteAccount(id: string) {
-  const res = await fetch(`/api/accounts/${id}`, { method: "DELETE" });
+  const res = await fetch(`/api/finance/accounts/${id}`, { method: "DELETE" });
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.error || "Failed to delete account");

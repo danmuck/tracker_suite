@@ -23,6 +23,7 @@ import { useSummary } from "@/hooks/use-summary";
 import { useProjections } from "@/hooks/use-projections";
 import { useCategories } from "@/hooks/use-categories";
 import { centsToDollars, formatDateShort } from "@/lib/formatters";
+import { netWorth as calcNetWorth } from "@/lib/finance";
 import { cn } from "@/lib/utils";
 
 const summaryChartConfig: ChartConfig = {
@@ -30,7 +31,7 @@ const summaryChartConfig: ChartConfig = {
   expenses: { label: "Expenses", color: "var(--chart-1)" },
 };
 
-export default function DashboardPage() {
+export default function FinanceOverviewPage() {
   const { accounts, isLoading: accountsLoading } = useAccounts();
   const todayEnd = useMemo(() => endOfDay(new Date()).toISOString(), []);
   const { transactions, isLoading: txLoading } = useTransactions({
@@ -48,10 +49,7 @@ export default function DashboardPage() {
   const { projection } = useProjections(today, addDays(today, 30), "daily");
 
   // Net worth: bank balances minus credit card balances and debt
-  const netWorth = accounts.reduce((total, account) => {
-    if (account.type === "bank") return total + account.balance;
-    return total - account.balance;
-  }, 0);
+  const netWorth = calcNetWorth(accounts);
 
   const bankAccounts = accounts.filter((a) => a.type === "bank");
   const creditAccounts = accounts.filter((a) => a.type === "credit_card");
@@ -81,7 +79,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Finance</h1>
         <p className="text-muted-foreground text-sm">
           {format(new Date(), "EEEE, MMMM d, yyyy")}
         </p>
@@ -161,7 +159,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Accounts</h2>
             <Button variant="ghost" size="sm" asChild>
-              <Link href="/accounts">
+              <Link href="/finance/accounts">
                 View all <ArrowRight className="ml-1 h-3.5 w-3.5" />
               </Link>
             </Button>
@@ -290,7 +288,7 @@ export default function DashboardPage() {
                 )}
 
                 <Button variant="outline" size="sm" className="w-full" asChild>
-                  <Link href="/reports">View Reports</Link>
+                  <Link href="/finance/reports">View Reports</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -303,7 +301,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">Recent Transactions</h2>
           <Button variant="ghost" size="sm" asChild>
-            <Link href="/transactions">
+            <Link href="/finance/transactions">
               View all <ArrowRight className="ml-1 h-3.5 w-3.5" />
             </Link>
           </Button>

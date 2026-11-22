@@ -2,73 +2,80 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  Wallet,
-  ArrowRightLeft,
-  TrendingUp,
-  BarChart3,
-} from "lucide-react";
+import { Home } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { ThemeToggle } from "@/components/theme-toggle";
-
-const navItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/accounts", label: "Accounts", icon: Wallet },
-  { href: "/transactions", label: "Transactions", icon: ArrowRightLeft },
-  { href: "/projections", label: "Projections", icon: TrendingUp },
-  { href: "/reports", label: "Reports", icon: BarChart3 },
-];
+import { Wordmark } from "@/components/brand/wordmark";
+import { findNavItem, modules } from "@/config/modules";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const activeHref = findNavItem(pathname)?.href;
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="p-4 group-data-[collapsible=icon]:px-0">
-        <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground font-bold text-sm">
-            F
-          </div>
-          <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">
-            FinLog
-          </span>
-        </div>
+      <SidebarHeader className="h-14 justify-center border-b px-4 group-data-[collapsible=icon]:px-0">
+        <Link
+          href="/"
+          aria-label="dan muck, home"
+          className="flex items-center group-data-[collapsible=icon]:justify-center"
+        >
+          <Wordmark className="text-xl group-data-[collapsible=icon]:hidden" />
+          <Wordmark
+            variant="mark"
+            className="hidden text-base group-data-[collapsible=icon]:inline"
+          />
+        </Link>
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarMenu>
-          {navItems.map(({ href, label, icon: Icon }) => {
-            const isActive =
-              href === "/" ? pathname === "/" : pathname.startsWith(href);
-            return (
-              <SidebarMenuItem key={href}>
-                <SidebarMenuButton asChild isActive={isActive} tooltip={label}>
-                  <Link href={href}>
-                    <Icon className="h-4 w-4" />
-                    <span>{label}</span>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild tooltip="Home">
+                  <Link href="/">
+                    <Home className="h-4 w-4" />
+                    <span>Home</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
-      </SidebarContent>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
 
-      <SidebarFooter className="p-2">
-        <div className="flex items-center justify-center group-data-[collapsible=icon]:justify-center">
-          <ThemeToggle />
-        </div>
-      </SidebarFooter>
+        {modules.map((module) => (
+          <SidebarGroup key={module.id}>
+            <SidebarGroupLabel className="font-mono text-[11px] uppercase tracking-widest">
+              {module.name}
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {module.nav.map(({ href, label, icon: Icon }) => (
+                  <SidebarMenuItem key={href}>
+                    <SidebarMenuButton asChild isActive={href === activeHref} tooltip={label}>
+                      <Link href={href}>
+                        <Icon className="h-4 w-4" />
+                        <span>{label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
 
       <SidebarRail />
     </Sidebar>

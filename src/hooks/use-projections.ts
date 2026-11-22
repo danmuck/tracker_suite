@@ -3,8 +3,7 @@
 import useSWR from "swr";
 import type { ProjectionResult, Granularity } from "@/types/projection";
 import { formatDateISO } from "@/lib/formatters";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { fetcher } from "@/lib/fetcher";
 
 export function useProjections(
   startDate: Date,
@@ -20,7 +19,7 @@ export function useProjections(
   if (accountId) params.set("accountId", accountId);
 
   const { data, error, isLoading } = useSWR(
-    `/api/projections?${params.toString()}`,
+    `/api/finance/projections?${params.toString()}`,
     fetcher
   );
 

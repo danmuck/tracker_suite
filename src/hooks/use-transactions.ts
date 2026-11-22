@@ -3,8 +3,7 @@
 import useSWR from "swr";
 import type { Transaction, TransactionFormData } from "@/types/transaction";
 import type { TransactionFilters, PaginatedResponse } from "@/types/api";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { fetcher } from "@/lib/fetcher";
 
 export function useTransactions(filters: TransactionFilters = {}) {
   const params = new URLSearchParams();
@@ -14,7 +13,7 @@ export function useTransactions(filters: TransactionFilters = {}) {
     }
   });
   const queryString = params.toString();
-  const url = `/api/transactions${queryString ? `?${queryString}` : ""}`;
+  const url = `/api/finance/transactions${queryString ? `?${queryString}` : ""}`;
 
   const { data, error, isLoading, mutate } = useSWR(url, fetcher);
 
@@ -29,7 +28,7 @@ export function useTransactions(filters: TransactionFilters = {}) {
 
 export function useTransaction(id: string) {
   const { data, error, isLoading, mutate } = useSWR(
-    id ? `/api/transactions/${id}` : null,
+    id ? `/api/finance/transactions/${id}` : null,
     fetcher
   );
   return {
@@ -41,7 +40,7 @@ export function useTransaction(id: string) {
 }
 
 export async function createTransaction(data: TransactionFormData) {
-  const res = await fetch("/api/transactions", {
+  const res = await fetch("/api/finance/transactions", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -54,7 +53,7 @@ export async function createTransaction(data: TransactionFormData) {
 }
 
 export async function updateTransaction(id: string, data: Partial<TransactionFormData>) {
-  const res = await fetch(`/api/transactions/${id}`, {
+  const res = await fetch(`/api/finance/transactions/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -67,7 +66,7 @@ export async function updateTransaction(id: string, data: Partial<TransactionFor
 }
 
 export async function deleteTransaction(id: string) {
-  const res = await fetch(`/api/transactions/${id}`, { method: "DELETE" });
+  const res = await fetch(`/api/finance/transactions/${id}`, { method: "DELETE" });
   if (!res.ok) {
     const err = await res.json();
     throw new Error(err.error || "Failed to delete transaction");

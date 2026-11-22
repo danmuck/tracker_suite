@@ -2,11 +2,10 @@
 
 import useSWR from "swr";
 import type { Category } from "@/types/category";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
+import { fetcher } from "@/lib/fetcher";
 
 export function useCategories() {
-  const { data, error, isLoading, mutate } = useSWR("/api/categories", fetcher);
+  const { data, error, isLoading, mutate } = useSWR("/api/finance/categories", fetcher);
   return {
     categories: (data?.data || []) as Category[],
     isLoading,
