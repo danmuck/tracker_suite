@@ -164,7 +164,7 @@ export const site = {
 		"P2P & Distributed Systems",
 		"Cloud Infrastructure",
 		"Terminal Tooling",
-		"Clean Frontends",
+		"System Architecture",
 	],
 	education,
 	links,
