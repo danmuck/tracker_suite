@@ -52,7 +52,7 @@ export function SiteHeader() {
 					{inDemos ? null : (
 						<Link
 							href="/dashboard"
-							className="hover:bg-accent inline-flex items-center gap-1.5 rounded-full border border-brand px-3 py-1.5 text-sm font-medium transition-colors"
+							className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm transition-colors"
 						>
 							<LayoutDashboard className="size-4" aria-hidden />
 							Demos
