@@ -84,6 +84,13 @@ const education: Education[] = [
 
 const projects: SiteProject[] = [
 	{
+		name: "tracker_suite",
+		description:
+			"The productivity app behind this site: finance, fitness, apartment hunting, projects and links, running on MongoDB or entirely in the browser.",
+		stack: ["Next.js", "TypeScript", "React", "MongoDB", "Tailwind"],
+		href: "https://github.com/danmuck/tracker_suite",
+	},
+	{
 		name: "edgectl",
 		description:
 			"A control plane for distributed service execution across heterogeneous nodes.",
