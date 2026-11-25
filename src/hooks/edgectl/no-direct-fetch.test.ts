@@ -13,7 +13,7 @@ test("edgectl client code reaches data only through the request helper", () => {
   const offenders = all.flatMap((f) => findDirectAccess(readFileSync(f, "utf8")).map((line) => `${f}:${line}`));
   assert.deepEqual(offenders, []);
   const hooks = files(roots[0]).filter((f) => /use-[\w-]+\.ts$/.test(f));
-  assert.equal(hooks.length, 6);
+  assert.equal(hooks.length, 12);
   for (const hook of hooks) {
     const source = readFileSync(hook, "utf8");
     assert.match(source, /from "@\/hooks\/request"/, hook);

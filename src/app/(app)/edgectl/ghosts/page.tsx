@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Ghost as GhostIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,16 +9,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { EmptyState } from "@/components/empty-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
+import { DeployGhostDialog } from "@/components/edgectl/deploy-dialog";
 import { AddGhostDialog, AttachGhostDialog } from "@/components/edgectl/ghost-dialogs";
 import { RunCommandButton } from "@/components/edgectl/run-command-dialog";
 import { ConnectedBadge } from "@/components/edgectl/state-badge";
 import { useGhosts } from "@/hooks/edgectl/use-ghosts";
 import { formatTime } from "@/lib/edgectl/format";
+import { ghostHref } from "@/lib/edgectl/paths";
 
 export default function EdgectlGhostsPage() {
   const { ghosts, hasData, isLoading, isError } = useGhosts();
   const [addOpen, setAddOpen] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
+  const [deployOpen, setDeployOpen] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -26,6 +30,9 @@ export default function EdgectlGhostsPage() {
         description="Execution nodes registered with Mirage"
         action={
           <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setDeployOpen(true)}>
+              Deploy
+            </Button>
             <Button variant="outline" onClick={() => setAttachOpen(true)}>
               Attach
             </Button>
@@ -65,7 +72,11 @@ export default function EdgectlGhostsPage() {
           <TableBody>
             {ghosts.map((ghost) => (
               <TableRow key={ghost.ghost_id}>
-                <TableCell className="font-mono text-sm font-medium">{ghost.ghost_id}</TableCell>
+                <TableCell className="font-mono text-sm font-medium">
+                  <Link href={ghostHref(ghost.ghost_id)} className="hover:underline">
+                    {ghost.ghost_id}
+                  </Link>
+                </TableCell>
                 <TableCell>
                   <ConnectedBadge connected={ghost.connected} />
                 </TableCell>
@@ -96,6 +107,7 @@ export default function EdgectlGhostsPage() {
 
       <AddGhostDialog open={addOpen} onOpenChange={setAddOpen} />
       <AttachGhostDialog open={attachOpen} onOpenChange={setAttachOpen} />
+      <DeployGhostDialog open={deployOpen} onOpenChange={setDeployOpen} />
     </div>
   );
 }

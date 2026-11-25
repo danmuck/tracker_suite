@@ -1,23 +1,62 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ListChecks } from "lucide-react";
+import { useSWRConfig } from "swr";
+import { toast } from "sonner";
+import { ListChecks, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/empty-state";
 import { LoadingState } from "@/components/loading-state";
 import { PageHeader } from "@/components/page-header";
 import { RunCommandButton } from "@/components/edgectl/run-command-dialog";
 import { StateBadge } from "@/components/edgectl/state-badge";
-import { useIntents } from "@/hooks/edgectl/use-intents";
+import { reconcileAll, useIntents } from "@/hooks/edgectl/use-intents";
+import { isEdgectlKey } from "@/hooks/edgectl/use-mirage";
 import { formatTime, targetLabel } from "@/lib/edgectl/format";
 import { intentHref } from "@/lib/edgectl/paths";
 
 export default function EdgectlIntentsPage() {
   const { intents, hasData, isLoading, isError } = useIntents();
+  const { mutate } = useSWRConfig();
+  const [reconciling, setReconciling] = useState(false);
+  const pending = intents.reduce((sum, intent) => sum + intent.pending_count, 0);
+
+  async function handleReconcileAll() {
+    if (reconciling) return;
+    setReconciling(true);
+    try {
+      const { reports } = await reconcileAll();
+      toast.success(`Reconciled: ${reports.length} report${reports.length === 1 ? "" : "s"}`);
+    } catch (error) {
+      toast.error(error instanceof Error && error.message ? error.message : "Reconcile all failed");
+    } finally {
+      mutate(isEdgectlKey);
+      setReconciling(false);
+    }
+  }
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Intents" description="Every issue Mirage holds, newest first" action={<RunCommandButton />} />
+      <PageHeader
+        title="Intents"
+        description="Every issue Mirage holds, newest first"
+        action={
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleReconcileAll}
+              disabled={reconciling || intents.length === 0}
+              title={`Mirage runs one pending command of every intent (${pending} pending)`}
+            >
+              {reconciling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Reconcile all
+            </Button>
+            <RunCommandButton />
+          </div>
+        }
+      />
       {!hasData ? (
         isLoading ? (
           <LoadingState variant="table" />

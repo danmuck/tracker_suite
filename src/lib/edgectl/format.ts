@@ -20,9 +20,16 @@ export function stateTone(state: string): Tone {
     case "success":
     case "complete":
     case "ok":
+    case "succeeded":
+    case "installed":
+    case "allow":
+    case "ready":
+    case "seeded":
       return "good";
     case "failed":
     case "error":
+    case "deny":
+    case "rejected":
       return "bad";
     case "":
       return "idle";

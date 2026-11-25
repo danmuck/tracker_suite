@@ -77,3 +77,25 @@
 
 - [ ] `npm test`, `npm run lint`, `npm run build`, `npm run build:static`.
 - [ ] Browser pass against a lab, as listed in the spec's Verification section, including stopping the lab.
+
+## Operator parity (2026-11-25)
+
+Design: "Operator parity (2026-11-25)" in the spec. Nothing is committed until the user says so.
+
+1. Types and validators for the amendment's shapes (`routes`, `services`, deploy, dependency
+   proposal, Ghost status/events/verification, activity), `targetName`, `seedIds`. Tests.
+2. Server: `client.ts` second identity; `edgecert.ts` (config, `execFile`, the five commands);
+   `approvals.ts` (prepared payloads, expiry); `local-ghost.ts` (which Ghost is local). Tests with
+   a stub tool, never the real keys.
+3. Routes under `src/app/api/edgectl/`: `capabilities`, `routing`, `services`, `reconcile`,
+   `ghosts/deploy-targets`, `ghosts/deploy`, `ghosts/spawn-local` (now issues the certificate
+   first), `ghosts/[ghostId]/{status,events,verification}`, `activity`,
+   `dependencies/proposals` (GET, POST), `dependencies/intent` (preview),
+   `dependencies/proposals/[proposalId]` (GET), `.../approval` (prepare), `.../approve`, `.../execute`.
+4. Hooks: `use-capabilities`, `use-routing`, `use-deploy`, `use-ghost-console`, `use-activity`,
+   `use-proposals`.
+5. UI: Routing page; Ghost page; Ghosts page (Add, Deploy, links); Intents "Reconcile all";
+   Dependencies list and detail with propose, approve (digest confirmation) and execute (its own
+   confirmation) dialogs; Activity tabs. Nav: Routing, Dependencies.
+6. `npm test`, `npm run lint`, `npm run build`, `npm run build:static` (module still absent).
+7. Browser check against a lab that has the new routes: everything except execute.

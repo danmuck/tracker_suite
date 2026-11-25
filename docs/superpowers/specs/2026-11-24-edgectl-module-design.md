@@ -66,3 +66,72 @@ Builder's calls:
 
 ## Verification
 `npm test`, `npm run lint` (no new findings), `npm run build`, `npm run build:static` (module absent from navigation). Then, with a lab running and the scratch server on port 3031 with the four `EDGECTL_*` variables: Overview shows `mirage.lab`; a `seed.kv` put then get on `ghost.local` shows its output; the report appears in Activity; stopping the lab gives "Mirage unreachable".
+
+## Operator parity (2026-11-25)
+
+Goal: everything the operator can do in the lab terminal (`client-tm`) can be done from this module.
+Mirage's side is the 2026-11-25 amendment of `api_v1.toml` (tables marked `amendment_2026_11_25`)
+and the "Operator parity amendment" section of `docs/progress/api_v1_gui.md` in the edgectl repo.
+
+### What changes for the operator
+
+| Page | New |
+|---|---|
+| Ghosts | "Add a Ghost" works end to end; "Deploy" for configured remote Ghosts; each Ghost links to its own page |
+| Ghost (`/edgectl/ghost?id=`) | Status, recent events, verification records, and Run a command |
+| Routing (`/edgectl/routing`) | Routing table and available services |
+| Intents | "Reconcile all" |
+| Dependencies (`/edgectl/dependencies`, `/edgectl/dependency?id=`) | List, propose, approve, execute |
+| Activity | Tabs: Reports, Audit, Custody |
+
+### Decisions fixed by the edgectl side
+
+- Mirage never issues certificates and never signs. This app's server does both as operator tooling
+  by running `edgecert` (`execFile` with an argument array, never a shell string). Signing and
+  digests are never reimplemented in TypeScript.
+- A spawned Ghost's certificate id is `<local ghost id>.<target_name>`.
+- Dependency approvals keep the two-operator rule; one person holds both operator identities. The
+  approve call goes out on a connection authenticated as the second operator.
+- Execute really installs software on the Ghost's host. It has its own confirmation and is never
+  called by a test or while verifying.
+
+### Approaches for the approval step
+
+1. **Keep the unsigned payload on this server between "prepare" and "confirm"** (chosen). Prepare
+   runs `edgecert approval`, stores `{ payload, digest }` in memory under the proposal id, and sends
+   the browser only the digest and what to show. Confirm takes the digest the operator saw; the
+   server signs its stored payload with `edgecert sign-approval -digest <stored digest>` only when
+   the two digests are equal. The browser can never substitute a payload.
+2. Round-trip the payload through the browser and re-check the digest. Works, since `sign-approval`
+   refuses a digest mismatch, but sends more than the browser needs and has more ways to go wrong.
+3. Sign in one step. Ruled out: the contract requires showing the content and digest first.
+
+The stored payload is dropped when it is used, when it expires (10 minutes, set by `edgecert`), or
+when this server restarts; the operator then prepares again.
+
+### Server
+
+- Environment, all optional. Each missing group disables only its own feature, with a message:
+  - `EDGECTL_EDGECERT_BIN`: built `edgecert`. Without it: no certificates, no signing.
+  - `EDGECTL_CA_ISSUER_CERT`, `EDGECTL_CA_ISSUER_KEY`, `EDGECTL_CERTS_DIR`: issuing a Ghost
+    certificate ("Add a Ghost"). Proposing uses the operator certificate already configured.
+  - `EDGECTL_APPROVER_CERT`, `EDGECTL_APPROVER_KEY`: the second operator (approving).
+  - `EDGECTL_LOCAL_GHOST_ID`: only when Mirage lists more than one Ghost that could be its local
+    one. `api/v1` does not say which Ghost is local, so it is taken to be the only listed Ghost
+    whose id is not `<another listed id>.<name>`.
+- `GET /api/edgectl/capabilities` says which of these features are usable and why not.
+- `src/lib/edgectl/server/edgecert.ts` runs the tool; `server/client.ts` takes
+  `identity: "approver"` for the one approve call; `server/approvals.ts` holds prepared payloads.
+- `target_name` is `[a-z0-9][a-z0-9.-]*` and the full certificate id at most 63 characters, checked
+  before anything reaches a command line. Ghost and Seed ids passed to `edgecert` are checked the
+  same way.
+- Every new POST starts with `refuseCrossSite`; the host allowlist in `src/proxy.ts` covers all of
+  them. These routes can issue certificates and install software, and the app still has no login.
+- Proposals are read from Mirage without reshaping when they are handed to `edgecert approval`
+  ("exactly as Mirage returned it"); the validated copy is only for display.
+
+### Not built
+
+- Metrics (Mirage has none). The terminal's target lists and config menus (client-side only).
+- Adding a Ghost when Mirage runs on another machine: this server must be able to write into
+  Mirage's certificate directory.

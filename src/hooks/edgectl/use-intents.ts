@@ -31,3 +31,6 @@ export const submitIssue = (issue: Issue) => send<IntentRef>(INTENTS_KEY, "POST"
 
 /** Makes Mirage run one pending command of the intent; answers with its `report` */
 export const reconcileIntent = (intentId: string) => send<Report>(apiPath("intents", intentId, "reconcile"), "POST");
+
+/** Reconcile all: Mirage runs one pending command of every intent; answers with their `report`s */
+export const reconcileAll = () => send<{ reports: Report[] }>(apiPath("reconcile"), "POST");

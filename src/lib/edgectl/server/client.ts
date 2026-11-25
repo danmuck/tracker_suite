@@ -25,7 +25,9 @@ export type MirageErrorKind =
   /** Mirage answered with an error envelope */
   | "api"
   /** Mirage answered with something that is not an api/v1 envelope of the expected shape */
-  | "bad_response";
+  | "bad_response"
+  /** The edgecert tool failed or printed something unexpected (server/edgecert.ts) */
+  | "tool";
 
 export class MirageError extends Error {
   kind: MirageErrorKind;
@@ -80,6 +82,20 @@ export function readConfig(env: Env = process.env): MirageConfig {
   };
 }
 
+/** Who a call is made as. "approver" is the second operator, used only to approve a dependency proposal. */
+export type MirageIdentity = "operator" | "approver";
+
+export const APPROVER_ENV_NAMES = ["EDGECTL_APPROVER_CERT", "EDGECTL_APPROVER_KEY"] as const;
+
+/** Certificate and key paths of the second operator; throws not_configured naming what is missing */
+export function readApproverPaths(env: Env = process.env): { certPath: string; keyPath: string } {
+  const missing = APPROVER_ENV_NAMES.filter((name) => !env[name]?.trim());
+  if (missing.length > 0) {
+    throw new MirageError("not_configured", `Approving is not configured. Not set on the server: ${missing.join(", ")}`);
+  }
+  return { certPath: env.EDGECTL_APPROVER_CERT!.trim(), keyPath: env.EDGECTL_APPROVER_KEY!.trim() };
+}
+
 async function readCredential(name: string, path: string): Promise<Buffer> {
   try {
     return await readFile(path);
@@ -97,6 +113,8 @@ export interface MirageRequestOptions<T> {
   schema?: z.ZodType<T>;
   timeoutMs?: number;
   requestId?: string;
+  /** Whose certificate the connection uses; the operator's when left out */
+  identity?: MirageIdentity;
   env?: Env;
 }
 
@@ -183,9 +201,11 @@ export async function mirageRequest<T = unknown>(
   options: MirageRequestOptions<T> = {},
 ): Promise<T> {
   const config = readConfig(options.env);
+  const asApprover = options.identity === "approver";
+  const who = asApprover ? readApproverPaths(options.env) : config;
   const [cert, key, ca] = await Promise.all([
-    readCredential("EDGECTL_CLIENT_CERT", config.certPath),
-    readCredential("EDGECTL_CLIENT_KEY", config.keyPath),
+    readCredential(asApprover ? "EDGECTL_APPROVER_CERT" : "EDGECTL_CLIENT_CERT", who.certPath),
+    readCredential(asApprover ? "EDGECTL_APPROVER_KEY" : "EDGECTL_CLIENT_KEY", who.keyPath),
     readCredential("EDGECTL_CA", config.caPath),
   ]);
 
@@ -265,11 +285,17 @@ export function failureOf(error: unknown): Failure {
         ? 504
         : error.kind === "bad_response"
           ? 502
-          : error.status >= 400 && error.status <= 599
-            ? error.status
-            : 502;
+          : error.kind === "tool"
+            ? 500
+            : error.status >= 400 && error.status <= 599
+              ? error.status
+              : 502;
   const prefix =
-    error.kind === "not_configured" ? "edgectl is not configured. " : error.kind === "unreachable" ? "Mirage unreachable. " : "";
+    error.kind === "not_configured" && !error.message.includes("not configured")
+      ? "edgectl is not configured. "
+      : error.kind === "unreachable"
+        ? "Mirage unreachable. "
+        : "";
   return {
     status,
     body: {

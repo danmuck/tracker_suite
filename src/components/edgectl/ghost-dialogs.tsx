@@ -15,24 +15,15 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MirageRefusal, NotConfigured, messageOf } from "@/components/edgectl/refusal";
+import { useCapabilities } from "@/hooks/edgectl/use-capabilities";
 import { attachGhost, spawnLocalGhost } from "@/hooks/edgectl/use-ghosts";
+import { targetName } from "@/lib/edgectl/validators";
 import { isEdgectlKey } from "@/hooks/edgectl/use-mirage";
 
 interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}
-
-const messageOf = (error: unknown, fallback: string) => (error instanceof Error && error.message ? error.message : fallback);
-
-/** Mirage's refusal, word for word */
-function MirageRefusal({ message }: { message: string }) {
-  return (
-    <div role="alert" className="rounded-md border border-destructive/50 bg-destructive/5 p-3 text-sm">
-      <p className="font-medium text-destructive">Mirage refused</p>
-      <p className="mt-1 font-mono text-xs break-words">{message}</p>
-    </div>
-  );
 }
 
 function AddGhostForm({ onDone }: { onDone: () => void }) {
@@ -41,10 +32,13 @@ function AddGhostForm({ onDone }: { onDone: () => void }) {
   const [addr, setAddr] = useState("");
   const [busy, setBusy] = useState(false);
   const [refusal, setRefusal] = useState("");
+  const { capabilities } = useCapabilities();
+  const issue = capabilities?.issue;
+  const nameProblem = name.trim() === "" ? "" : (targetName.safeParse(name.trim()).error?.issues[0]?.message ?? "");
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (busy) return;
+    if (busy || nameProblem) return;
     setBusy(true);
     setRefusal("");
     try {
@@ -64,7 +58,22 @@ function AddGhostForm({ onDone }: { onDone: () => void }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
         <Label htmlFor="ghost-name">Name</Label>
-        <Input id="ghost-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="ghost.two" required />
+        <Input
+          id="ghost-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="web1"
+          aria-invalid={!!nameProblem}
+          required
+        />
+        {nameProblem ? (
+          <p className="text-xs text-destructive">{nameProblem}</p>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            The Ghost&apos;s id is Mirage&apos;s local Ghost id, a dot, then this name (for example{" "}
+            <span className="font-mono">ghost.local.{name.trim() || "web1"}</span>).
+          </p>
+        )}
       </div>
       <div className="space-y-2">
         <Label htmlFor="ghost-admin-addr">Admin address</Label>
@@ -76,17 +85,20 @@ function AddGhostForm({ onDone }: { onDone: () => void }) {
           required
         />
       </div>
-      <p className="rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
-        A certificate for the new Ghost must already exist. Only edgectl operator tooling issues certificates (the lab
-        menu&apos;s &quot;Add a Ghost&quot; does both steps), so without one Mirage refuses and its message is shown
-        here.
-      </p>
+      {issue && !issue.enabled ? (
+        <NotConfigured message={issue.message} />
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          This app&apos;s server issues the new Ghost&apos;s certificate with edgecert, then Mirage starts the Ghost on
+          its own machine.
+        </p>
+      )}
       {refusal && <MirageRefusal message={refusal} />}
       <DialogFooter>
         <Button type="button" variant="outline" onClick={onDone}>
           Cancel
         </Button>
-        <Button type="submit" disabled={busy || !name.trim() || !addr.trim()}>
+        <Button type="submit" disabled={busy || !name.trim() || !addr.trim() || !!nameProblem || issue?.enabled === false}>
           {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Add Ghost
         </Button>
@@ -95,14 +107,14 @@ function AddGhostForm({ onDone }: { onDone: () => void }) {
   );
 }
 
-/** Asks Mirage to start a new Ghost on its own machine (spawn-local) */
+/** Issues a certificate for a new Ghost, then asks Mirage to start it on its own machine (spawn-local) */
 export function AddGhostDialog({ open, onOpenChange }: DialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add a Ghost</DialogTitle>
-          <DialogDescription>Mirage starts a new Ghost on its own machine and registers it.</DialogDescription>
+          <DialogDescription>A new Ghost on Mirage&apos;s own machine, under its local Ghost.</DialogDescription>
         </DialogHeader>
         <AddGhostForm onDone={() => onOpenChange(false)} />
       </DialogContent>

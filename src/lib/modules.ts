@@ -16,6 +16,8 @@ import {
   Sprout,
   ListChecks,
   Activity,
+  Route,
+  PackagePlus,
   type LucideIcon,
 } from "lucide-react";
 import type { DataSource } from "@/lib/data/mode";
@@ -106,7 +108,9 @@ export const modules: ModuleConfig[] = [
       { href: "/edgectl", label: "Overview", icon: LayoutDashboard },
       { href: "/edgectl/ghosts", label: "Ghosts", icon: Ghost },
       { href: "/edgectl/seeds", label: "Seeds", icon: Sprout },
+      { href: "/edgectl/routing", label: "Routing", icon: Route },
       { href: "/edgectl/intents", label: "Intents", icon: ListChecks },
+      { href: "/edgectl/dependencies", label: "Dependencies", icon: PackagePlus },
       { href: "/edgectl/activity", label: "Activity", icon: Activity },
     ],
     browserData: false,

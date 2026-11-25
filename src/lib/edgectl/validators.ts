@@ -3,11 +3,16 @@
 
 import { z } from "zod";
 import type {
+  ActivityRecord,
   AttachRequest,
+  DependencyProposal,
+  DeployRequest,
+  DeployResult,
   Execution,
   Ghost,
   GhostRouteRef,
   GhostSeedCatalog,
+  InstallStep,
   IntentRef,
   IntentSnapshot,
   Issue,
@@ -223,3 +228,168 @@ export const executionSchema: z.ZodType<Execution> = z.object({
 
 /** `limit` of GET /api/edgectl/reports: absent, or a positive integer */
 export const reportLimitSchema = z.coerce.number().int().min(1).max(1000);
+
+// Shapes added by the 2026-11-25 operator parity amendment.
+
+export const routesSchema = z.object({
+  routes: list(z.object({ ghost_id: text, admin_addr: text, connected: flag })),
+});
+
+export const servicesSchema = z.object({
+  services: list(z.object({ seed_id: text, ghost_ids: list(z.string()) })),
+});
+
+export const deployTargetsSchema = z.object({
+  targets: list(z.object({ ghost_id: text, host: text, admin_addr: text })),
+});
+
+export const deployRequestSchema: z.ZodType<DeployRequest> = z.strictObject({
+  ghost_id: pathId,
+  force_redeploy: z.boolean().optional(),
+});
+
+export const deployResultSchema: z.ZodType<DeployResult> = z.object({
+  ghost_id: text,
+  host: text,
+  admin_addr: text,
+  status: text,
+  message: text,
+});
+
+export const installStepSchema: z.ZodType<InstallStep> = z.object({
+  seed_id: text,
+  method: text,
+  repo_url: text,
+  ref: text,
+  url: text,
+  version: text,
+  sha256: text,
+  destination: text,
+  package: text,
+  tap: text,
+  binary: text,
+});
+
+/**
+ * A proposal for display. The signed intent and approval are dropped (only proposed_at_ms is kept
+ * from the intent); what goes to the signing tool is Mirage's own data, never this copy.
+ */
+export const dependencyProposalSchema: z.ZodType<DependencyProposal> = z
+  .object({
+    id: text,
+    ghost_id: text,
+    seed_ids: list(z.string()),
+    steps: list(installStepSchema),
+    unresolved: list(z.string()),
+    state: text,
+    proposed_by: text,
+    intent: z
+      .object({ intent: z.object({ proposed_at_ms: int }).nullish() })
+      .nullish(),
+    approved_by: text,
+    executed_by: text,
+    execution: z
+      .object({
+        succeeded: flag,
+        steps: list(z.object({ seed_id: text, method: text, status: text, error: text })),
+        rollback: list(z.object({ seed_id: text, method: text, rolled_back: flag, error: text })),
+        error: text,
+      })
+      .nullish()
+      .transform((v) => v ?? null),
+    audit: list(z.object({ kind: text, actor: text, state: text, detail: text, at_ms: int })),
+  })
+  .transform(({ intent, ...rest }) => ({ ...rest, proposed_at_ms: intent?.intent?.proposed_at_ms ?? 0 }));
+
+export const dependencyProposalsSchema = z.object({ proposals: list(dependencyProposalSchema) });
+
+export const ghostStatusSchema = z.object({ ghost_id: text, phase: text, seed_count: int });
+
+export const ghostEventsSchema = z.object({
+  events: list(
+    z.object({
+      event_id: text,
+      command_id: text,
+      intent_id: text,
+      ghost_id: text,
+      seed_id: text,
+      outcome: text,
+      timestamp_ms: int,
+    }),
+  ),
+});
+
+export const ghostVerificationSchema = z.object({
+  records: list(
+    z.object({
+      request_id: text,
+      trace_id: text,
+      command_message_id: int,
+      command_message_type: int,
+      event_message_type: int,
+      command_id: text,
+      execution_id: text,
+      event_id: text,
+      ghost_id: text,
+      seed_id: text,
+      operation: text,
+      outcome: text,
+      seed_status: text,
+      exit_code: int,
+      timestamp_ms: int,
+      status: text,
+    }),
+  ),
+});
+
+const activityRecordSchema: z.ZodType<ActivityRecord> = z.object({
+  kind: text,
+  timestamp_ms: int,
+  fields: args,
+});
+
+export const activitySchema = z.object({ records: list(activityRecordSchema) });
+
+export const activityKindSchema = z.enum(["audit", "custody"]);
+
+// Values that reach an `edgecert` command line. edgecert's own rule for a principal id is
+// [a-z0-9][a-z0-9._-]{0,62}; these are checked here first so nothing else is ever passed on.
+
+/** A principal id: a Ghost id, or the id a certificate is issued for */
+export const principalId = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9._-]{0,62}$/, "Use lowercase letters, digits, dot, dash or underscore (at most 63 characters)");
+
+/** The name of a Ghost to add: lowercase letters, digits, dot and dash */
+export const targetName = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9.-]{0,39}$/, "Use lowercase letters, digits, dot or dash, starting with a letter or digit");
+
+/** An admin address the new Ghost listens on: host:port, nothing else */
+export const adminAddr = z
+  .string()
+  .trim()
+  .max(255)
+  .regex(/^(\[[0-9a-fA-F:]+\]|[A-Za-z0-9.-]+):\d{1,5}$/, "Use host:port, for example 127.0.0.1:7031");
+
+/** Body of POST /api/edgectl/ghosts/spawn-local; unknown fields are refused, as Mirage refuses them */
+export const addGhostSchema: z.ZodType<SpawnRequest> = z.strictObject({
+  target_name: targetName,
+  admin_addr: adminAddr,
+});
+
+const seedId = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,62}$/, "Not a Seed id");
+
+/** Body of the intent preview and of propose: which Seeds' dependencies to install on which Ghost */
+export const proposeSchema = z.strictObject({
+  ghost_id: principalId,
+  seed_ids: z.array(seedId).min(1, "Choose at least one Seed").max(32),
+});
+
+/** sha256 in hex, as edgecert prints a digest */
+export const digestSchema = z.string().regex(/^[0-9a-f]{64}$/, "Not a digest");
+
+export const approveSchema = z.strictObject({ digest: digestSchema });
+
+/** Execute must repeat the proposal id it is for */
+export const executeSchema = z.strictObject({ confirm: pathId });
