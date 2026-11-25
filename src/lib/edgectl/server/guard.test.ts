@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { crossSiteProblem } from "./guard";
+import { crossSiteProblem, HOST_REFUSED, hostAllowed } from "./guard";
 
 const headers = (values: Record<string, string>) => new Headers(values);
 const json = { "content-type": "application/json" };
@@ -28,7 +28,7 @@ test("an Origin that is not this app's host is refused", () => {
     const problem = crossSiteProblem(headers({ host: "localhost:3030", origin, ...json }), { body: true });
     assert.match(problem ?? "", /did not come from this app/, origin);
   }
-  assert.match(crossSiteProblem(headers({ origin: "http://localhost:3030" }), { body: false }) ?? "", /did not come/);
+  assert.equal(crossSiteProblem(headers({ origin: "http://localhost:3030" }), { body: false }), HOST_REFUSED);
 });
 
 test("a bodiless cross-site POST is refused too", () => {
@@ -46,4 +46,22 @@ test("a body that is not declared as JSON is refused", () => {
     crossSiteProblem(headers({ host: "localhost:3030", "content-type": "Application/JSON; charset=utf-8" }), { body: true }),
     null,
   );
+});
+
+test("only loopback names and listed hosts are served", () => {
+  for (const host of ["localhost", "localhost:3030", "LOCALHOST:3031", "app.localhost:3030", "127.0.0.1:3030", "[::1]:3030"]) {
+    assert.equal(hostAllowed(host, {}), true, host);
+  }
+  for (const host of ["evil.example", "evil.example:3030", "localhost.evil.example", "127.0.0.1.evil.example:3030", "192.168.1.5:3030", "", null, "a b"]) {
+    assert.equal(hostAllowed(host, {}), false, String(host));
+  }
+  const env = { EDGECTL_ALLOWED_HOSTS: "tracker.lan, 192.168.1.5:3030" };
+  assert.equal(hostAllowed("tracker.lan:3030", env), true);
+  assert.equal(hostAllowed("192.168.1.5:3030", env), true);
+  assert.equal(hostAllowed("192.168.1.5:4000", env), false);
+});
+
+test("a rebound domain is refused even when its Origin matches its Host", () => {
+  const rebound = { host: "evil.example:3030", origin: "http://evil.example:3030", "sec-fetch-site": "same-origin", ...json };
+  assert.equal(crossSiteProblem(headers(rebound), { body: true, env: {} }), HOST_REFUSED);
 });
