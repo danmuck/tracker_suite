@@ -11,6 +11,7 @@ const MODULE_API_DIRS = {
   future: ["future"],
   projects: ["projects", "tasks"],
   links: ["links", "link-groups"],
+  edgectl: ["edgectl"],
 };
 const MODULE_IDS = Object.keys(MODULE_API_DIRS);
 
@@ -51,6 +52,11 @@ const browserPatterns = [
     message: "Browser-reachable code may not import server-only code.",
   },
   { regex: "^@/models/", message: "Browser-reachable code may not import Mongoose models." },
+  {
+    // A module's server folder (src/lib/<module>/server/) holds code for route handlers only.
+    regex: "^(@/lib/[^/]+/server|(\\.\\.?/)+(.*/)?server)(/|$)",
+    message: "Browser-reachable code may not import a module's server-only folder.",
+  },
 ];
 
 const restrict = (patterns) => ({ "no-restricted-imports": ["error", { patterns }] });

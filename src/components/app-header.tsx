@@ -9,6 +9,7 @@ const segmentLabels: Record<string, string> = {
   transactions: "Transactions",
   projections: "Projections",
   reports: "Reports",
+  edgectl: "edgectl",
 };
 
 function buildBreadcrumb(pathname: string): string {

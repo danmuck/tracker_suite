@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { EdgectlCard } from "@/components/dashboard/edgectl-card";
 import { FigureCard } from "@/components/dashboard/figure-card";
 import { FinanceCard } from "@/components/dashboard/finance-card";
 import { FutureCard } from "@/components/dashboard/future-card";
@@ -12,4 +13,5 @@ export const moduleCards: Record<string, ComponentType> = {
   future: FutureCard,
   projects: ProjectsCard,
   links: LinksCard,
+  edgectl: EdgectlCard,
 };

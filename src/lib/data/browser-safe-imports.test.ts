@@ -18,7 +18,16 @@ const FORBIDDEN_FILES = new Set(
 // Models are server-only; test-support holds node-only helpers for tests (node:fs).
 const FORBIDDEN_DIRS = [join(SRC, "models") + sep, join(SRC, "lib", "data", "test-support") + sep];
 
-const isForbiddenFile = (file: string) => FORBIDDEN_FILES.has(file) || FORBIDDEN_DIRS.some((d) => file.startsWith(d));
+// A module's server folder (src/lib/<module>/server/) is for route handlers only: it may hold credentials
+// and node-only code (the edgectl client and its operator certificate).
+const MODULE_SERVER_DIR = new RegExp(`^${escapeForRegex(join(SRC, "lib") + sep)}[^${escapeForRegex(sep)}]+${escapeForRegex(sep)}server${escapeForRegex(sep)}`);
+
+function escapeForRegex(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const isForbiddenFile = (file: string) =>
+  FORBIDDEN_FILES.has(file) || FORBIDDEN_DIRS.some((d) => file.startsWith(d)) || MODULE_SERVER_DIR.test(file);
 
 const rel = (file: string) => relative(ROOT, file).split(sep).join("/");
 
@@ -127,6 +136,22 @@ test("test-support helpers count as forbidden for browser-reachable code", () =>
   assert.ok(existsSync(helper));
   assert.equal(isForbiddenFile(helper), true);
   assert.ok(!entryPoints().includes(helper));
+});
+
+test("a module's server folder counts as forbidden for browser-reachable code", () => {
+  const client = join(SRC, "lib", "edgectl", "server", "client.ts");
+  assert.ok(existsSync(client));
+  assert.equal(isForbiddenFile(client), true);
+  assert.equal(isForbiddenFile(join(SRC, "lib", "edgectl", "validators.ts")), false);
+  assert.ok(!entryPoints().includes(client));
+  // The scanner follows an import into it: a hook importing the client is reported.
+  const hook = join(SRC, "hooks", "edgectl", "use-mirage.ts");
+  importsCache.set(hook, [{ specifier: "@/lib/edgectl/server/client", target: client }]);
+  try {
+    assert.deepEqual(findViolation(hook, new Set()), ["src/hooks/edgectl/use-mirage.ts", "src/lib/edgectl/server/client.ts"]);
+  } finally {
+    importsCache.delete(hook);
+  }
 });
 
 test("no server-only code is reachable from browser-reachable code", () => {

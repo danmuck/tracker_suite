@@ -11,6 +11,11 @@ import {
   Dumbbell,
   Salad,
   Building2,
+  Network,
+  Ghost,
+  Sprout,
+  ListChecks,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import type { DataSource } from "@/lib/data/mode";
@@ -89,6 +94,22 @@ export const modules: ModuleConfig[] = [
     accentColor: "var(--chart-4)",
     navItems: [],
     browserData: true,
+  },
+  {
+    // GUI for a locally running edgectl Mirage; reads nothing from the store, so no browser data
+    id: "edgectl",
+    label: "edgectl",
+    icon: Network,
+    basePath: "/edgectl",
+    accentColor: "var(--module-edgectl)",
+    navItems: [
+      { href: "/edgectl", label: "Overview", icon: LayoutDashboard },
+      { href: "/edgectl/ghosts", label: "Ghosts", icon: Ghost },
+      { href: "/edgectl/seeds", label: "Seeds", icon: Sprout },
+      { href: "/edgectl/intents", label: "Intents", icon: ListChecks },
+      { href: "/edgectl/activity", label: "Activity", icon: Activity },
+    ],
+    browserData: false,
   },
 ];
 
