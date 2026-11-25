@@ -1,5 +1,5 @@
 import { MirageError, mirageRequest } from "@/lib/edgectl/server/client";
-import { forward, invalid, readJson } from "@/lib/edgectl/server/respond";
+import { forward, invalid, readJson, refuseCrossSite } from "@/lib/edgectl/server/respond";
 import { intentIdsSchema, intentRefSchema, intentSnapshotSchema, issueSchema } from "@/lib/edgectl/validators";
 import type { IntentSummary } from "@/types/edgectl/api";
 
@@ -40,6 +40,8 @@ export function GET() {
 
 // Submits an `issue`. Idempotent by intent_id in Mirage; not retried here.
 export async function POST(request: Request) {
+  const refused = refuseCrossSite(request, { body: true });
+  if (refused) return refused;
   const issue = issueSchema.safeParse(await readJson(request));
   if (!issue.success) return invalid(issue.error);
   return forward(() => mirageRequest("POST", ["intents"], { body: issue.data, schema: intentRefSchema }));
