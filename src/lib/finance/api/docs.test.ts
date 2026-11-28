@@ -23,7 +23,7 @@ import {
   type TransactionDoc,
 } from "./docs";
 import { BrowserStore } from "@/lib/data/browser-store";
-import type { BaseDoc, Collection, CollectionName, Store } from "@/lib/data/store";
+import { ConflictError, type BaseDoc, type Collection, type CollectionName, type Store } from "@/lib/data/store";
 import { memoryStorage } from "@/lib/data/test-helpers";
 import { countingStore } from "./test-helpers";
 
@@ -177,4 +177,36 @@ test("a partial rap reassigned its defaults-filled value writes only the missing
     saveUpdate(shapeAccount(raw) as unknown as Record<string, unknown>, accountDefaults(raw as unknown as Record<string, unknown>), { rap: { dependents: 0, recertDate: "07-01", autoSchedule: true, enabled: true } }),
     { $set: { "rap.autoSchedule": filled.autoSchedule, "rap.recertDate": filled.recertDate, "rap.dependents": filled.dependents }, touch: false },
   );
+});
+
+/** A store over `real` whose `collection(name)` has one method replaced. */
+function overriding<T extends BaseDoc>(real: Store, name: CollectionName, method: keyof Collection<T>, impl: (...args: never[]) => unknown): Store {
+  return {
+    collection<U extends BaseDoc>(n: CollectionName): Collection<U> {
+      const c = real.collection<U>(n);
+      if (n !== name) return c;
+      const wrapped: Collection<U> = Object.create(c);
+      (wrapped as unknown as Record<string, unknown>)[method as string] = impl;
+      return wrapped;
+    },
+  };
+}
+
+test("ensureCashAccount treats a duplicate-key insert as another request having just made Cash", async () => {
+  const real = new BrowserStore(memoryStorage());
+  const racing = overriding(real, "accounts", "insert", () => Promise.reject(new ConflictError("accounts", "ownerId")));
+  await ensureCashAccount(racing);
+});
+
+test("ensureCashAccount still rejects on any other insert error", async () => {
+  const real = new BrowserStore(memoryStorage());
+  const broken = overriding(real, "accounts", "insert", () => Promise.reject(new Error("disk full")));
+  await assert.rejects(ensureCashAccount(broken), /disk full/);
+});
+
+test("two store objects over the same storage leave one Cash account", async () => {
+  const storage = memoryStorage();
+  await ensureCashAccount(new BrowserStore(storage));
+  await ensureCashAccount(new BrowserStore(storage));
+  assert.equal((await accounts(new BrowserStore(storage)).find({ isCash: true })).length, 1);
 });

@@ -7,7 +7,7 @@
 // mutate-then-save() sites go through `saveUpdate`.
 
 import { isId } from "@/lib/data/api";
-import type { BaseDoc, Collection, Store } from "@/lib/data/store";
+import { ConflictError, type BaseDoc, type Collection, type Store } from "@/lib/data/store";
 import { toDateStr, toIso } from "@/lib/finance/dates";
 import { DEFAULT_PROFILE } from "@/lib/finance/finance-profile";
 import type { Account } from "@/types/finance/account";
@@ -328,7 +328,9 @@ export async function saveTransaction(
 }
 
 // One check-and-insert in flight per store: concurrent callers share it, so they cannot each
-// see "no Cash" and each insert one. Cleared when it settles (rejection included).
+// see "no Cash" and each insert one. Cleared when it settles (rejection included). This only
+// covers one store object: across store objects (one per request) the database's unique index
+// on the Cash account is the guarantee, and the losing insert's ConflictError is swallowed.
 const cashInFlight = new WeakMap<Store, Promise<void>>();
 
 /** The Cash account, inserted only when none exists (read first: never an upsert, so no write otherwise). */
@@ -338,7 +340,11 @@ export function ensureCashAccount(store: Store): Promise<void> {
   const run = (async () => {
     const acc = accounts(store);
     if (!(await acc.exists({ isCash: true }))) {
-      await acc.insert({ name: "Cash", type: "bank", isCash: true, balance: 0, currency: "USD", isArchived: false });
+      try {
+        await acc.insert({ name: "Cash", type: "bank", isCash: true, balance: 0, currency: "USD", isArchived: false });
+      } catch (err) {
+        if (!(err instanceof ConflictError)) throw err; // another request just inserted it
+      }
     }
   })();
   const shared = run.finally(() => cashInFlight.delete(store));

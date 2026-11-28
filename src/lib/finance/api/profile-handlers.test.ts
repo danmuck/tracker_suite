@@ -5,6 +5,11 @@ import type { FinanceProfileData } from "@/types/finance/datasheet";
 import { accounts, profiles, transactions, type AccountDoc, type TransactionDoc } from "./docs";
 import type { PaymentPlanDTO } from "./payment-plan";
 import { setup } from "./test-helpers";
+import { saveProfileAndApply } from "./profile";
+import { BrowserStore } from "@/lib/data/browser-store";
+import { ConflictError, type BaseDoc, type Collection, type CollectionName, type Store } from "@/lib/data/store";
+import { memoryStorage } from "@/lib/data/test-helpers";
+import { NOW } from "./test-helpers";
 
 let t = setup();
 const acct = async (body: object) => (await t.call("POST", "/api/accounts", body)).body as AccountDoc;
@@ -239,4 +244,40 @@ test("saving the profile reprices automatic RAP payment schedules from the new s
   const after = await rapAmounts();
   assert.equal(after.length, before.length);
   assert.ok(after[0] > before[0]);
+});
+
+/** A store whose profile `updateOne` throws `errors` in turn (then behaves normally); `calls()` counts the attempts. */
+function failingUpserts(errors: Error[]): { store: Store; real: Store; calls: () => number } {
+  const real = new BrowserStore(memoryStorage());
+  let n = 0;
+  const store: Store = {
+    collection<T extends BaseDoc>(name: CollectionName): Collection<T> {
+      const c = real.collection<T>(name);
+      if (name !== "financeProfile") return c;
+      const wrapped: Collection<T> = Object.create(c);
+      wrapped.updateOne = (filter, update, options) => {
+        const err = errors[n++];
+        return err ? Promise.reject(err) : c.updateOne(filter, update, options);
+      };
+      return wrapped;
+    },
+  };
+  return { store, real, calls: () => n };
+}
+const DATA = { filingStatus: "single", hoursPerWeek: 40, nycResident: false, raiseRate: 0.03, salaryTransactionId: null, rentTransactionId: null, salarySteps: [{ effectiveDate: "2025-01-01", annualGross: 80000 }], retirementSteps: [], healthSteps: [], rentSteps: [], whatIfSalaries: [] } as FinanceProfileData;
+
+test("saving the profile retries the upsert once when another request just created it", async () => {
+  const { store, real, calls } = failingUpserts([new ConflictError("financeProfile", "ownerId")]);
+  await saveProfileAndApply(store, DATA, NOW);
+  assert.equal(calls(), 2);
+  assert.equal(await profiles(real).count(), 1);
+});
+
+test("saving the profile gives up after one retry, and other errors are not retried", async () => {
+  const twice = failingUpserts([new ConflictError("financeProfile", "ownerId"), new ConflictError("financeProfile", "ownerId")]);
+  await assert.rejects(saveProfileAndApply(twice.store, DATA, NOW), ConflictError);
+  assert.equal(twice.calls(), 2);
+  const other = failingUpserts([new Error("disk full")]);
+  await assert.rejects(saveProfileAndApply(other.store, DATA, NOW), /disk full/);
+  assert.equal(other.calls(), 1);
 });

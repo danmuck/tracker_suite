@@ -2,7 +2,7 @@
 // Used by the profile routes in both data sources.
 // Pure: no framework, browser or server imports (browser-reachable).
 
-import type { Store } from "@/lib/data/store";
+import { ConflictError, type Store } from "@/lib/data/store";
 import { amountOn } from "@/lib/finance/amount-schedule";
 import { buildRentSchedule, buildSalarySchedule } from "@/lib/finance/datasheet";
 import { localDateStr, toIso } from "@/lib/finance/dates";
@@ -80,7 +80,14 @@ export async function saveProfileAndApply(
   await checkProfileLinks(store, p);
 
   const previous = await loadProfile(store); // AP1
-  await profiles(store).updateOne({}, { $set: profileToDoc(p) }, { upsert: true }); // AP7
+  const upsert = () => profiles(store).updateOne({}, { $set: profileToDoc(p) }, { upsert: true }); // AP7
+  try {
+    await upsert();
+  } catch (err) {
+    // Two first saves can both try to create the owner's one profile; the loser retries as an update.
+    if (!(err instanceof ConflictError)) throw err;
+    await upsert();
+  }
 
   // Transactions that were unlinked or swapped out keep no stale schedule
   if (previous.salaryTransactionId !== (p.salaryTransactionId || null)) {
