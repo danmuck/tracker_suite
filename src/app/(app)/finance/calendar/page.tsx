@@ -77,7 +77,7 @@ function CalendarContent() {
     <div className="space-y-6">
       <PageHeader title="Calendar" description="Each month's transactions, past and upcoming, day by day" />
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="relative flex flex-wrap items-center justify-center gap-2">
         <Button variant="outline" size="icon" onClick={() => go(shiftMonth(month, -1))} aria-label="Previous month">
           <ChevronLeft className="h-4 w-4" />
         </Button>
@@ -87,10 +87,11 @@ function CalendarContent() {
         <Button variant="outline" size="icon" onClick={() => go(shiftMonth(month, 1))} aria-label="Next month">
           <ChevronRight className="h-4 w-4" />
         </Button>
-        <Button variant="ghost" size="sm" onClick={() => go(thisMonth)} disabled={month === thisMonth}>
+        <Button variant="outline" onClick={() => go(thisMonth)} disabled={month === thisMonth}>
           Today
         </Button>
-        {isLoading && <span className="text-xs text-muted-foreground">Loading…</span>}
+        {/* Out of the flow so the controls stay centered while a month loads */}
+        {isLoading && <span className="absolute right-0 text-xs text-muted-foreground">Loading…</span>}
       </div>
 
       {isError && !current && (
