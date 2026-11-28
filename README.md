@@ -44,6 +44,19 @@ npm run deploy:static    # checks, builds and deploys
 
 The full steps, including one-time hosting setup, are in [docs/deploy-static.md](docs/deploy-static.md).
 
+## Accounts (in progress)
+
+Every record now has an optional owner. To turn an existing single-user database into one owned by a first admin, with the app stopped:
+
+```bash
+RUN="node --experimental-strip-types --no-warnings --import ./scripts/register-ts.mjs"
+$RUN scripts/auth/create-admin.ts --db <name> --email <email> --name <name>     # asks for the password in the terminal
+$RUN scripts/auth/claim-data.ts --db <name> --admin <email>                      # report only, writes nothing
+$RUN scripts/auth/claim-data.ts --db <name> --admin <email> --apply              # gives every record to the admin, rebuilds indexes
+```
+
+Order: stop the app, `create-admin`, then `claim-data --apply`. Run `mongodump` on the live database first. Both scripts connect only to the database named by `--db` and refuse a `--uri` that names another. `create-admin` prints the recovery codes once; keep them somewhere safe.
+
 ## Where things live
 
 - `src/app/(site)/`: the landing page at `/`
