@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IShoppingItem extends Document {
+  ownerId?: string;
   name: string;
   quantity?: number;
   unit?: string;
@@ -13,6 +14,7 @@ export interface IShoppingItem extends Document {
 
 const ShoppingItemSchema = new Schema<IShoppingItem>(
   {
+    ownerId: { type: String },
     name: { type: String, required: true, trim: true },
     quantity: { type: Number, min: 0 },
     unit: { type: String, trim: true },
@@ -23,7 +25,7 @@ const ShoppingItemSchema = new Schema<IShoppingItem>(
   { timestamps: true }
 );
 
-ShoppingItemSchema.index({ checked: 1, order: 1 });
+ShoppingItemSchema.index({ ownerId: 1, checked: 1, order: 1 });
 
 if (process.env.NODE_ENV !== "production" && mongoose.models.ShoppingItem) {
   delete mongoose.models.ShoppingItem;

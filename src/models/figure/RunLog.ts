@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IRunLog extends Document {
+  ownerId?: string;
   /** Calendar day, yyyy-MM-dd */
   date: string;
   /** Miles */
@@ -14,6 +15,7 @@ export interface IRunLog extends Document {
 
 const RunLogSchema = new Schema<IRunLog>(
   {
+    ownerId: { type: String },
     date: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
     distance: { type: Number, required: true, min: 0 },
     durationSeconds: { type: Number, required: true, min: 1 },
@@ -28,7 +30,7 @@ const RunLogSchema = new Schema<IRunLog>(
   { timestamps: true }
 );
 
-RunLogSchema.index({ date: -1, createdAt: -1 });
+RunLogSchema.index({ ownerId: 1, date: -1, createdAt: -1 });
 
 if (process.env.NODE_ENV !== "production" && mongoose.models.RunLog) {
   delete mongoose.models.RunLog;

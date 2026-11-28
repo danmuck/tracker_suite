@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 import { AMENITIES, LISTING_STATUSES } from "@/lib/future/validators";
 
 export interface IListing extends Document {
+  ownerId?: string;
   name: string;
   city: string;
   /** Monthly rent in cents */
@@ -30,6 +31,7 @@ export interface IListing extends Document {
 
 const ListingSchema = new Schema<IListing>(
   {
+    ownerId: { type: String },
     name: { type: String, required: true, trim: true },
     city: { type: String, required: true, trim: true },
     rent: { type: Number, required: true, min: 1 },
@@ -53,7 +55,7 @@ const ListingSchema = new Schema<IListing>(
   { timestamps: true }
 );
 
-ListingSchema.index({ city: 1, rent: 1 });
+ListingSchema.index({ ownerId: 1, city: 1, rent: 1 });
 
 if (process.env.NODE_ENV !== "production" && mongoose.models.Listing) {
   delete mongoose.models.Listing;

@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IWorkout extends Document {
+  ownerId?: string;
   name: string;
   notes?: string;
   exercises: {
@@ -28,6 +29,7 @@ const WorkoutExerciseSchema = new Schema(
 
 const WorkoutSchema = new Schema<IWorkout>(
   {
+    ownerId: { type: String },
     name: { type: String, required: true, trim: true },
     notes: { type: String, trim: true },
     exercises: { type: [WorkoutExerciseSchema], default: [] },
@@ -35,6 +37,8 @@ const WorkoutSchema = new Schema<IWorkout>(
   },
   { timestamps: true }
 );
+
+WorkoutSchema.index({ ownerId: 1 });
 
 if (process.env.NODE_ENV !== "production" && mongoose.models.Workout) {
   delete mongoose.models.Workout;

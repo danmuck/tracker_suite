@@ -18,6 +18,7 @@ export interface IAmountStep {
 }
 
 export interface ITransaction extends Document {
+  ownerId?: string;
   amount: number;
   date: Date;
   description: string;
@@ -65,6 +66,7 @@ const AmountStepSchema = new Schema<IAmountStep>(
 
 const TransactionSchema = new Schema<ITransaction>(
   {
+    ownerId: { type: String },
     amount: { type: Number, required: true },
     date: { type: Date, required: true },
     description: { type: String, required: true, trim: true },
@@ -82,10 +84,10 @@ const TransactionSchema = new Schema<ITransaction>(
   { timestamps: true }
 );
 
-TransactionSchema.index({ accountId: 1, date: -1 });
-TransactionSchema.index({ toAccountId: 1, date: -1 });
-TransactionSchema.index({ date: -1 });
-TransactionSchema.index({ categoryTags: 1 });
+TransactionSchema.index({ ownerId: 1, accountId: 1, date: -1 });
+TransactionSchema.index({ ownerId: 1, toAccountId: 1, date: -1 });
+TransactionSchema.index({ ownerId: 1, date: -1 });
+TransactionSchema.index({ ownerId: 1, categoryTags: 1 });
 
 // Delete cached model in development to pick up schema changes on hot reload
 if (process.env.NODE_ENV !== "production" && mongoose.models.Transaction) {

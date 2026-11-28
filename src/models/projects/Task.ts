@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface ITask extends Document {
+  ownerId?: string;
   projectId: mongoose.Types.ObjectId;
   title: string;
   description?: string;
@@ -15,6 +16,7 @@ export interface ITask extends Document {
 
 const TaskSchema = new Schema<ITask>(
   {
+    ownerId: { type: String },
     projectId: { type: Schema.Types.ObjectId, ref: "Project", required: true },
     title: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
@@ -37,7 +39,7 @@ const TaskSchema = new Schema<ITask>(
   { timestamps: true }
 );
 
-TaskSchema.index({ projectId: 1, status: 1, order: 1 });
+TaskSchema.index({ ownerId: 1, projectId: 1, status: 1, order: 1 });
 
 if (process.env.NODE_ENV !== "production" && mongoose.models.Task) {
   delete mongoose.models.Task;

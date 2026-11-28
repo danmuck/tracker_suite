@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IAccount extends Document {
+  ownerId?: string;
   name: string;
   type: "bank" | "credit_card" | "debt";
   balance: number;
@@ -27,6 +28,7 @@ export interface IAccount extends Document {
 
 const AccountSchema = new Schema<IAccount>(
   {
+    ownerId: { type: String },
     name: { type: String, required: true, trim: true },
     type: { type: String, required: true, enum: ["bank", "credit_card", "debt"] },
     balance: { type: Number, default: 0 },
@@ -68,6 +70,10 @@ const AccountSchema = new Schema<IAccount>(
   },
   { timestamps: true }
 );
+
+// One cash account per owner
+AccountSchema.index({ ownerId: 1 }, { unique: true, partialFilterExpression: { isCash: true } });
+AccountSchema.index({ ownerId: 1, type: 1 });
 
 // Delete cached model in development to pick up schema changes on hot reload
 if (process.env.NODE_ENV !== "production" && mongoose.models.Account) {

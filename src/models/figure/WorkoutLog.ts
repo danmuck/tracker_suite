@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IWorkoutLog extends Document {
+  ownerId?: string;
   /** Calendar day, yyyy-MM-dd (string so it never shifts with timezone) */
   date: string;
   workoutId?: mongoose.Types.ObjectId;
@@ -33,6 +34,7 @@ const LoggedExerciseSchema = new Schema(
 
 const WorkoutLogSchema = new Schema<IWorkoutLog>(
   {
+    ownerId: { type: String },
     date: { type: String, required: true, match: /^\d{4}-\d{2}-\d{2}$/ },
     workoutId: { type: Schema.Types.ObjectId, ref: "Workout" },
     name: { type: String, required: true, trim: true },
@@ -42,8 +44,8 @@ const WorkoutLogSchema = new Schema<IWorkoutLog>(
   { timestamps: true }
 );
 
-WorkoutLogSchema.index({ date: -1, createdAt: -1 });
-WorkoutLogSchema.index({ "exercises.name": 1 });
+WorkoutLogSchema.index({ ownerId: 1, date: -1, createdAt: -1 });
+WorkoutLogSchema.index({ ownerId: 1, "exercises.name": 1 });
 
 if (process.env.NODE_ENV !== "production" && mongoose.models.WorkoutLog) {
   delete mongoose.models.WorkoutLog;

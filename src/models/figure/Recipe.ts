@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IRecipe extends Document {
+  ownerId?: string;
   name: string;
   servings?: number;
   ingredients: { name: string; quantity?: number; unit?: string }[];
@@ -21,6 +22,7 @@ const IngredientSchema = new Schema(
 
 const RecipeSchema = new Schema<IRecipe>(
   {
+    ownerId: { type: String },
     name: { type: String, required: true, trim: true },
     servings: { type: Number, min: 1 },
     ingredients: { type: [IngredientSchema], default: [] },
@@ -29,6 +31,8 @@ const RecipeSchema = new Schema<IRecipe>(
   },
   { timestamps: true }
 );
+
+RecipeSchema.index({ ownerId: 1 });
 
 if (process.env.NODE_ENV !== "production" && mongoose.models.Recipe) {
   delete mongoose.models.Recipe;

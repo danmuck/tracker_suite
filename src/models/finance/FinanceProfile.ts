@@ -3,6 +3,7 @@ import { FILING_STATUSES } from "@/lib/finance/constants";
 
 // Singleton document backing the Finance → Datasheet page. Money in cents.
 export interface IFinanceProfile extends Document {
+  ownerId?: string;
   filingStatus: (typeof FILING_STATUSES)[number];
   hoursPerWeek: number;
   nycResident: boolean;
@@ -30,6 +31,7 @@ function stepSchema(field: string) {
 
 const FinanceProfileSchema = new Schema<IFinanceProfile>(
   {
+    ownerId: { type: String },
     filingStatus: { type: String, enum: FILING_STATUSES, default: "single" },
     hoursPerWeek: { type: Number, default: 40 },
     nycResident: { type: Boolean, default: false },
@@ -47,6 +49,9 @@ const FinanceProfileSchema = new Schema<IFinanceProfile>(
   },
   { timestamps: true }
 );
+
+// One profile per owner
+FinanceProfileSchema.index({ ownerId: 1 }, { unique: true });
 
 // Delete cached model in development to pick up schema changes on hot reload
 if (process.env.NODE_ENV !== "production" && mongoose.models.FinanceProfile) {

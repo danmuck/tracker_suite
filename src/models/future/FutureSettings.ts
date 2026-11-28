@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 import { SETTINGS_RECORD_KEY } from "@/lib/future/validators";
 
 export interface IFutureSettings extends Document {
+  ownerId?: string;
   key: string;
   /** Gross annual salary in cents */
   annualSalary?: number;
@@ -10,12 +11,15 @@ export interface IFutureSettings extends Document {
 
 const FutureSettingsSchema = new Schema<IFutureSettings>(
   {
-    key: { type: String, required: true, unique: true, default: SETTINGS_RECORD_KEY },
+    ownerId: { type: String },
+    key: { type: String, required: true, default: SETTINGS_RECORD_KEY },
     annualSalary: { type: Number, min: 1 },
     commuteDestination: { type: String, trim: true },
   },
   { timestamps: true }
 );
+
+FutureSettingsSchema.index({ ownerId: 1, key: 1 }, { unique: true });
 
 if (process.env.NODE_ENV !== "production" && mongoose.models.FutureSettings) {
   delete mongoose.models.FutureSettings;

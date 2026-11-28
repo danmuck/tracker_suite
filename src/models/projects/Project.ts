@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
 
 export interface IProject extends Document {
+  ownerId?: string;
   name: string;
   description?: string;
   status: "active" | "archived" | "completed";
@@ -12,6 +13,7 @@ export interface IProject extends Document {
 
 const ProjectSchema = new Schema<IProject>(
   {
+    ownerId: { type: String },
     name: { type: String, required: true, trim: true },
     description: { type: String, trim: true },
     status: {
@@ -25,6 +27,8 @@ const ProjectSchema = new Schema<IProject>(
   },
   { timestamps: true }
 );
+
+ProjectSchema.index({ ownerId: 1 });
 
 if (process.env.NODE_ENV !== "production" && mongoose.models.Project) {
   delete mongoose.models.Project;
