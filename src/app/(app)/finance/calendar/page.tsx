@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/page-header";
 import { LoadingState } from "@/components/loading-state";
 import { StatTile } from "@/components/stat-tile";
-import { MonthGrid } from "@/components/finance/calendar/month-grid";
+import { MonthGrid, type WeekEndTotals } from "@/components/finance/calendar/month-grid";
 import { DaySheet } from "@/components/finance/calendar/day-sheet";
 import { useAccounts } from "@/hooks/finance/use-accounts";
 import { useCategories } from "@/hooks/finance/use-categories";
 import { useSummary } from "@/hooks/finance/use-summary";
 import { useQueryParam } from "@/hooks/use-query-param";
-import { parseMonth, shiftMonth } from "@/lib/finance/calendar";
+import { bankBalance, creditPosition, creditUtilization, monthWeeks, parseMonth, shiftMonth, weekEndDate } from "@/lib/finance/calendar";
 import { localTodayStr } from "@/lib/finance/dates";
 import { formatCurrency, parseDate } from "@/lib/finance/formatters";
 import type { DaySummary } from "@/types/finance/summary";
@@ -35,6 +35,10 @@ function CalendarContent() {
 
   const monthDate = useMemo(() => parseDate(`${month}-01`), [month]);
   const { summary, isLoading, isError } = useSummary("monthly", monthDate);
+  // The last week usually ends on a Saturday in the next month; its closing totals come from there
+  const nextMonth = shiftMonth(month, 1);
+  const nextMonthDate = useMemo(() => parseDate(`${nextMonth}-01`), [nextMonth]);
+  const { summary: nextSummary } = useSummary("monthly", nextMonthDate);
   // Archived accounts too, so old transactions still show their account names
   const { accounts } = useAccounts(undefined, { includeArchived: true });
   const { categories } = useCategories();
@@ -46,6 +50,18 @@ function CalendarContent() {
     for (const d of current?.days ?? []) map[d.date.slice(0, 10)] = d;
     return map;
   }, [current]);
+
+  const weekEnds = useMemo(() => {
+    const next = nextSummary?.period.start.slice(0, 7) === nextMonth ? nextSummary : undefined;
+    const balances: Record<string, Record<string, number>> = {};
+    for (const d of [...(current?.days ?? []), ...(next?.days ?? [])]) balances[d.date.slice(0, 10)] = d.balances;
+    const map: Record<string, WeekEndTotals | undefined> = {};
+    for (const end of monthWeeks(month).map(weekEndDate)) {
+      const b = balances[end];
+      map[end] = b && { bank: bankBalance(b, accounts), credit: creditPosition(b, accounts), utilization: creditUtilization(b, accounts) };
+    }
+    return map;
+  }, [current, nextSummary, nextMonth, month, accounts]);
 
   function go(next: string) {
     setSelected(null);
@@ -94,13 +110,14 @@ function CalendarContent() {
         <StatTile label="Net" value={money(totals?.net)} sub="Income less expenses" />
       </div>
 
-      <MonthGrid month={month} days={days} today={today} onSelect={setSelected} />
+      <MonthGrid month={month} days={days} weekEnds={weekEnds} today={today} onSelect={setSelected} />
 
       <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <Legend className="bg-green-500" label="Income" />
         <Legend className="bg-red-500" label="Expense" />
         <Legend className="bg-blue-500" label="Transfer" />
         <span>Upcoming transactions are dimmed.</span>
+        <span>Week end shows Bank / Cash and Credit at the end of each Saturday: credit is the balance owed, or the available credit when nothing is owed. Owed credit turns red at 25% of the limit.</span>
       </p>
 
       <DaySheet

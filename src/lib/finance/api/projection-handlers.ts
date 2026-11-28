@@ -212,8 +212,13 @@ export const getSummary: Handler = ({ store, query: params, now }) =>
 
     const accts = (await accounts(store).find()).map(shapeAccount); // SU1
 
+    // A period starting in the future is projected forward from today, so the
+    // engine also needs the transactions between today and the period start
+    const todayStr = localDateStr(now);
+    const queryStart = range.startStr > todayStr ? todayStr : range.startStr;
+
     // Stored dates are UTC midnight, so query with UTC-midnight bounds (inclusive)
-    const startDate = filterDate(range.startStr);
+    const startDate = filterDate(queryStart);
     const endDate = filterDate(range.endStr);
 
     const dateFilter = {

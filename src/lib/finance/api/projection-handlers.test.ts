@@ -200,3 +200,15 @@ test("an account filter caps an inbound transfer against the source's full proje
   const own = (await summary(`?view=monthly&date=2026-11-17&accountId=${checking._id}`)).data;
   assert.deepEqual([own.totals.income, own.days!.find((d) => d.date === "2026-11-30")!.balances[checking._id]], [300000, 270000]);
 });
+
+test("a future month's summary starts from balances that include what is due between today and that month", async () => {
+  await post({ amount: 200, date: "2026-11-25", description: "pending bill" }); // after today (17 Nov), before December
+  const dec = (await summary("?view=monthly&date=2026-12-01")).data;
+  assert.equal(dec.days![0].date, "2026-12-01");
+  assert.equal(dec.days![0].balances[bank._id], 80000, "the 25 Nov bill has left the bank by 1 Dec");
+  assert.equal(dec.totals.expenses, 0, "November's bill is not a December expense");
+  assert.equal(dec.days!.flatMap((d) => d.transactions).length, 0);
+  // The same day seen from November's summary agrees
+  const nov = (await summary("?view=monthly&date=2026-11-17")).data;
+  assert.equal(nov.days!.at(-1)!.balances[bank._id], 80000);
+});
