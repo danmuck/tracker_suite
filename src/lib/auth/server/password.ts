@@ -1,5 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { hash, verify } from "@node-rs/argon2";
+import { normalizePassword } from "../password-rules";
+import { once } from "../../data/once";
 
 // Argon2id parameters. Raising any of them makes needsRehash true for older hashes.
 export const ARGON2_MEMORY_KIB = 65536;
@@ -14,14 +16,15 @@ const OPTIONS = {
   parallelism: ARGON2_PARALLELISM,
 };
 
+/** Hashes the normalised password (see normalizePassword), so callers cannot skip normalising. */
 export function hashPassword(password: string): Promise<string> {
-  return hash(password, OPTIONS);
+  return hash(normalizePassword(password), OPTIONS);
 }
 
 /** True when the password matches. A malformed hash or any library error is false. */
 export async function verifyPassword(storedHash: string, password: string): Promise<boolean> {
   try {
-    return await verify(storedHash, password);
+    return await verify(storedHash, normalizePassword(password));
   } catch {
     return false;
   }
@@ -37,5 +40,9 @@ export function needsRehash(storedHash: string): boolean {
   return m < ARGON2_MEMORY_KIB || t < ARGON2_TIME_COST || p < ARGON2_PARALLELISM;
 }
 
-/** A hash of a random value, computed once: verify against it for unknown accounts so timing matches. */
-export const DUMMY_HASH: Promise<string> = hashPassword(randomBytes(32).toString("hex"));
+/**
+ * A hash of a random value, for verifying against when the account is unknown so timing matches.
+ * Computed on the first call and shared after; a failure reaches that call's caller only (never an
+ * unhandled rejection) and the next call tries again.
+ */
+export const dummyHash: () => Promise<string> = once(() => hashPassword(randomBytes(32).toString("hex")));

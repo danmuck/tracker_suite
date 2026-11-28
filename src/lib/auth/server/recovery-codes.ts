@@ -21,14 +21,20 @@ function encode(bytes: Buffer): string {
   return out;
 }
 
-/** Normalizes what a person typed and hashes it (SHA-256 hex). Only a hash is ever stored. */
-export function hashRecoveryCode(input: string): string {
+const CODE_LENGTH = 16;
+
+/**
+ * Normalizes what a person typed and hashes it (SHA-256 hex). Only a hash is ever stored.
+ * Null when the input does not normalise to exactly 16 characters: it cannot be a code.
+ */
+export function hashRecoveryCode(input: string): string | null {
   const normalized = input
     .toUpperCase()
     .replace(/[^0-9A-Z]/g, "")
     .replaceAll("O", "0")
     .replace(/[IL]/g, "1")
     .replace(/[^0-9A-HJKMNP-TV-Z]/g, "");
+  if (normalized.length !== CODE_LENGTH) return null;
   return createHash("sha256").update(normalized).digest("hex");
 }
 
@@ -41,7 +47,7 @@ export function generateRecoveryCodes(): { codes: string[]; hashes: string[] } {
     if (seen.has(raw)) continue;
     seen.add(raw);
     codes.push(raw.match(/.{4}/g)!.join("-"));
-    hashes.push(hashRecoveryCode(raw));
+    hashes.push(hashRecoveryCode(raw)!); // raw is 16 alphabet characters, so never null
   }
   return { codes, hashes };
 }

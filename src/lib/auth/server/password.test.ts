@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { hash as argonHash } from "@node-rs/argon2";
-import { DUMMY_HASH, hashPassword, needsRehash, verifyPassword } from "./password";
+import { dummyHash, hashPassword, needsRehash, verifyPassword } from "./password";
 
 const PASSWORD = "correct horse battery";
 
@@ -29,8 +29,24 @@ test("needsRehash flags weaker or unparseable hashes", async () => {
   assert.equal(needsRehash("$argon2i$v=19$m=65536,t=3,p=1$c2FsdHNhbHQ$aGFzaGhhc2g"), true);
 });
 
-test("the dummy hash is a real hash that matches no known password", async () => {
-  const dummy = await DUMMY_HASH;
+test("the dummy hash is computed once, on first use, and matches no known password", async () => {
+  assert.equal(dummyHash(), dummyHash());
+  const dummy = await dummyHash();
   assert.ok(dummy.startsWith("$argon2id$"));
   assert.equal(await verifyPassword(dummy, PASSWORD), false);
+});
+
+test("composed and decomposed forms of a password verify against each other", async () => {
+  const composed = "caf\u00e9 horse battery";
+  const decomposed = "cafe\u0301 horse battery";
+  assert.notEqual(composed, decomposed);
+  assert.equal(await verifyPassword(await hashPassword(composed), decomposed), true);
+  assert.equal(await verifyPassword(await hashPassword(decomposed), composed), true);
+});
+
+test("a full-width password verifies against its ASCII form", async () => {
+  const ascii = "mango glacier lamp";
+  const fullWidth = Array.from(ascii, (c) => (c === " " ? "\u3000" : String.fromCodePoint(c.codePointAt(0)! + 0xfee0))).join("");
+  assert.equal(await verifyPassword(await hashPassword(fullWidth), ascii), true);
+  assert.equal(await verifyPassword(await hashPassword(ascii), fullWidth), true);
 });

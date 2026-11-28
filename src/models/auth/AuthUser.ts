@@ -19,7 +19,8 @@ const AuthUserSchema = new Schema<IAuthUser>(
   {
     email: { type: String, required: true, lowercase: true, trim: true, unique: true },
     name: { type: String, required: true, trim: true },
-    passwordHash: { type: String, required: true },
+    // Secrets are never read by accident: a query that needs them asks with select("+passwordHash").
+    passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: ["admin", "member"], default: "member" },
     disabledAt: { type: Date },
     passwordChangedAt: { type: Date },
@@ -33,6 +34,7 @@ const AuthUserSchema = new Schema<IAuthUser>(
           { _id: false }
         ),
       ],
+      select: false,
     },
     appleSub: { type: String, unique: true, sparse: true },
     secondStep: { type: Schema.Types.Mixed, default: undefined },

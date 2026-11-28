@@ -26,9 +26,17 @@ test("a code matches its stored hash however it is typed", () => {
 
 test("O, I and L stand in for 0 and 1", () => {
   assert.equal(hashRecoveryCode("0O01-1I1L-ABCD-EFGH"), hashRecoveryCode("0001-1111-ABCD-EFGH"));
-  assert.equal(hashRecoveryCode("oil0"), hashRecoveryCode("0110"));
+  assert.equal(hashRecoveryCode("oil0-oil0-oil0-oil0"), hashRecoveryCode("0110-0110-0110-0110"));
+  assert.notEqual(hashRecoveryCode("oil0-oil0-oil0-oil0"), null);
 });
 
 test("different codes hash differently", () => {
   assert.notEqual(hashRecoveryCode("0000-0000-0000-0000"), hashRecoveryCode("0000-0000-0000-0001"));
+});
+
+test("only input that normalises to exactly 16 characters is hashed", () => {
+  for (const input of ["", "   ", "----", "ABCD", "0000-0000-0000-000", "0000-0000-0000-00000", "!!!!"]) {
+    assert.equal(hashRecoveryCode(input), null, JSON.stringify(input));
+  }
+  assert.match(hashRecoveryCode("0000-0000-0000-0000") ?? "", /^[0-9a-f]{64}$/);
 });

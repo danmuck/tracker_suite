@@ -45,8 +45,18 @@ function codePointLength(value: string): number {
   return Array.from(value).length;
 }
 
-/** Returns a message saying what is wrong with the password, or null when it is acceptable. */
-export function passwordProblem(password: string, context?: { email?: string }): string | null {
+/**
+ * The form a password is checked, hashed and verified in (Unicode NFKC), so the same password
+ * typed on another keyboard or system (composed or decomposed accents, full-width forms) matches.
+ * passwordProblem, hashPassword and verifyPassword all call it; callers pass what was typed.
+ */
+export function normalizePassword(password: string): string {
+  return password.normalize("NFKC");
+}
+
+/** Returns a message saying what is wrong with the password, or null when it is acceptable. Rules apply to the normalised form. */
+export function passwordProblem(typed: string, context?: { email?: string }): string | null {
+  const password = normalizePassword(typed);
   const length = codePointLength(password);
   if (length < PASSWORD_MIN_LENGTH) {
     return `Use at least ${PASSWORD_MIN_LENGTH} characters.`;
