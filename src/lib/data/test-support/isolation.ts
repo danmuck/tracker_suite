@@ -30,7 +30,7 @@ function withoutIdentity(doc: BaseDoc): Omit<BaseDoc, keyof BaseDoc> {
  * Fills every collection with at least two records for the owner `store` is scoped to, using the
  * demo sample (written through each module's own routes) plus the values that exercise unique
  * fields: a link group named "Gaming", the default finance categories, Future settings and a
- * finance profile. Every call must answer 2xx or this throws.
+ * finance profile (exactly one: it is a per-owner singleton). Every call must answer 2xx or this throws.
  */
 export async function seedOwner(store: Store): Promise<void> {
   await loadSampleData(store, FIXED_NOW);
@@ -44,35 +44,41 @@ export async function seedOwner(store: Store): Promise<void> {
     await request(store, "PUT", `/api/projects/${project._id}/scratchpad`, { content: `scratchpad ${i}` });
   }
 
-  // Future settings and the finance profile hold one record each through the routes; add a second
-  // directly (through the scoped store) so those collections have two records to protect.
+  // The sample leaves one Future settings record, and no route creates a second one, so add it
+  // directly (through the scoped store) to give that collection two records to protect. The
+  // finance profile stays at exactly one: MongoDB has a unique {ownerId} index on it.
   const settings = store.collection<BaseDoc & { key: string }>("futureSettings");
   const firstSettings = await settings.findOne({});
   if (!firstSettings) throw new Error("seedOwner: no Future settings");
   await settings.insert({ ...withoutIdentity(firstSettings), key: "second" } as never);
-
-  const profiles = store.collection<BaseDoc>("financeProfile");
-  const firstProfile = await profiles.findOne({});
-  if (!firstProfile) throw new Error("seedOwner: no finance profile");
-  await profiles.insert(withoutIdentity(firstProfile) as never);
 }
 
 /**
- * Calls every route of `allRoutes` as the owner `store` is scoped to, naming only `foreignIds`:
- * a route without a :param once, one with params once per id (every param set to that id).
- * Non-GET calls send `{}`. Returns every result.
+ * Calls every route of `allRoutes` as the owner `store` is scoped to, naming only `foreign` records.
+ * A route without a :param is called once. A route with params is called once per record with every
+ * param set to its _id; a non-GET route is called twice per record: with `{}` and with a valid body
+ * (the record minus _id, ownerId and timestamps), so the write reaches the store's update path
+ * instead of stopping at validation. Non-GET calls without a body send `{}`. Returns every result.
  */
-export async function probeAsStranger(store: Store, foreignIds: string[]): Promise<ApiResult[]> {
+export async function probeAsStranger(
+  store: Store,
+  foreign: { _id: string; [key: string]: unknown }[],
+): Promise<ApiResult[]> {
   const results: ApiResult[] = [];
+  const call = async (method: string, url: string, body: unknown) =>
+    results.push(await dispatch(allRoutes, store, method, url, method === "GET" ? undefined : body, FIXED_NOW));
   for (const route of allRoutes) {
-    const body = route.method === "GET" ? undefined : {};
     if (!route.path.includes(":")) {
-      results.push(await dispatch(allRoutes, store, route.method, route.path, body, FIXED_NOW));
+      await call(route.method, route.path, {});
       continue;
     }
-    for (const id of foreignIds) {
-      const url = route.path.replace(/:[A-Za-z]+/g, id);
-      results.push(await dispatch(allRoutes, store, route.method, url, body, FIXED_NOW));
+    for (const record of foreign) {
+      const url = route.path.replace(/:[A-Za-z]+/g, record._id);
+      await call(route.method, url, {});
+      if (route.method === "GET") continue;
+      const valid: Record<string, unknown> = { ...record };
+      for (const key of ["_id", "ownerId", "createdAt", "updatedAt"]) delete valid[key];
+      await call(route.method, url, valid);
     }
   }
   return results;
