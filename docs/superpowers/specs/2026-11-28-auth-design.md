@@ -203,6 +203,28 @@ Each stage gets its own plan in `docs/superpowers/plans/` and lands on `dev`.
 3. **Live deployment.** Security headers and a CSP for the server build in `next.config.ts`, checking required env at startup, a hosted MongoDB (TLS, a database user limited to one database, network allowlist, backups), the trusted proxy setting, `docs/deploy-live.md`. Where to host is the owner's choice, asked at that point.
 4. **Sign in with Apple.** Its own short design. Links to an already invited person by Apple's stable user id; never creates a person. Needs an Apple Developer membership.
 
+## Stage 1 outcome (2026-11-28) and what stage 2 must carry
+
+Stage 1 is built on `dev` (`44d0273`..`a6f73b7`). Decisions made while building it:
+
+- `scopedStore` refuses any owner id that is not a lowercase 24-hex string, and any update operator other than `$set`, `$unset`, `$inc`, `$setOnInsert`.
+- Passwords are NFKC-normalised inside `passwordProblem`, `hashPassword` and `verifyPassword`.
+- The finance profile is one per owner; `hashRecoveryCode` returns null unless the typed code normalises to 16 characters; `passwordHash` and `recoveryCodes` are `select: false`.
+- `claim-data` blocks on records whose owner is null or matches no user, prints the index diff in its dry run, builds new indexes before dropping old ones, and ends `--apply` with a verification pass.
+
+Stage 2 must carry:
+
+- Pass `String(user._id)` (lowercase) to `scopedStore`; never set `strictQuery` to true (a schema missing `ownerId` would then drop the filter); keep the test that every collection's model has `ownerId`.
+- Isolation probes with a foreign id in a query string (`?accountId=`, `?projectId=`) and in the body of a parameterless POST.
+- A bound on concurrent Argon2 hashes (64 MiB each) and a cap on password input length before hashing.
+- Single use of a recovery code as one conditional update on `usedAt`.
+- Parallel first saves of Future settings and scratchpads for a new owner can answer 409 or 500: decide whether to retry, as Cash and the profile do.
+- After `claim-data --apply`, start only the stage 2 build: the stage 1 app returns `ownerId` in responses and saves new records without an owner.
+
+Stage 3 must carry: `autoIndex: false` in production with indexes built deliberately; the database URI for scripts read from the environment, not `--uri`; a larger common-password list.
+
+Before `claim-data --apply` on real data: take a `mongodump`, stop every server, rehearse `create-admin` and the claim on a restored copy of the dump (the populated path and the terminal prompt have only been exercised on a near-empty scratch database), and read the dry run's index diff. Do not delete and re-create the admin after a claim: ownership is by that user's id.
+
 ## Left to the builder
 
 - Exact Argon2id parameters and which implementation, within the rule above.
