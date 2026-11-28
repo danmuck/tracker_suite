@@ -27,6 +27,8 @@ export interface NavItem {
   href: string;
   label: string;
   icon: LucideIcon;
+  /** Pages that belong to this section without being under its path, such as a detail page */
+  also?: string[];
 }
 
 export interface ModuleConfig {
@@ -35,6 +37,7 @@ export interface ModuleConfig {
   icon: LucideIcon;
   basePath: string;
   accentColor: string;
+  /** The module's sections, shown as tabs above its pages */
   navItems: NavItem[];
   browserData: boolean; // works with browser-stored data
 }
@@ -108,11 +111,16 @@ export const modules: ModuleConfig[] = [
     accentColor: "var(--module-edgectl)",
     navItems: [
       { href: "/edgectl", label: "Overview", icon: LayoutDashboard },
-      { href: "/edgectl/ghosts", label: "Ghosts", icon: Ghost },
+      { href: "/edgectl/ghosts", label: "Ghosts", icon: Ghost, also: ["/edgectl/ghost"] },
       { href: "/edgectl/seeds", label: "Seeds", icon: Sprout },
       { href: "/edgectl/routing", label: "Routing", icon: Route },
-      { href: "/edgectl/intents", label: "Intents", icon: ListChecks },
-      { href: "/edgectl/dependencies", label: "Dependencies", icon: PackagePlus },
+      { href: "/edgectl/intents", label: "Intents", icon: ListChecks, also: ["/edgectl/intent"] },
+      {
+        href: "/edgectl/dependencies",
+        label: "Dependencies",
+        icon: PackagePlus,
+        also: ["/edgectl/dependency"],
+      },
       { href: "/edgectl/activity", label: "Activity", icon: Activity },
     ],
     browserData: false,
@@ -123,12 +131,29 @@ export function availableModules(source: DataSource): ModuleConfig[] {
   return source === "browser" ? modules.filter((m) => m.browserData) : modules;
 }
 
+function isUnder(pathname: string, base: string): boolean {
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
+
+/** The module a page belongs to */
+export function moduleForPath(pathname: string): ModuleConfig | undefined {
+  return modules.find((mod) => isUnder(pathname, mod.basePath));
+}
+
+/** Where a module opens: its first section, or its base path when it has none */
+export function moduleHome(mod: ModuleConfig): string {
+  return mod.navItems[0]?.href ?? mod.basePath;
+}
+
+/** Whether a page belongs to a section. The section at the module's base path owns only that page */
+export function isNavItemActive(mod: ModuleConfig, item: NavItem, pathname: string): boolean {
+  if (item.href === mod.basePath) return pathname === mod.basePath;
+  return [item.href, ...(item.also ?? [])].some((base) => isUnder(pathname, base));
+}
+
 /** The dashboard and the module pages, as opposed to the landing page */
 export function isAppPath(pathname: string): boolean {
-  return (
-    pathname === "/dashboard" ||
-    modules.some((mod) => pathname === mod.basePath || pathname.startsWith(`${mod.basePath}/`))
-  );
+  return pathname === "/dashboard" || moduleForPath(pathname) !== undefined;
 }
 
 export const globalNavItems: NavItem[] = [
