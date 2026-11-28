@@ -2,15 +2,21 @@
 
 import { useState } from "react";
 import { useSWRConfig } from "swr";
-import { ArrowRight, Plus, Repeat } from "lucide-react";
+import { ArrowRight, Pencil, Plus, Repeat, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { CategoryBadge } from "@/components/finance/category-badge";
 import { CurrencyDisplay } from "@/components/finance/currency-display";
+import { DeleteConfirmDialog } from "@/components/delete-confirm-dialog";
 import { TransactionForm } from "@/components/finance/transaction-form";
-import { createTransaction } from "@/hooks/finance/use-transactions";
+import {
+  createTransaction,
+  deleteTransaction,
+  fetchTransaction,
+  updateTransaction,
+} from "@/hooks/finance/use-transactions";
 import { amountLabel, TX_TEXT } from "@/components/finance/calendar/month-grid";
 import { bankBalance, signedAmount } from "@/lib/finance/calendar";
 import { formatCurrency, parseDate } from "@/lib/finance/formatters";
@@ -19,7 +25,8 @@ import { format } from "date-fns";
 import type { Account } from "@/types/finance/account";
 import type { Category } from "@/types/finance/category";
 import type { DaySummary } from "@/types/finance/summary";
-import type { TransactionFormData } from "@/types/finance/transaction";
+import type { ProjectedTransaction } from "@/types/finance/projection";
+import type { Transaction, TransactionFormData } from "@/types/finance/transaction";
 
 interface DaySheetProps {
   /** yyyy-MM-dd, or null when closed */
@@ -33,13 +40,17 @@ interface DaySheetProps {
   onClose: () => void;
 }
 
-/** Side panel listing one day's transactions and its end-of-day bank balance, with a way to add one on that day */
+/** Side panel listing one day's transactions and its end-of-day bank balance, with ways to add, edit and delete */
 export function DaySheet({ date, day, accounts, categories, today, onClose }: DaySheetProps) {
   const names = Object.fromEntries(accounts.map((a) => [a._id, a.name]));
   const txs = day?.transactions ?? [];
   const net = txs.reduce((sum, t) => sum + signedAmount(t), 0);
   const upcoming = date != null && date > today;
   const [adding, setAdding] = useState(false);
+  const [editTarget, setEditTarget] = useState<Transaction | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<ProjectedTransaction | null>(null);
+  /** Source id of the transaction being loaded for editing */
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const { mutate } = useSWRConfig();
 
   async function handleCreate(data: TransactionFormData) {
@@ -52,6 +63,43 @@ export function DaySheet({ date, day, accounts, categories, today, onClose }: Da
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to create transaction");
       throw err;
+    }
+  }
+
+  // The day shows occurrences; editing works on the stored transaction behind one
+  async function startEdit(id: string) {
+    setLoadingId(id);
+    try {
+      setEditTarget(await fetchTransaction(id));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load transaction");
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
+  async function handleEdit(data: TransactionFormData) {
+    if (!editTarget) return;
+    try {
+      await updateTransaction(editTarget._id, data);
+      await mutate(() => true);
+      setEditTarget(null);
+      toast.success("Transaction updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update transaction");
+      throw err;
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget?.sourceTransactionId) return;
+    try {
+      await deleteTransaction(deleteTarget.sourceTransactionId);
+      await mutate(() => true);
+      setDeleteTarget(null);
+      toast.success("Transaction deleted");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete transaction");
     }
   }
 
@@ -89,6 +137,49 @@ export function DaySheet({ date, day, accounts, categories, today, onClose }: Da
             </DialogContent>
           </Dialog>
 
+          <Dialog open={!!editTarget} onOpenChange={(o) => !o && setEditTarget(null)}>
+            <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+              <DialogHeader>
+                <DialogTitle>Edit Transaction</DialogTitle>
+                {editTarget?.isRecurring && (
+                  <DialogDescription>This is a recurring transaction: changes apply to every occurrence.</DialogDescription>
+                )}
+              </DialogHeader>
+              {editTarget && (
+                <TransactionForm
+                  key={editTarget._id}
+                  defaultValues={{
+                    description: editTarget.description,
+                    amount: editTarget.amount / 100,
+                    date: editTarget.date,
+                    accountId: editTarget.accountId,
+                    toAccountId: editTarget.toAccountId,
+                    type: editTarget.type,
+                    categoryTags: editTarget.categoryTags,
+                    isRecurring: editTarget.isRecurring,
+                    recurrenceRule: editTarget.recurrenceRule,
+                    notes: editTarget.notes,
+                    amountSchedule: editTarget.amountSchedule,
+                  }}
+                  onSubmit={handleEdit}
+                  onCancel={() => setEditTarget(null)}
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+
+          <DeleteConfirmDialog
+            open={!!deleteTarget}
+            onOpenChange={(o) => !o && setDeleteTarget(null)}
+            onConfirm={handleDelete}
+            title="Delete transaction"
+            description={
+              deleteTarget?.isRecurring
+                ? `Delete "${deleteTarget.description}"? It is recurring, so every occurrence is removed, not only this day's. This cannot be undone.`
+                : `Delete "${deleteTarget?.description}"? This cannot be undone.`
+            }
+          />
+
           {txs.length > 0 && (
             <ul className="divide-y rounded-lg border">
               {txs.map((t, i) => (
@@ -115,12 +206,36 @@ export function DaySheet({ date, day, accounts, categories, today, onClose }: Da
                       </div>
                     )}
                   </div>
-                  <div className="shrink-0 text-right">
+                  <div className="shrink-0 space-y-1 text-right">
                     <p className={cn("font-mono text-sm font-medium tabular-nums", TX_TEXT[t.type])}>{amountLabel(t)}</p>
                     {t.originalAmount != null && t.originalAmount !== t.amount && (
                       <p className="font-mono text-xs text-muted-foreground line-through">
                         {formatCurrency(t.originalAmount)}
                       </p>
+                    )}
+                    {/* Interest lines are worked out, not stored, so there is nothing to edit */}
+                    {t.sourceTransactionId && (
+                      <div className="flex justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          aria-label={`Edit ${t.description}`}
+                          disabled={loadingId != null}
+                          onClick={() => startEdit(t.sourceTransactionId!)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 hover:text-destructive"
+                          aria-label={`Delete ${t.description}`}
+                          onClick={() => setDeleteTarget(t)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     )}
                   </div>
                 </li>

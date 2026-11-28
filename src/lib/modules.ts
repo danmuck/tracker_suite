@@ -51,9 +51,9 @@ export const modules: ModuleConfig[] = [
     accentColor: "var(--chart-2)",
     navItems: [
       { href: "/finance", label: "Dashboard", icon: LayoutDashboard },
+      { href: "/finance/calendar", label: "Calendar", icon: CalendarDays },
       { href: "/finance/accounts", label: "Accounts", icon: Wallet },
       { href: "/finance/transactions", label: "Transactions", icon: ArrowRightLeft },
-      { href: "/finance/calendar", label: "Calendar", icon: CalendarDays },
       { href: "/finance/projections", label: "Projections", icon: TrendingUp },
       { href: "/finance/datasheet", label: "Datasheet", icon: Calculator },
     ],

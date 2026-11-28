@@ -27,6 +27,11 @@ export function useTransactions(filters: TransactionFilters = {}) {
   };
 }
 
+/** One stored transaction by id (a recurring one is the whole series, not an occurrence) */
+export async function fetchTransaction(id: string): Promise<Transaction> {
+  return (await fetcher(`/api/transactions/${encodeURIComponent(id)}`)) as Transaction;
+}
+
 export async function createTransaction(data: TransactionFormData) {
   return send("/api/transactions", "POST", data);
 }
