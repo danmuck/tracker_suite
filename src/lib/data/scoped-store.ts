@@ -33,9 +33,14 @@ function assertNoOwnerKey(value: unknown): void {
   }
 }
 
+const UPDATE_OPERATORS: ReadonlySet<string> = new Set(["$set", "$unset", "$inc", "$setOnInsert"]);
+
+// An allowlist: any other top-level key (another operator, or a bare field that would replace
+// the record) is refused, and no operator may name the owner field.
 function assertUpdateClean(update: Update): void {
-  for (const part of [update.$set, update.$unset, update.$setOnInsert, update.$inc]) {
-    if (part) for (const key of Object.keys(part)) refuseOwnerPath(key);
+  for (const [operator, part] of Object.entries(update as Record<string, unknown>)) {
+    if (!UPDATE_OPERATORS.has(operator)) throw new Error(`Unsupported update operator: ${operator}`);
+    if (part !== null && typeof part === "object") for (const key of Object.keys(part)) refuseOwnerPath(key);
   }
 }
 
@@ -147,6 +152,8 @@ class ScopedCollection<T extends BaseDoc> implements Collection<T> {
 }
 
 export function scopedStore(store: Store, ownerId: string): Store {
+  // undefined or null would match every record without an owner, and store inserts without one.
+  if (typeof ownerId !== "string" || !isId(ownerId)) throw new Error("scopedStore needs an owner id (24 lowercase hex)");
   return {
     collection<T extends BaseDoc>(name: CollectionName): Collection<T> {
       return new ScopedCollection<T>(store.collection<T>(name), ownerId);

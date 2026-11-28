@@ -3,30 +3,17 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { Model } from "mongoose";
-import LinkGroup from "./links/LinkGroup";
-import Link from "./links/Link";
-import Listing from "./future/Listing";
-import Tour from "./future/Tour";
-import FutureSettings from "./future/FutureSettings";
-import Account from "./finance/Account";
-import Transaction from "./finance/Transaction";
-import Category from "./finance/Category";
-import FinanceProfile from "./finance/FinanceProfile";
-import Project from "./projects/Project";
-import Task from "./projects/Task";
-import Scratchpad from "./projects/Scratchpad";
-import Workout from "./figure/Workout";
-import WorkoutLog from "./figure/WorkoutLog";
-import RunLog from "./figure/RunLog";
-import Recipe from "./figure/Recipe";
-import ShoppingItem from "./figure/ShoppingItem";
+import { MODELS as STORE_MODELS } from "@/lib/data/mongo-store";
+import { COLLECTIONS } from "@/lib/data/store";
 
-const MODELS: Record<string, Model<never>> = {
-  LinkGroup, Link, Listing, Tour, FutureSettings, Account, Transaction, Category, FinanceProfile,
-  Project, Task, Scratchpad, Workout, WorkoutLog, RunLog, Recipe, ShoppingItem,
-} as unknown as Record<string, Model<never>>;
+// Keyed by collection name. Every collection in COLLECTIONS has a model here (the type requires it),
+// so a new collection is checked below without being added to this file.
+const MODELS = STORE_MODELS as unknown as Record<string, Model<never>>;
+const { linkGroups: LinkGroup, financeCategories: Category, futureSettings: FutureSettings, scratchpads: Scratchpad,
+  financeProfile: FinanceProfile, accounts: Account } = MODELS;
 
-test("all 17 models are covered", () => {
+test("every store collection is covered", () => {
+  assert.deepEqual(Object.keys(MODELS).sort(), Object.keys(COLLECTIONS).sort());
   assert.equal(Object.keys(MODELS).length, 17);
 });
 
@@ -62,7 +49,7 @@ test("unique indexes are exactly the per-owner ones", () => {
   assert.deepEqual(uniques(FinanceProfile as never), [{ keys: { ownerId: 1 }, partial: undefined }]);
   assert.deepEqual(uniques(Account as never), [{ keys: { ownerId: 1 }, partial: { isCash: true } }]);
   for (const [name, m] of Object.entries(MODELS)) {
-    if (["LinkGroup", "Category", "FutureSettings", "Scratchpad", "FinanceProfile", "Account"].includes(name)) continue;
+    if (["linkGroups", "financeCategories", "futureSettings", "scratchpads", "financeProfile", "accounts"].includes(name)) continue;
     assert.deepEqual(uniques(m), [], `${name} has no unique index`);
   }
 });

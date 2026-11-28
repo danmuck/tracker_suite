@@ -169,3 +169,38 @@ test("an unscoped BrowserStore still enforces global uniqueness", async () => {
   await raw.collection<Item>("linkGroups").insert({ slug: "x" });
   await assert.rejects(() => raw.collection<Item>("linkGroups").insert({ slug: "x" }), ConflictError);
 });
+
+test("an owner id that is not a lowercase 24-hex id is refused", () => {
+  const raw = new BrowserStore(memoryStorage());
+  for (const bad of [undefined, null, "", "not-an-id", "A".repeat(24), "a".repeat(23), 42]) {
+    assert.throws(() => scopedStore(raw, bad as never), /owner id/i, `refuses ${JSON.stringify(bad)}`);
+  }
+  assert.doesNotThrow(() => scopedStore(raw, A));
+});
+
+test("only $set, $unset, $inc and $setOnInsert may appear in an update", async () => {
+  const { a } = await seedA();
+  const c = a.collection<Item>("links");
+  for (const update of [{ $rename: { name: "label" } }, { $push: { tags: "x" } }, { ownerId: B }, { name: "x" }]) {
+    await assert.rejects(() => c.updateOne({}, update as never), /update/i, JSON.stringify(update));
+    await assert.rejects(() => c.updateMany({}, update as never), /update/i);
+    await assert.rejects(() => c.updateById("c".repeat(24), update as never), /update/i);
+    await assert.rejects(() => c.batchUpdate([{ filter: {}, update: update as never }]), /update/i);
+  }
+  for (const part of ["$set", "$unset", "$setOnInsert", "$inc"] as const) {
+    await assert.rejects(() => c.updateOne({}, { [part]: { "ownerId.x": 1 } } as never), MANAGED);
+  }
+});
+
+test("renaming a unique field is checked per owner", async () => {
+  const { a, b } = setup();
+  const ga = a.collection<Item>("linkGroups");
+  const gb = b.collection<Item>("linkGroups");
+  await ga.insert({ slug: "home" });
+  const other = await ga.insert({ slug: "work" });
+  const mine = await gb.insert({ slug: "b-home" });
+  const renamed = await gb.updateById(mine._id, { $set: { slug: "home" } });
+  assert.equal(renamed?.slug, "home");
+  await assert.rejects(() => ga.updateById(other._id, { $set: { slug: "home" } }), ConflictError);
+  assert.equal((await ga.findById(other._id))?.slug, "work");
+});

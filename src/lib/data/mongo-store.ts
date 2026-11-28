@@ -25,9 +25,10 @@ import type { BaseDoc, Collection, CollectionName, FindOptions, Store } from "./
 
 type Doc = Record<string, unknown>;
 // The models are strictly typed per collection; this layer treats documents as plain objects.
-type AnyModel = Model<Doc>;
+export type AnyModel = Model<Doc>;
 
-const MODELS: Record<CollectionName, AnyModel> = {
+/** The one list of the 17 store models, by collection name. Scripts and schema tests use it too. */
+export const MODELS: Record<CollectionName, AnyModel> = {
   linkGroups: LinkGroup as unknown as AnyModel,
   links: Link as unknown as AnyModel,
   listings: Listing as unknown as AnyModel,

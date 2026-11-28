@@ -9,31 +9,14 @@
 // and is the only one this script touches. Prints one line per check; exits non-zero on any FAIL.
 
 import assert from "node:assert/strict";
-import mongoose, { type Model } from "mongoose";
+import mongoose from "mongoose";
 import { allRoutes } from "@/lib/data/all-routes";
 import { dispatch } from "@/lib/data/dispatch";
-import { mongoStore } from "@/lib/data/mongo-store";
+import { MODELS, mongoStore } from "@/lib/data/mongo-store";
 import { scopedStore } from "@/lib/data/scoped-store";
 import { COLLECTIONS, ConflictError, type BaseDoc, type CollectionName } from "@/lib/data/store";
 import { ensureCashAccount } from "@/lib/finance/api/docs";
 import { FIXED_NOW, probeAsStranger, probeLinkedWrites, seedOwner } from "@/lib/data/test-support/isolation";
-import LinkGroup from "@/models/links/LinkGroup";
-import Link from "@/models/links/Link";
-import Listing from "@/models/future/Listing";
-import Tour from "@/models/future/Tour";
-import FutureSettings from "@/models/future/FutureSettings";
-import Account from "@/models/finance/Account";
-import Transaction from "@/models/finance/Transaction";
-import Category from "@/models/finance/Category";
-import FinanceProfile from "@/models/finance/FinanceProfile";
-import Project from "@/models/projects/Project";
-import Task from "@/models/projects/Task";
-import Scratchpad from "@/models/projects/Scratchpad";
-import Workout from "@/models/figure/Workout";
-import WorkoutLog from "@/models/figure/WorkoutLog";
-import RunLog from "@/models/figure/RunLog";
-import Recipe from "@/models/figure/Recipe";
-import ShoppingItem from "@/models/figure/ShoppingItem";
 
 const URI = "mongodb://localhost:27017/tracker_isolation";
 const NAME = "tracker_isolation";
@@ -42,13 +25,6 @@ const A = "a".repeat(24);
 const B = "b".repeat(24);
 const C = "c".repeat(24);
 
-type AnyModel = Model<Record<string, unknown>>;
-const MODELS: Record<CollectionName, AnyModel> = {
-  linkGroups: LinkGroup, links: Link, listings: Listing, tours: Tour, futureSettings: FutureSettings,
-  accounts: Account, transactions: Transaction, financeCategories: Category, financeProfile: FinanceProfile,
-  projects: Project, tasks: Task, scratchpads: Scratchpad, workouts: Workout, workoutLogs: WorkoutLog,
-  runLogs: RunLog, recipes: Recipe, shoppingItems: ShoppingItem,
-} as unknown as Record<CollectionName, AnyModel>;
 const NAMES = Object.keys(COLLECTIONS) as CollectionName[];
 
 type Raw = BaseDoc & { ownerId?: string; [key: string]: unknown };
