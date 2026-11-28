@@ -204,13 +204,14 @@ class BrowserCollection<T extends BaseDoc> implements Collection<T> {
   // Checks only the inserted or changed docs against the rest, so an old duplicate
   // already in storage does not block writes to unrelated docs, nor to the duplicate itself
   // as long as the write leaves the unique field alone (`before` is the doc as it was).
+  // A clash counts only between docs of the same owner (both undefined in browser data mode).
   private checkUnique(all: Doc[], changed: { doc: Doc; before?: Doc }[]): void {
     for (const field of COLLECTIONS[this.name].unique as readonly string[]) {
       for (const { doc, before } of changed) {
         const value = doc[field];
         if (value === undefined) continue;
         if (before && before[field] === value) continue;
-        if (all.some((other) => other !== doc && other[field] === value)) {
+        if (all.some((other) => other !== doc && other.ownerId === doc.ownerId && other[field] === value)) {
           throw new ConflictError(this.name, field);
         }
       }
