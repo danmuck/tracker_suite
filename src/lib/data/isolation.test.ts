@@ -14,7 +14,7 @@ const A = "a".repeat(24);
 const B = "b".repeat(24);
 const NAMES = Object.keys(COLLECTIONS) as CollectionName[];
 
-type Raw = BaseDoc & { ownerId?: string };
+type Raw = BaseDoc & Record<string, unknown> & { ownerId?: string };
 
 const rawDocs = (raw: BrowserStore, name: CollectionName) => raw.collection<Raw>(name).find({});
 

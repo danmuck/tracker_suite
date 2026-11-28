@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { planClaim, type ClaimFacts } from "./claim-plan.ts";
+import { planClaim, type ClaimFacts } from "./claim-plan";
 
 function facts(over: Partial<ClaimFacts> = {}): ClaimFacts {
   return {

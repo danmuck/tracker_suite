@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { generateRecoveryCodes, hashRecoveryCode } from "./recovery-codes.ts";
+import { generateRecoveryCodes, hashRecoveryCode } from "./recovery-codes";
 
 const SHAPE = /^([0-9A-HJKMNP-TV-Z]{4}-){3}[0-9A-HJKMNP-TV-Z]{4}$/;
 

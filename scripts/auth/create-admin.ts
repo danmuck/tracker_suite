@@ -7,12 +7,12 @@
 // Stop the app first. Connects only to the database named by --db.
 
 import mongoose from "mongoose";
-import AuthUser from "../../src/models/auth/AuthUser.ts";
-import { passwordProblem } from "../../src/lib/auth/password-rules.ts";
-import { hashPassword } from "../../src/lib/auth/server/password.ts";
-import { generateRecoveryCodes } from "../../src/lib/auth/server/recovery-codes.ts";
-import { flagValue, parseTarget } from "../../src/lib/auth/server/script-target.ts";
-import { connectTo } from "./target.ts";
+import AuthUser from "@/models/auth/AuthUser";
+import { passwordProblem } from "@/lib/auth/password-rules";
+import { hashPassword } from "@/lib/auth/server/password";
+import { generateRecoveryCodes } from "@/lib/auth/server/recovery-codes";
+import { flagValue, parseTarget } from "@/lib/auth/server/script-target";
+import { connectTo } from "./target";
 
 /** Reads one line from the terminal with echo off. Only called when stdin is a TTY. */
 function readHidden(prompt: string): Promise<string> {

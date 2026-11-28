@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { hash as argonHash } from "@node-rs/argon2";
-import { DUMMY_HASH, hashPassword, needsRehash, verifyPassword } from "./password.ts";
+import { DUMMY_HASH, hashPassword, needsRehash, verifyPassword } from "./password";
 
 const PASSWORD = "correct horse battery";
 

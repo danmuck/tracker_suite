@@ -1,6 +1,6 @@
 // Shared by the auth scripts: connect to the one database named by --db, or refuse.
 import mongoose from "mongoose";
-import type { ScriptTarget } from "../../src/lib/auth/server/script-target.ts";
+import type { ScriptTarget } from "@/lib/auth/server/script-target";
 
 /**
  * Connects to target.uri and throws (after disconnecting) unless the connection really is on

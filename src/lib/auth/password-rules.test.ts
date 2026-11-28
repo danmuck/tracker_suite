@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { passwordProblem } from "./password-rules.ts";
+import { passwordProblem } from "./password-rules";
 
 test("length is checked from 12 to 128 characters", () => {
   assert.notEqual(passwordProblem("mangoglacie"), null);

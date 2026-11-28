@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { parseTarget } from "./script-target.ts";
+import { parseTarget } from "./script-target";
 
 test("--db is required", () => {
   assert.throws(() => parseTarget([]), /--db/);

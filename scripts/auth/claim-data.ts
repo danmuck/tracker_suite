@@ -9,27 +9,27 @@
 
 import mongoose from "mongoose";
 import type { Model } from "mongoose";
-import AuthUser from "../../src/models/auth/AuthUser.ts";
-import LinkGroup from "../../src/models/links/LinkGroup.ts";
-import Link from "../../src/models/links/Link.ts";
-import Listing from "../../src/models/future/Listing.ts";
-import Tour from "../../src/models/future/Tour.ts";
-import FutureSettings from "../../src/models/future/FutureSettings.ts";
-import Account from "../../src/models/finance/Account.ts";
-import Transaction from "../../src/models/finance/Transaction.ts";
-import Category from "../../src/models/finance/Category.ts";
-import FinanceProfile from "../../src/models/finance/FinanceProfile.ts";
-import Project from "../../src/models/projects/Project.ts";
-import Task from "../../src/models/projects/Task.ts";
-import Scratchpad from "../../src/models/projects/Scratchpad.ts";
-import Workout from "../../src/models/figure/Workout.ts";
-import WorkoutLog from "../../src/models/figure/WorkoutLog.ts";
-import RunLog from "../../src/models/figure/RunLog.ts";
-import Recipe from "../../src/models/figure/Recipe.ts";
-import ShoppingItem from "../../src/models/figure/ShoppingItem.ts";
-import { planClaim, type CollectionFacts } from "../../src/lib/auth/server/claim-plan.ts";
-import { flagValue, parseTarget } from "../../src/lib/auth/server/script-target.ts";
-import { connectTo } from "./target.ts";
+import AuthUser from "@/models/auth/AuthUser";
+import LinkGroup from "@/models/links/LinkGroup";
+import Link from "@/models/links/Link";
+import Listing from "@/models/future/Listing";
+import Tour from "@/models/future/Tour";
+import FutureSettings from "@/models/future/FutureSettings";
+import Account from "@/models/finance/Account";
+import Transaction from "@/models/finance/Transaction";
+import Category from "@/models/finance/Category";
+import FinanceProfile from "@/models/finance/FinanceProfile";
+import Project from "@/models/projects/Project";
+import Task from "@/models/projects/Task";
+import Scratchpad from "@/models/projects/Scratchpad";
+import Workout from "@/models/figure/Workout";
+import WorkoutLog from "@/models/figure/WorkoutLog";
+import RunLog from "@/models/figure/RunLog";
+import Recipe from "@/models/figure/Recipe";
+import ShoppingItem from "@/models/figure/ShoppingItem";
+import { planClaim, type CollectionFacts } from "@/lib/auth/server/claim-plan";
+import { flagValue, parseTarget } from "@/lib/auth/server/script-target";
+import { connectTo } from "./target";
 
 type AnyModel = Model<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
