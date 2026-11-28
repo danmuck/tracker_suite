@@ -8,7 +8,7 @@ import { BrowserStore } from "./browser-store";
 import { scopedStore } from "./scoped-store";
 import { COLLECTIONS, type BaseDoc, type CollectionName } from "./store";
 import { memoryStorage } from "./test-helpers";
-import { FIXED_NOW, probeAsStranger, seedOwner } from "./test-support/isolation";
+import { FIXED_NOW, probeAsStranger, probeLinkedWrites, seedOwner } from "./test-support/isolation";
 
 const A = "a".repeat(24);
 const B = "b".repeat(24);
@@ -63,6 +63,23 @@ test("a stranger's calls through every route read and change nothing of the owne
     const leaks = results.filter((r) => JSON.stringify(r.body).includes(id));
     assert.equal(leaks.length, 0, `an answer contains ${id}: ${JSON.stringify(leaks[0])}`);
   }
+});
+
+test("a stranger's update of a foreign tour or payment plan, with links that resolve, still changes nothing", async () => {
+  const raw = await seeded();
+  const before = await snapshot(raw, A);
+  const tour = before.tours[0];
+  const card = before.accounts.find((a) => a.type === "credit_card" || a.type === "debt");
+  assert.ok(tour && card);
+
+  const { tour: tourResult, plan: planResult } = await probeLinkedWrites(scopedStore(raw, B), tour, card);
+
+  // Both bodies are valid and every linked id is the stranger's own: only the target is foreign.
+  assert.equal(tourResult.status, 404, JSON.stringify(tourResult.body));
+  assert.deepEqual(tourResult.body, { error: "Tour not found" });
+  assert.equal(planResult.status, 404, JSON.stringify(planResult.body));
+  assert.deepEqual(planResult.body, { error: "Account not found" });
+  assert.deepEqual(await snapshot(raw, A), before);
 });
 
 test("every stored record belongs to A or B and none lacks an owner", async () => {

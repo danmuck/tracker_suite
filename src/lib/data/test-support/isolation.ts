@@ -83,3 +83,47 @@ export async function probeAsStranger(
   }
   return results;
 }
+
+type Doc = BaseDoc & Record<string, unknown>;
+
+const withoutManaged = (record: Doc): Record<string, unknown> => {
+  const body: Record<string, unknown> = { ...record };
+  for (const key of ["_id", "ownerId", "createdAt", "updatedAt"]) delete body[key];
+  return body;
+};
+
+/**
+ * Two writes that the generic probe cannot reach, because the handler checks a linked record the
+ * stranger must own before it writes. Each is sent with a body valid in every respect except that
+ * the target is the other owner's record, so the handler reaches its write with a foreign id:
+ *  - PUT a foreign tour with `listingId` set to one of the stranger's OWN listings;
+ *  - POST a payment plan on a foreign credit card or debt account with `fromAccountId` set to one
+ *    of the stranger's OWN bank accounts.
+ * `store` is scoped to the stranger; `foreignTour` and `foreignAccount` are the other owner's records.
+ */
+export async function probeLinkedWrites(
+  store: Store,
+  foreignTour: Doc,
+  foreignAccount: Doc,
+): Promise<{ tour: ApiResult; plan: ApiResult }> {
+  const ownListing = await store.collection<Doc>("listings").findOne({});
+  const ownBank = await store.collection<Doc>("accounts").findOne({ type: "bank", isCash: false, isArchived: false });
+  if (!ownListing || !ownBank) throw new Error("probeLinkedWrites: the stranger needs a listing and a bank account");
+  const tour = await dispatch(
+    allRoutes,
+    store,
+    "PUT",
+    `/api/future/tours/${foreignTour._id}`,
+    { ...withoutManaged(foreignTour), listingId: ownListing._id },
+    FIXED_NOW,
+  );
+  const plan = await dispatch(
+    allRoutes,
+    store,
+    "POST",
+    `/api/accounts/${foreignAccount._id}/payment-plan`,
+    { fromAccountId: ownBank._id, dayOfMonth: 15, startDate: "2026-07-01", firstAmount: 100 },
+    FIXED_NOW,
+  );
+  return { tour, plan };
+}
